@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace Infrastructure.Migrations
 {
     /// <inheritdoc />
-    public partial class Init : Migration
+    public partial class PostgresInitialV2 : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -15,14 +15,14 @@ namespace Infrastructure.Migrations
                 name: "AIImprovementSessions",
                 columns: table => new
                 {
-                    SessionID = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    Status = table.Column<int>(type: "int", nullable: false),
-                    Insight = table.Column<string>(type: "nvarchar(2000)", maxLength: 2000, nullable: false),
-                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    CompletedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    StudentID = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    CourseID = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    EnrollmentID = table.Column<Guid>(type: "uniqueidentifier", nullable: false)
+                    SessionID = table.Column<Guid>(type: "uuid", nullable: false),
+                    Status = table.Column<int>(type: "integer", nullable: false),
+                    Insight = table.Column<string>(type: "character varying(2000)", maxLength: 2000, nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    CompletedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    StudentID = table.Column<Guid>(type: "uuid", nullable: false),
+                    CourseID = table.Column<Guid>(type: "uuid", nullable: false),
+                    EnrollmentID = table.Column<Guid>(type: "uuid", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -33,13 +33,13 @@ namespace Infrastructure.Migrations
                 name: "AuditLogs",
                 columns: table => new
                 {
-                    AuditLogId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    EntityName = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    Action = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    PerformedBy = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
-                    Timestamp = table.Column<DateTime>(type: "datetime2", nullable: false, defaultValueSql: "GETUTCDATE()"),
-                    OldValue = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    NewValue = table.Column<string>(type: "nvarchar(max)", nullable: true)
+                    AuditLogId = table.Column<Guid>(type: "uuid", nullable: false),
+                    EntityName = table.Column<string>(type: "text", nullable: false),
+                    Action = table.Column<string>(type: "text", nullable: false),
+                    PerformedBy = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: true),
+                    Timestamp = table.Column<DateTime>(type: "timestamp with time zone", nullable: false, defaultValueSql: "now()"),
+                    OldValue = table.Column<string>(type: "text", nullable: true),
+                    NewValue = table.Column<string>(type: "text", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -50,9 +50,9 @@ namespace Infrastructure.Migrations
                 name: "Grades",
                 columns: table => new
                 {
-                    GradeID = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    Name = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
-                    IsActive = table.Column<bool>(type: "bit", nullable: false, defaultValue: true)
+                    GradeID = table.Column<Guid>(type: "uuid", nullable: false),
+                    Name = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
+                    IsActive = table.Column<bool>(type: "boolean", nullable: false, defaultValue: true)
                 },
                 constraints: table =>
                 {
@@ -63,9 +63,9 @@ namespace Infrastructure.Migrations
                 name: "Policies",
                 columns: table => new
                 {
-                    PolicyID = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    Name = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: false),
-                    IsActive = table.Column<bool>(type: "bit", nullable: false, defaultValue: true)
+                    PolicyID = table.Column<Guid>(type: "uuid", nullable: false),
+                    Name = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: false),
+                    IsActive = table.Column<bool>(type: "boolean", nullable: false, defaultValue: true)
                 },
                 constraints: table =>
                 {
@@ -76,10 +76,10 @@ namespace Infrastructure.Migrations
                 name: "Subjects",
                 columns: table => new
                 {
-                    SubjectID = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    Code = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
-                    Name = table.Column<string>(type: "nvarchar(150)", maxLength: 150, nullable: false),
-                    IsActive = table.Column<bool>(type: "bit", nullable: false, defaultValue: true)
+                    SubjectID = table.Column<Guid>(type: "uuid", nullable: false),
+                    Code = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
+                    Name = table.Column<string>(type: "character varying(150)", maxLength: 150, nullable: false),
+                    IsActive = table.Column<bool>(type: "boolean", nullable: false, defaultValue: true)
                 },
                 constraints: table =>
                 {
@@ -90,20 +90,20 @@ namespace Infrastructure.Migrations
                 name: "Users",
                 columns: table => new
                 {
-                    UserID = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    Email = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: false),
-                    PasswordHash = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: false),
-                    RefreshTokenHash = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true),
-                    RefreshTokenExpiresAt = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    Phone = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: false),
-                    Name = table.Column<string>(type: "nvarchar(150)", maxLength: 150, nullable: false),
-                    Bio = table.Column<string>(type: "nvarchar(1000)", maxLength: 1000, nullable: true),
-                    Role = table.Column<int>(type: "int", nullable: false),
-                    IsVerified = table.Column<bool>(type: "bit", nullable: false, defaultValue: false),
-                    EmailOtp = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    EmailOtpExpiresAt = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    IsActive = table.Column<bool>(type: "bit", nullable: false, defaultValue: true),
-                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false)
+                    UserID = table.Column<Guid>(type: "uuid", nullable: false),
+                    Email = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: false),
+                    PasswordHash = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: false),
+                    RefreshTokenHash = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: true),
+                    RefreshTokenExpiresAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    Phone = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: false),
+                    Name = table.Column<string>(type: "character varying(150)", maxLength: 150, nullable: false),
+                    Bio = table.Column<string>(type: "character varying(1000)", maxLength: 1000, nullable: true),
+                    Role = table.Column<int>(type: "integer", nullable: false),
+                    IsVerified = table.Column<bool>(type: "boolean", nullable: false, defaultValue: false),
+                    EmailOtp = table.Column<string>(type: "text", nullable: true),
+                    EmailOtpExpiresAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    IsActive = table.Column<bool>(type: "boolean", nullable: false, defaultValue: true),
+                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -114,11 +114,11 @@ namespace Infrastructure.Migrations
                 name: "AIAssignments",
                 columns: table => new
                 {
-                    AIAssignmentID = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    Question = table.Column<string>(type: "nvarchar(2000)", maxLength: 2000, nullable: false),
-                    Guidance = table.Column<string>(type: "nvarchar(2000)", maxLength: 2000, nullable: false),
-                    SessionID = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    LessonID = table.Column<Guid>(type: "uniqueidentifier", nullable: false)
+                    AIAssignmentID = table.Column<Guid>(type: "uuid", nullable: false),
+                    Question = table.Column<string>(type: "character varying(2000)", maxLength: 2000, nullable: false),
+                    Guidance = table.Column<string>(type: "character varying(2000)", maxLength: 2000, nullable: false),
+                    SessionID = table.Column<Guid>(type: "uuid", nullable: false),
+                    LessonID = table.Column<Guid>(type: "uuid", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -135,10 +135,11 @@ namespace Infrastructure.Migrations
                 name: "PolicyRules",
                 columns: table => new
                 {
-                    PolicyRuleID = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    Code = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
-                    Description = table.Column<string>(type: "nvarchar(2000)", maxLength: 2000, nullable: false),
-                    PolicyID = table.Column<Guid>(type: "uniqueidentifier", nullable: false)
+                    PolicyRuleID = table.Column<Guid>(type: "uuid", nullable: false),
+                    Code = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
+                    Description = table.Column<string>(type: "character varying(2000)", maxLength: 2000, nullable: false),
+                    PolicyID = table.Column<Guid>(type: "uuid", nullable: false),
+                    IsActive = table.Column<bool>(type: "boolean", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -155,14 +156,14 @@ namespace Infrastructure.Migrations
                 name: "DefaultLessons",
                 columns: table => new
                 {
-                    DefaultLessonID = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    Objectives = table.Column<string>(type: "nvarchar(2000)", maxLength: 2000, nullable: false),
-                    Description = table.Column<string>(type: "nvarchar(4000)", maxLength: 4000, nullable: false),
-                    Name = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: false),
-                    IsActive = table.Column<bool>(type: "bit", nullable: false, defaultValue: true),
-                    SubjectID = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    GradeID = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    SubjectID1 = table.Column<Guid>(type: "uniqueidentifier", nullable: true)
+                    DefaultLessonID = table.Column<Guid>(type: "uuid", nullable: false),
+                    Objectives = table.Column<string>(type: "character varying(2000)", maxLength: 2000, nullable: false),
+                    Description = table.Column<string>(type: "character varying(4000)", maxLength: 4000, nullable: false),
+                    Name = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: false),
+                    IsActive = table.Column<bool>(type: "boolean", nullable: false, defaultValue: true),
+                    SubjectID = table.Column<Guid>(type: "uuid", nullable: false),
+                    GradeID = table.Column<Guid>(type: "uuid", nullable: false),
+                    SubjectID1 = table.Column<Guid>(type: "uuid", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -190,13 +191,13 @@ namespace Infrastructure.Migrations
                 name: "Coupons",
                 columns: table => new
                 {
-                    CouponID = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    StudentID = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    Code = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
-                    DiscountAmount = table.Column<decimal>(type: "decimal(18,2)", precision: 18, scale: 2, nullable: false),
-                    IsUsed = table.Column<bool>(type: "bit", nullable: false),
-                    Reason = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: false),
-                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false)
+                    CouponID = table.Column<Guid>(type: "uuid", nullable: false),
+                    StudentID = table.Column<Guid>(type: "uuid", nullable: false),
+                    Code = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
+                    DiscountAmount = table.Column<decimal>(type: "numeric(18,2)", precision: 18, scale: 2, nullable: false),
+                    IsUsed = table.Column<bool>(type: "boolean", nullable: false),
+                    Reason = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -213,22 +214,22 @@ namespace Infrastructure.Migrations
                 name: "Courses",
                 columns: table => new
                 {
-                    CourseID = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    Title = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: false),
-                    Description = table.Column<string>(type: "nvarchar(4000)", maxLength: 4000, nullable: false),
-                    Status = table.Column<int>(type: "int", nullable: false),
-                    PriceAmount = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
-                    ThumbnailName = table.Column<string>(type: "nvarchar(255)", maxLength: 255, nullable: true),
-                    Slug = table.Column<string>(type: "nvarchar(4000)", maxLength: 4000, nullable: false),
-                    Prerequisites = table.Column<string>(type: "nvarchar(4000)", maxLength: 4000, nullable: false),
-                    LearningOutcomes = table.Column<string>(type: "nvarchar(4000)", maxLength: 4000, nullable: false),
-                    RejectedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    AdminNote = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    PublishedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    TeacherID = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    GradeID = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    SubjectID = table.Column<Guid>(type: "uniqueidentifier", nullable: false)
+                    CourseID = table.Column<Guid>(type: "uuid", nullable: false),
+                    Title = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: false),
+                    Description = table.Column<string>(type: "character varying(4000)", maxLength: 4000, nullable: false),
+                    Status = table.Column<int>(type: "integer", nullable: false),
+                    PriceAmount = table.Column<decimal>(type: "numeric", nullable: false),
+                    ThumbnailName = table.Column<string>(type: "character varying(255)", maxLength: 255, nullable: true),
+                    Slug = table.Column<string>(type: "character varying(4000)", maxLength: 4000, nullable: false),
+                    Prerequisites = table.Column<string>(type: "character varying(4000)", maxLength: 4000, nullable: false),
+                    LearningOutcomes = table.Column<string>(type: "character varying(4000)", maxLength: 4000, nullable: false),
+                    RejectedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    AdminNote = table.Column<string>(type: "text", nullable: true),
+                    PublishedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    TeacherID = table.Column<Guid>(type: "uuid", nullable: false),
+                    GradeID = table.Column<Guid>(type: "uuid", nullable: false),
+                    SubjectID = table.Column<Guid>(type: "uuid", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -257,12 +258,12 @@ namespace Infrastructure.Migrations
                 name: "AISubmissions",
                 columns: table => new
                 {
-                    AISubmissionID = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    Answer = table.Column<string>(type: "nvarchar(4000)", maxLength: 4000, nullable: false),
-                    IsCorrect = table.Column<bool>(type: "bit", nullable: false),
-                    Feedback = table.Column<string>(type: "nvarchar(2000)", maxLength: 2000, nullable: false),
-                    SubmittedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    AIAssignmentID = table.Column<Guid>(type: "uniqueidentifier", nullable: false)
+                    AISubmissionID = table.Column<Guid>(type: "uuid", nullable: false),
+                    Answer = table.Column<string>(type: "character varying(4000)", maxLength: 4000, nullable: false),
+                    IsCorrect = table.Column<bool>(type: "boolean", nullable: false),
+                    Feedback = table.Column<string>(type: "character varying(2000)", maxLength: 2000, nullable: false),
+                    SubmittedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    AIAssignmentID = table.Column<Guid>(type: "uuid", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -279,13 +280,13 @@ namespace Infrastructure.Migrations
                 name: "Chapters",
                 columns: table => new
                 {
-                    ChapterID = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    Title = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: false),
-                    Description = table.Column<string>(type: "nvarchar(2000)", maxLength: 2000, nullable: true),
-                    Order = table.Column<int>(type: "int", nullable: false),
-                    IsViolated = table.Column<bool>(type: "bit", nullable: false),
-                    AdminNote = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    CourseID = table.Column<Guid>(type: "uniqueidentifier", nullable: false)
+                    ChapterID = table.Column<Guid>(type: "uuid", nullable: false),
+                    Title = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: false),
+                    Description = table.Column<string>(type: "character varying(2000)", maxLength: 2000, nullable: true),
+                    Order = table.Column<int>(type: "integer", nullable: false),
+                    IsViolated = table.Column<bool>(type: "boolean", nullable: false),
+                    AdminNote = table.Column<string>(type: "text", nullable: true),
+                    CourseID = table.Column<Guid>(type: "uuid", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -302,15 +303,15 @@ namespace Infrastructure.Migrations
                 name: "Complaints",
                 columns: table => new
                 {
-                    ComplaintID = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    Reason = table.Column<string>(type: "nvarchar(2000)", maxLength: 2000, nullable: false),
-                    EvidenceImagePath = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true),
-                    Status = table.Column<int>(type: "int", nullable: false),
-                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    ReviewedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    AdminNote = table.Column<string>(type: "nvarchar(2000)", maxLength: 2000, nullable: true),
-                    CourseID = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    StudentID = table.Column<Guid>(type: "uniqueidentifier", nullable: false)
+                    ComplaintID = table.Column<Guid>(type: "uuid", nullable: false),
+                    Reason = table.Column<string>(type: "character varying(2000)", maxLength: 2000, nullable: false),
+                    EvidenceImagePath = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: true),
+                    Status = table.Column<int>(type: "integer", nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    ReviewedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    AdminNote = table.Column<string>(type: "character varying(2000)", maxLength: 2000, nullable: true),
+                    CourseID = table.Column<Guid>(type: "uuid", nullable: false),
+                    StudentID = table.Column<Guid>(type: "uuid", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -333,12 +334,12 @@ namespace Infrastructure.Migrations
                 name: "Enrollments",
                 columns: table => new
                 {
-                    EnrollmentID = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    Status = table.Column<int>(type: "int", nullable: false),
-                    EnrolledAt = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    CompletedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    StudentID = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    CourseID = table.Column<Guid>(type: "uniqueidentifier", nullable: false)
+                    EnrollmentID = table.Column<Guid>(type: "uuid", nullable: false),
+                    Status = table.Column<int>(type: "integer", nullable: false),
+                    EnrolledAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    CompletedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    StudentID = table.Column<Guid>(type: "uuid", nullable: false),
+                    CourseID = table.Column<Guid>(type: "uuid", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -355,16 +356,16 @@ namespace Infrastructure.Migrations
                 name: "Orders",
                 columns: table => new
                 {
-                    OrderID = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    OrderID = table.Column<Guid>(type: "uuid", nullable: false),
                     OrderCode = table.Column<long>(type: "bigint", nullable: false),
-                    PlatformAmount = table.Column<decimal>(type: "decimal(18,2)", precision: 18, scale: 2, nullable: false),
-                    TeacherAmount = table.Column<decimal>(type: "decimal(18,2)", precision: 18, scale: 2, nullable: false),
-                    Method = table.Column<int>(type: "int", nullable: false),
-                    Status = table.Column<int>(type: "int", nullable: false),
-                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    PaidAt = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    StudentID = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    CourseID = table.Column<Guid>(type: "uniqueidentifier", nullable: false)
+                    PlatformAmount = table.Column<decimal>(type: "numeric(18,2)", precision: 18, scale: 2, nullable: false),
+                    TeacherAmount = table.Column<decimal>(type: "numeric(18,2)", precision: 18, scale: 2, nullable: false),
+                    Method = table.Column<int>(type: "integer", nullable: false),
+                    Status = table.Column<int>(type: "integer", nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    PaidAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    StudentID = table.Column<Guid>(type: "uuid", nullable: false),
+                    CourseID = table.Column<Guid>(type: "uuid", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -387,12 +388,12 @@ namespace Infrastructure.Migrations
                 name: "Penalties",
                 columns: table => new
                 {
-                    PenaltyID = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    PenaltyAmount = table.Column<decimal>(type: "decimal(18,2)", precision: 18, scale: 2, nullable: false),
-                    Reason = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: false),
-                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    TeacherID = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    CourseID = table.Column<Guid>(type: "uniqueidentifier", nullable: false)
+                    PenaltyID = table.Column<Guid>(type: "uuid", nullable: false),
+                    PenaltyAmount = table.Column<decimal>(type: "numeric(18,2)", precision: 18, scale: 2, nullable: false),
+                    Reason = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    TeacherID = table.Column<Guid>(type: "uuid", nullable: false),
+                    CourseID = table.Column<Guid>(type: "uuid", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -415,9 +416,9 @@ namespace Infrastructure.Migrations
                 name: "ViolatedPolicies",
                 columns: table => new
                 {
-                    ViolatedPolicyID = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    PolicyID = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    CourseID = table.Column<Guid>(type: "uniqueidentifier", nullable: false)
+                    ViolatedPolicyID = table.Column<Guid>(type: "uuid", nullable: false),
+                    PolicyID = table.Column<Guid>(type: "uuid", nullable: false),
+                    CourseID = table.Column<Guid>(type: "uuid", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -440,13 +441,13 @@ namespace Infrastructure.Migrations
                 name: "Lessons",
                 columns: table => new
                 {
-                    LessonID = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    Title = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: false),
-                    Objectives = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: false),
-                    Description = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: false),
-                    VideoUrl = table.Column<string>(type: "nvarchar(1000)", maxLength: 1000, nullable: false),
-                    Order = table.Column<int>(type: "int", nullable: false),
-                    ChapterID = table.Column<Guid>(type: "uniqueidentifier", nullable: false)
+                    LessonID = table.Column<Guid>(type: "uuid", nullable: false),
+                    Title = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: false),
+                    Objectives = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: false),
+                    Description = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: false),
+                    VideoUrl = table.Column<string>(type: "character varying(1000)", maxLength: 1000, nullable: false),
+                    Order = table.Column<int>(type: "integer", nullable: false),
+                    ChapterID = table.Column<Guid>(type: "uuid", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -463,10 +464,10 @@ namespace Infrastructure.Migrations
                 name: "CourseProgresses",
                 columns: table => new
                 {
-                    CourseProgressID = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    CompletionRate = table.Column<decimal>(type: "decimal(5,2)", precision: 5, scale: 2, nullable: false),
-                    IsCompleted = table.Column<bool>(type: "bit", nullable: false),
-                    EnrollmentID = table.Column<Guid>(type: "uniqueidentifier", nullable: false)
+                    CourseProgressID = table.Column<Guid>(type: "uuid", nullable: false),
+                    CompletionRate = table.Column<decimal>(type: "numeric(5,2)", precision: 5, scale: 2, nullable: false),
+                    IsCompleted = table.Column<bool>(type: "boolean", nullable: false),
+                    EnrollmentID = table.Column<Guid>(type: "uuid", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -483,11 +484,11 @@ namespace Infrastructure.Migrations
                 name: "Assignments",
                 columns: table => new
                 {
-                    AssignmentID = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    Title = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: false),
-                    Description = table.Column<string>(type: "nvarchar(2000)", maxLength: 2000, nullable: false),
-                    MaxScore = table.Column<int>(type: "int", nullable: false),
-                    LessonID = table.Column<Guid>(type: "uniqueidentifier", nullable: false)
+                    AssignmentID = table.Column<Guid>(type: "uuid", nullable: false),
+                    Title = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: false),
+                    Description = table.Column<string>(type: "character varying(2000)", maxLength: 2000, nullable: false),
+                    MaxScore = table.Column<int>(type: "integer", nullable: false),
+                    LessonID = table.Column<Guid>(type: "uuid", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -504,12 +505,12 @@ namespace Infrastructure.Migrations
                 name: "Materials",
                 columns: table => new
                 {
-                    MaterialID = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    Name = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: false),
-                    Description = table.Column<string>(type: "nvarchar(2000)", maxLength: 2000, nullable: false),
-                    Url = table.Column<string>(type: "nvarchar(1000)", maxLength: 1000, nullable: false),
-                    Type = table.Column<int>(type: "int", nullable: false),
-                    LessonID = table.Column<Guid>(type: "uniqueidentifier", nullable: false)
+                    MaterialID = table.Column<Guid>(type: "uuid", nullable: false),
+                    Name = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: false),
+                    Description = table.Column<string>(type: "character varying(2000)", maxLength: 2000, nullable: false),
+                    Url = table.Column<string>(type: "character varying(1000)", maxLength: 1000, nullable: false),
+                    Type = table.Column<int>(type: "integer", nullable: false),
+                    LessonID = table.Column<Guid>(type: "uuid", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -526,13 +527,13 @@ namespace Infrastructure.Migrations
                 name: "Quizzes",
                 columns: table => new
                 {
-                    QuizID = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    Question = table.Column<string>(type: "nvarchar(2000)", maxLength: 2000, nullable: false),
-                    Note = table.Column<string>(type: "nvarchar(2000)", maxLength: 2000, nullable: true),
-                    LessonID = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    AnswerType = table.Column<int>(type: "int", nullable: false),
-                    CorrectAnswers = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    Options = table.Column<string>(type: "nvarchar(max)", nullable: true)
+                    QuizID = table.Column<Guid>(type: "uuid", nullable: false),
+                    Question = table.Column<string>(type: "character varying(2000)", maxLength: 2000, nullable: false),
+                    Note = table.Column<string>(type: "character varying(2000)", maxLength: 2000, nullable: true),
+                    LessonID = table.Column<Guid>(type: "uuid", nullable: false),
+                    AnswerType = table.Column<int>(type: "integer", nullable: false),
+                    CorrectAnswers = table.Column<string>(type: "text", nullable: false),
+                    Options = table.Column<string>(type: "text", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -549,10 +550,10 @@ namespace Infrastructure.Migrations
                 name: "ChapterProgresses",
                 columns: table => new
                 {
-                    ChapterProgressID = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    IsCompleted = table.Column<bool>(type: "bit", nullable: false),
-                    CourseProgressID = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    ChapterID = table.Column<Guid>(type: "uniqueidentifier", nullable: false)
+                    ChapterProgressID = table.Column<Guid>(type: "uuid", nullable: false),
+                    IsCompleted = table.Column<bool>(type: "boolean", nullable: false),
+                    CourseProgressID = table.Column<Guid>(type: "uuid", nullable: false),
+                    ChapterID = table.Column<Guid>(type: "uuid", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -575,11 +576,11 @@ namespace Infrastructure.Migrations
                 name: "LessonProgresses",
                 columns: table => new
                 {
-                    LessonProgressID = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    IsCompleted = table.Column<bool>(type: "bit", nullable: false),
-                    CompletedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    ChapterProgressID = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    LessonID = table.Column<Guid>(type: "uniqueidentifier", nullable: false)
+                    LessonProgressID = table.Column<Guid>(type: "uuid", nullable: false),
+                    IsCompleted = table.Column<bool>(type: "boolean", nullable: false),
+                    CompletedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    ChapterProgressID = table.Column<Guid>(type: "uuid", nullable: false),
+                    LessonID = table.Column<Guid>(type: "uuid", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -602,12 +603,12 @@ namespace Infrastructure.Migrations
                 name: "QuizProgresses",
                 columns: table => new
                 {
-                    QuizProgressID = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    IsCorrect = table.Column<bool>(type: "bit", nullable: false),
-                    AttemptCount = table.Column<int>(type: "int", nullable: false),
-                    LastAttemptAt = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    LessonProgressID = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    QuizID = table.Column<Guid>(type: "uniqueidentifier", nullable: false)
+                    QuizProgressID = table.Column<Guid>(type: "uuid", nullable: false),
+                    IsCorrect = table.Column<bool>(type: "boolean", nullable: false),
+                    AttemptCount = table.Column<int>(type: "integer", nullable: false),
+                    LastAttemptAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    LessonProgressID = table.Column<Guid>(type: "uuid", nullable: false),
+                    QuizID = table.Column<Guid>(type: "uuid", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -897,4 +898,3 @@ namespace Infrastructure.Migrations
         }
     }
 }
-

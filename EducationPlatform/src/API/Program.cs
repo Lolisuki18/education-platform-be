@@ -14,6 +14,9 @@ using Microsoft.OpenApi.Models;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Fix PostgreSQL DateTime issue
+AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
+
 // ====================
 // Web API
 // ====================
@@ -126,6 +129,7 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI(c =>
     {
         c.SwaggerEndpoint("/swagger/v1/swagger.json", "Education Platform API v1");
+        c.RoutePrefix = string.Empty; // Set Swagger as the root page
     });
 }
 
@@ -137,6 +141,13 @@ var storageRootPath = builder.Configuration["Storage:RootPath"];
 if (string.IsNullOrWhiteSpace(storageRootPath))
 {
     throw new Exception("Storage:RootPath is not configured.");
+}
+
+// Auto-create the storage directory if it doesn't exist
+if (!Directory.Exists(storageRootPath))
+{
+    Directory.CreateDirectory(storageRootPath);
+    Console.WriteLine($"[Storage] Created storage directory: {storageRootPath}");
 }
 
 app.UseStaticFiles();

@@ -94,16 +94,14 @@ namespace API.Controllers
         [Authorize(Roles = "Teacher")]
         [HttpPost("upload-chunk")]
         public async Task<ActionResult<ApiResponse>> UploadChunk(
-            [FromForm] IFormFile chunk,
-            [FromForm] string uploadId,
-            [FromForm] int index,
+            [FromForm] UploadChunkRequestDto request,
             CancellationToken ct)
         {
-            if (chunk == null || chunk.Length == 0)
+            if (request.Chunk == null || request.Chunk.Length == 0)
                 return BadRequest(ApiResponse.Success("Empty chunk", 400));
 
-            await using var stream = chunk.OpenReadStream();
-            await storageService.SaveChunkAsync(stream, uploadId, index, ct);
+            await using var stream = request.Chunk.OpenReadStream();
+            await storageService.SaveChunkAsync(stream, request.UploadId, request.Index, ct);
 
             return Ok(ApiResponse.Success("Chunk uploaded successfully."));
         }
@@ -111,11 +109,10 @@ namespace API.Controllers
         [Authorize(Roles = "Teacher")]
         [HttpPost("complete-upload")]
         public async Task<ActionResult<ApiResponse<object>>> CompleteUpload(
-            [FromForm] string uploadId,
-            [FromForm] string extension,
+            [FromForm] CompleteUploadRequestDto request,
             CancellationToken ct)
         {
-            var path = await storageService.CompleteUploadAsync(uploadId, extension, ct);
+            var path = await storageService.CompleteUploadAsync(request.UploadId, request.Extension, ct);
             var fullPath = storageService.GetFullPath(path);
 
             // Fire and forget transcription

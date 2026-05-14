@@ -1,15 +1,15 @@
 using Application.Features.Courses.CreateCourse;
 using Domain.CourseManagement.Aggregate;
 using Domain.CourseManagement.Entity;
+using Domain.Common.Interfaces;
 using FluentAssertions;
-using Infrastructure.Interface;
 using Moq;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Xunit;
-// Removed legacy using Application.Commands.Course;
 using Domain.CourseManagement.Events;
 
 namespace UnitTests.Application.Features.Courses.CreateCourse

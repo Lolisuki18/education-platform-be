@@ -20,7 +20,7 @@ namespace Infrastructure.Persistence
 
             // Build DbContext
             var optionsBuilder = new DbContextOptionsBuilder<EducationPlatformDBContext>();
-            optionsBuilder.UseSqlServer(connectionString);
+            optionsBuilder.UseNpgsql(connectionString);
 
             return new EducationPlatformDBContext(optionsBuilder.Options);
         }

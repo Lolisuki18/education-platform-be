@@ -896,7 +896,7 @@ namespace Infrastructure.Persistence
                 entity.Property(a => a.NewValue);
 
                 entity.Property(a => a.Timestamp)
-                      .HasDefaultValueSql("GETUTCDATE()");
+                      .HasDefaultValueSql("now()");
             });
         }
     }

@@ -32,8 +32,9 @@ namespace Infrastructure
             services.AddDbContext<EducationPlatformDBContext>((sp, options) =>
             {
                 var interceptor = sp.GetRequiredService<Infrastructure.Persistence.Interceptors.DomainEventDispatcherInterceptor>();
-                options.UseSqlServer(connectionString)
-                       .AddInterceptors(interceptor);
+                options.UseNpgsql(connectionString)
+                       .AddInterceptors(interceptor)
+                       .ConfigureWarnings(w => w.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning));
             });
 
             services.AddScoped<IAIImprovementSessionRepository, AIImprovementSessionRepository>();
