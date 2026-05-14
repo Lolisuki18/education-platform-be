@@ -1,4 +1,4 @@
-using Infrastructure.Interface;
+using Domain.Common.Interfaces;
 using Infrastructure.Persistence;
 using Domain.OrderManagement.Aggregate;
 using Domain.OrderManagement.Enum;

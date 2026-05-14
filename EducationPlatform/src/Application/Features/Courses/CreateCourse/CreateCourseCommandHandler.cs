@@ -2,7 +2,7 @@ using Application.Interface;
 using Domain.CourseManagement.Aggregate;
 using Domain.CourseManagement.Entity;
 using Domain.CourseManagement.Enum;
-using Infrastructure.Interface;
+using Domain.Common.Interfaces;
 using MediatR;
 using System;
 using System.Collections.Generic;

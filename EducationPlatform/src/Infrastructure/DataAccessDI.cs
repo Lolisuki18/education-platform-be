@@ -1,5 +1,5 @@
 using Infrastructure.Implementation;
-using Infrastructure.Interface;
+using Domain.Common.Interfaces;
 using Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -42,6 +42,10 @@ namespace Infrastructure
             services.AddScoped<IUnitOfWork, UnitOfWork>();
 
             // ----- Application Services -----
+            services.AddHttpContextAccessor();
+            services.AddScoped<Application.Interface.ICurrentUser, Infrastructure.Services.CurrentUser>();
+            
+            services.AddScoped<Application.Interface.IPaymentService, Infrastructure.Services.PayOSPaymentService>();
             services.AddScoped<Domain.Common.Interfaces.INotificationService,
                                Infrastructure.Services.LogNotificationService>();
 

@@ -14,6 +14,7 @@ namespace Application.Results
         public DateTime? PaidAt { get; set; }
         public Guid StudentID { get; set; }
         public Guid CourseID { get; set; }
+        public string? CheckoutUrl { get; set; }
     }
 
     public class CouponDTO

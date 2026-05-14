@@ -2,13 +2,11 @@ using API.Models.Statistics;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Application.Features.Statistics.Queries.GetSummaryStatistic;
+using Application.Features.Statistics.Queries.GetSummaryStatistics;
 using Application.Features.Statistics.Queries.GetAnalyticsGrowth;
 using Application.Features.Statistics.Queries.GetAnalyticsDemandAndSupply;
 using Application.Features.Statistics.Queries.GetAnalyticsNormalizedGrowth;
 using Application.Features.Statistics.Queries.GetTopPerformance;
-using Application.Features.Academic.Queries.GetGrades;
-using Application.Features.Academic.Queries.GetSubjects;
 
 namespace API.Controllers
 {
@@ -27,13 +25,7 @@ namespace API.Controllers
         [HttpGet("summary")]
         public async Task<ActionResult<SummaryStatisticsResponseDto>> GetSummary([FromQuery] SummaryStatisticsRequestDto request)
         {
-            request.Query.From ??= DateTime.Now.AddMonths(-1);
-            request.Query.To ??= DateTime.Now;
-
-            var grades = await mediator.Send(new GetGradesQuery());
-            var subjects = await mediator.Send(new GetSubjectsQuery());
-            
-            var summary = await mediator.Send(new GetSummaryStatisticQuery
+            var result = await mediator.Send(new GetSummaryStatisticsQuery
             {
                 From = request.Query.From,
                 To = request.Query.To
@@ -41,9 +33,9 @@ namespace API.Controllers
 
             return Ok(new SummaryStatisticsResponseDto
             {
-                Grades = grades,
-                Subjects = subjects,
-                Summary = summary
+                Grades = result.Grades,
+                Subjects = result.Subjects,
+                Summary = result.Summary
             });
         }
 

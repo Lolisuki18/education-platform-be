@@ -1,5 +1,5 @@
 using System.Text;
-using Infrastructure.Interface;
+using Domain.Common.Interfaces;
 using Infrastructure.Persistence;
 using Domain.EnrollmentManagement.Aggregate;
 using Domain.EnrollmentManagement.Entity;

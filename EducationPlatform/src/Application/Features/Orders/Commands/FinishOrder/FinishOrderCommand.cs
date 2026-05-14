@@ -1,8 +1,9 @@
 using MediatR;
 using Application.Results;
-using Infrastructure.Interface;
+using Domain.Common.Interfaces;
 using AutoMapper;
 using Application.BusinessException;
+using Domain.OrderManagement.Aggregate;
 
 namespace Application.Features.Orders.Commands.FinishOrder
 {

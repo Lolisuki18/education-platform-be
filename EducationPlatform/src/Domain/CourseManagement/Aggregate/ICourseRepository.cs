@@ -2,16 +2,12 @@ using Domain.CourseManagement.Aggregate;
 using Domain.CourseManagement.Entity;
 using Domain.CourseManagement.Enum;
 using Domain.IdentityManagement.ValueObject;
+using Domain.Common.Interfaces;
 
 namespace Domain.CourseManagement.Aggregate
 {
-    public interface ICourseRepository
+    public interface ICourseRepository : IGenericRepository<Course>
     {
-        Task<Course?> GetByIdAsync(Guid id);
-        Task<IEnumerable<Course>> GetAllAsync();
-        void Add(Course entity);
-        Course Update(Guid id, Course entity);
-        void Remove(Guid id);
         Task<IEnumerable<Course>> GetAllCourses(
             string? title,
             decimal? price,
@@ -82,4 +78,3 @@ namespace Domain.CourseManagement.Aggregate
             Guid? subjectId);
     }
 }
-

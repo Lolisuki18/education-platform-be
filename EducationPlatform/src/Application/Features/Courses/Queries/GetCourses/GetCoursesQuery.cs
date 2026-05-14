@@ -14,9 +14,5 @@ namespace Application.Features.Courses.Queries.GetCourses
         public string? SubjectName { get; set; } = string.Empty;
         public int PageIndex { get; set; } = 1;
         public int PageSize { get; set; } = 10;
-        
-        // Caller context for authorization/scoping
-        public Guid? CallerId { get; set; }
-        public string? CallerRole { get; set; }
     }
 }

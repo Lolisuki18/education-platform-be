@@ -1,7 +1,8 @@
 using Application.BusinessException;
 using Domain.CourseManagement.Aggregate;
-using Infrastructure.Interface;
+using Domain.Common.Interfaces;
 using MediatR;
+using Application.Interface;
 
 namespace Application.Features.Courses.ReviewCourse
 {
@@ -19,14 +20,19 @@ namespace Application.Features.Courses.ReviewCourse
     public class ReviewCourseCommandHandler : IRequestHandler<ReviewCourseCommand>
     {
         private readonly IUnitOfWork _unitOfWork;
+        private readonly ICurrentUser _currentUser;
 
-        public ReviewCourseCommandHandler(IUnitOfWork unitOfWork)
+        public ReviewCourseCommandHandler(IUnitOfWork unitOfWork, ICurrentUser currentUser)
         {
             _unitOfWork = unitOfWork;
+            _currentUser = currentUser;
         }
 
         public async Task Handle(ReviewCourseCommand request, CancellationToken cancellationToken)
         {
+            if (!_currentUser.Id.HasValue)
+                throw new AuthenticateException("User must be authenticated.");
+
             // ---------- 1. Load the Aggregate ----------
             var course = await _unitOfWork
                 .GetRepository<ICourseRepository>()
@@ -47,7 +53,7 @@ namespace Application.Features.Courses.ReviewCourse
                 request.ViolatedPolicyIDs,
                 violatedChapters,
                 request.AdminNote,
-                request.CallerId);
+                _currentUser.Id.Value);
 
             // ---------- 4. Persist ----------
             await _unitOfWork.BeginTransactionAsync();
@@ -59,7 +65,7 @@ namespace Application.Features.Courses.ReviewCourse
                        .ReplaceViolatedPolicies(course.CourseID, violatedPolicies);
 
             // CommitAsync triggers DomainEventDispatcherInterceptor → dispatches CourseReviewedEvent
-            await _unitOfWork.CommitAsync(request.CallerId.ToString());
+            await _unitOfWork.CommitAsync(_currentUser.Id.Value.ToString());
         }
     }
 }

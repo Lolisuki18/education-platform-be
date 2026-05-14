@@ -1,4 +1,4 @@
-namespace Infrastructure.Interface
+namespace Domain.Common.Interfaces
 {
     public interface IUnitOfWork
     {
@@ -7,10 +7,4 @@ namespace Infrastructure.Interface
         Task BeginTransactionAsync();
         Task<int> CommitAsync(string? performedBy = null);
     }
-
-    public interface IRepositoryBase
-    {
-
-    }
 }
-

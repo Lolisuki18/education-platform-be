@@ -1,10 +1,9 @@
-using Domain.EnrollmentManagement.Aggregate;
+using Domain.Common.Interfaces;
 
-namespace Infrastructure.Interface
+namespace Domain.EnrollmentManagement.Aggregate
 {
     public interface IEnrollmentRepository :
-        IGenericRepository<Enrollment>,
-        IRepositoryBase
+        IGenericRepository<Enrollment>
     {
         // Get all enrollments for a student
         Task<IEnumerable<Enrollment>> GetStudentEnrollments(Guid studentId);

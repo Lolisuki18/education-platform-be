@@ -1,6 +1,7 @@
 using MediatR;
-using Infrastructure.Interface;
+using Domain.Common.Interfaces;
 using Application.BusinessException;
+using Application.Interface;
 
 namespace Application.Features.Enrollments.Commands.SubmitQuiz
 {
@@ -13,20 +14,24 @@ namespace Application.Features.Enrollments.Commands.SubmitQuiz
         public Guid LessonID { get; set; }
         public Guid QuizID { get; set; }
         public List<string> SelectedAnswers { get; set; } = new();
-        public Guid CallerId { get; set; }
     }
 
     public class SubmitQuizCommandHandler : IRequestHandler<SubmitQuizCommand, SubmitQuizResult>
     {
         private readonly IUnitOfWork _unitOfWork;
+        private readonly ICurrentUser _currentUser;
 
-        public SubmitQuizCommandHandler(IUnitOfWork unitOfWork)
+        public SubmitQuizCommandHandler(IUnitOfWork unitOfWork, ICurrentUser currentUser)
         {
             _unitOfWork = unitOfWork;
+            _currentUser = currentUser;
         }
 
         public async Task<SubmitQuizResult> Handle(SubmitQuizCommand request, CancellationToken cancellationToken)
         {
+            if (!_currentUser.Id.HasValue)
+                throw new AuthenticateException("User must be authenticated.");
+
             var enrollment = await _unitOfWork
                 .GetRepository<IEnrollmentRepository>()
                 .GetEnrollmentForUpdate(request.EnrollmentID);
@@ -34,8 +39,8 @@ namespace Application.Features.Enrollments.Commands.SubmitQuiz
             if (enrollment == null)
                 throw new NotFound("Enrollment not found");
 
-            if (enrollment.StudentID != request.CallerId)
-                throw new AuthenticateException("You are not the owner of this enrollment");
+            if (enrollment.StudentID != _currentUser.Id.Value)
+                throw new ForbiddenException("You are not the owner of this enrollment");
 
             await _unitOfWork.BeginTransactionAsync();
             
@@ -48,7 +53,7 @@ namespace Application.Features.Enrollments.Commands.SubmitQuiz
                     request.QuizID, 
                     request.SelectedAnswers);
 
-            await _unitOfWork.CommitAsync(request.CallerId.ToString());
+            await _unitOfWork.CommitAsync(_currentUser.Id.Value.ToString());
 
             return new SubmitQuizResult(result.isCorrect, result.explanation);
         }

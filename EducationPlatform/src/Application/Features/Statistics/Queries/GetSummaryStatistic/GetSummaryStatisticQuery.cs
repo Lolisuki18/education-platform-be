@@ -1,7 +1,10 @@
 using Application.Results;
 using MediatR;
-using Infrastructure.Interface;
+using Domain.Common.Interfaces;
 using Domain.CourseManagement.Aggregate;
+using Domain.IdentityManagement.Aggregate;
+using Domain.EnrollmentManagement.Aggregate;
+using Domain.OrderManagement.Aggregate;
 using Application.BusinessException;
 using System.Linq;
 

@@ -1,4 +1,4 @@
-using Infrastructure.Interface;
+using Domain.Common.Interfaces;
 using Infrastructure.Persistence;
 using Domain.AcademicManagement.Aggregate;
 using Domain.AcademicManagement.Entity;

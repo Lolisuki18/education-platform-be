@@ -1,17 +1,13 @@
-using System.Security.Cryptography;
-using System.Text;
 using Application.Results;
 using Application.Features.Courses.Queries.GetCourseDetail;
 using Application.Features.Orders.Queries.GetCoupons;
 using Application.Features.Orders.Queries.GetOrders;
 using Application.Features.Orders.Commands.CreateOrder;
 using Application.Features.Orders.Commands.FinishOrder;
-using API.Helper;
 using API.Models.Orders;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Newtonsoft.Json;
 using Domain.OrderManagement.Enum;
 
 namespace API.Controllers
@@ -20,17 +16,10 @@ namespace API.Controllers
     [Route("api/orders")]
     public class OrdersController : ControllerBase
     {
-        private readonly HttpClient httpClient;
-        private readonly IConfiguration config;
         private readonly IMediator mediator;
 
-        public OrdersController(
-            IConfiguration config,
-            IHttpClientFactory factory,
-            IMediator mediator)
+        public OrdersController(IMediator mediator)
         {
-            this.config = config;
-            httpClient = factory.CreateClient("PayOSClient");
             this.mediator = mediator;
         }
 
@@ -38,12 +27,7 @@ namespace API.Controllers
         [HttpGet("coupons")]
         public async Task<ActionResult<IEnumerable<CouponDTO>>> ListCoupons()
         {
-            var (userId, role) = CheckClaimHelper.CheckClaim(User);
-            var coupons = await mediator.Send(new GetCouponsQuery 
-            { 
-                CallerId = userId, 
-                CallerRole = role 
-            });
+            var coupons = await mediator.Send(new GetCouponsQuery());
             return Ok(coupons);
         }
 
@@ -51,15 +35,11 @@ namespace API.Controllers
         [HttpGet]
         public async Task<ActionResult<ListOrdersResponseDto>> ListOrders([FromQuery] ListOrdersRequestDto request)
         {
-            var (userId, role) = CheckClaimHelper.CheckClaim(User);
-
             var orders = await mediator.Send(new GetOrdersQuery
             {
                 OrderStatus = Enum.TryParse<OrderStatus>(request.Status, true, out var s) ? s : null,
                 PageIndex   = request.Page,
-                PageSize    = request.PageSize,
-                CallerId    = userId,
-                CallerRole  = role
+                PageSize    = request.PageSize
             });
 
             return Ok(new ListOrdersResponseDto
@@ -72,13 +52,7 @@ namespace API.Controllers
         [HttpGet("course/{courseId:guid}")]
         public async Task<ActionResult<CourseDetailDTO>> GetCourseForOrder(Guid courseId)
         {
-            var (userId, role) = CheckClaimHelper.CheckClaim(User);
-            var course = await mediator.Send(new GetCourseDetailQuery
-            {
-                CourseID   = courseId,
-                CallerId   = userId,
-                CallerRole = role
-            });
+            var course = await mediator.Send(new GetCourseDetailQuery { CourseID = courseId });
             return Ok(course);
         }
 
@@ -86,88 +60,24 @@ namespace API.Controllers
         [HttpPost]
         public async Task<ActionResult<CreateOrderResponseDto>> CreateOrder([FromBody] CreateOrderRequestDto request)
         {
-            var (userId, role) = CheckClaimHelper.CheckClaim(User);
-
             var order = await mediator.Send(new CreateOrderCommand
             {
                 CourseID  = request.CourseId,
-                StudentID = userId,
                 CouponIds = request.SelectedCouponIds
             });
 
-            var payos = config.GetSection("PayOS");
-
-            long orderCode = order.OrderCode;
-            int amount = (int)(order.PlatformAmount + order.TeacherAmount);
-            string description = "CourseOrder";
-
-            string signature = GenerateSignature(
-                orderCode,
-                amount,
-                description,
-                payos["ReturnUrl"]!,
-                payos["CancelUrl"]!,
-                payos["ChecksumKey"]!
-            );
-
-            long expiredAt = DateTimeOffset.UtcNow
-                .AddMinutes(15)
-                .ToUnixTimeSeconds();
-
-            var payload = new
-            {
-                orderCode,
-                amount,
-                description,
-                cancelUrl = payos["CancelUrl"],
-                returnUrl = payos["ReturnUrl"],
-                expiredAt,
-                signature
-            };
-
-            var json = JsonConvert.SerializeObject(payload);
-
-            httpClient.DefaultRequestHeaders.Clear();
-            httpClient.DefaultRequestHeaders.Add("x-client-id", payos["ClientId"]);
-            httpClient.DefaultRequestHeaders.Add("x-api-key", payos["ApiKey"]);
-
-            var requestMessage = new HttpRequestMessage(
-                HttpMethod.Post,
-                "https://api-merchant.payos.vn/v2/payment-requests")
-            {
-                Content = new StringContent(json, Encoding.UTF8, "application/json")
-            };
-
-            requestMessage.Headers.Add("x-client-id", payos["ClientId"]);
-            requestMessage.Headers.Add("x-api-key", payos["ApiKey"]);
-            requestMessage.Headers.Add("accept", "application/json");
-
-            var response = await httpClient.SendAsync(requestMessage);
-            if (!response.IsSuccessStatusCode)
-            {
-                var errorDetails = await response.Content.ReadAsStringAsync();
-                throw new Exception($"PayOS Error: {response.StatusCode} - {errorDetails}");
-            }
-
-            var responseJson = await response.Content.ReadAsStringAsync();
-            var result = JsonConvert.DeserializeObject<dynamic>(responseJson);
-
-            string checkoutUrl = result?.data?.checkoutUrl;
-
             return Ok(new CreateOrderResponseDto
             {
-                CheckoutUrl = checkoutUrl
+                CheckoutUrl = order.CheckoutUrl
             });
         }
 
         [Authorize]
         [HttpGet("return")]
         public async Task<ActionResult<ReturnOrderResponseDto>> ReturnOrder(
-            [FromQuery] string code,
-            [FromQuery] string id,
-            [FromQuery] bool cancel,
             [FromQuery] string status,
-            [FromQuery] long orderCode)
+            [FromQuery] long orderCode,
+            [FromQuery] bool cancel = false)
         {
             var response = new ReturnOrderResponseDto
             {
@@ -187,22 +97,6 @@ namespace API.Controllers
             }
 
             return Ok(response);
-        }
-
-        private static string GenerateSignature(
-            long orderCode,
-            int amount,
-            string description,
-            string returnUrl,
-            string cancelUrl,
-            string checksumKey)
-        {
-            string raw =
-                $"amount={amount}&cancelUrl={cancelUrl}&description={description}&orderCode={orderCode}&returnUrl={returnUrl}";
-
-            using var hmac = new HMACSHA256(Encoding.UTF8.GetBytes(checksumKey));
-            var hash = hmac.ComputeHash(Encoding.UTF8.GetBytes(raw));
-            return BitConverter.ToString(hash).Replace("-", "").ToLower();
         }
     }
 }

@@ -1,4 +1,4 @@
-using Infrastructure.Interface;
+using Domain.Common.Interfaces;
 using Infrastructure.Persistence;
 using Domain.CourseManagement.Aggregate;
 using Domain.CourseManagement.Entity;
@@ -6,23 +6,14 @@ using Domain.CourseManagement.Enum;
 using Domain.IdentityManagement.ValueObject;
 using Microsoft.EntityFrameworkCore;
 
-using Domain.CourseManagement.Aggregate;
-
 namespace Infrastructure.Implementation
 {
     public class CourseRepository :
         GenericRepository<Course>,
         ICourseRepository
     {
-        #region Attributes
-        #endregion
-
-        #region Properties
-        #endregion
-
         public CourseRepository(EducationPlatformDBContext context) : base(context) { }
 
-        #region Methods
         public async Task<IEnumerable<Course>> GetAllCourses(
             string? title,
             decimal? price,
@@ -255,12 +246,12 @@ namespace Infrastructure.Implementation
         }
 
         public async Task<(
-           int InReview,
-           int Rejected,
-           int Published,
-           Dictionary<string, int> GradeCounts,
-           Dictionary<string, int> SubjectCounts
-       )> Summary(DateTime? from, DateTime? to)
+            int InReview,
+            int Rejected,
+            int Published,
+            Dictionary<string, int> GradeCounts,
+            Dictionary<string, int> SubjectCounts
+        )> Summary(DateTime? from, DateTime? to)
         {
             var query = context.Courses.AsQueryable();
 
@@ -373,7 +364,5 @@ namespace Infrastructure.Implementation
                 }
             };
         }
-        #endregion
     }
 }
-

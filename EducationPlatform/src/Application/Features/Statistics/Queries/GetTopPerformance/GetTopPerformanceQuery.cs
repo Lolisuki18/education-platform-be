@@ -1,6 +1,6 @@
 using Application.Results;
 using MediatR;
-using Infrastructure.Interface;
+using Domain.Common.Interfaces;
 using System.Linq;
 
 namespace Application.Features.Statistics.Queries.GetTopPerformance

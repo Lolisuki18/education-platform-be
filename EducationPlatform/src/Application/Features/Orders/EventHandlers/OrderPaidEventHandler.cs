@@ -1,6 +1,6 @@
 using Domain.OrderManagement.Events;
 using MediatR;
-using Infrastructure.Interface;
+using Domain.Common.Interfaces;
 using Domain.EnrollmentManagement.Aggregate;
 
 namespace Application.Features.Orders.EventHandlers

@@ -1,6 +1,6 @@
 using MediatR;
 using Application.Results;
-using Infrastructure.Interface;
+using Domain.Common.Interfaces;
 using Application.BusinessException;
 using Application.Helper;
 

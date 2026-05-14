@@ -11,6 +11,7 @@ namespace Domain.OrderManagement.Aggregate
     public class Order : BaseEntity
     {
         #region Attributes
+        public const decimal PLATFORM_COMMISSION_RATE = 0.15m;
         #endregion
 
         #region Properties

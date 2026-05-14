@@ -1,30 +1,35 @@
 using Application.Results;
 using MediatR;
-using Infrastructure.Interface;
+using Domain.Common.Interfaces;
 using AutoMapper;
 using Application.BusinessException;
+using Application.Interface;
 
 namespace Application.Features.Enrollments.Queries.GetEnrollmentDetail
 {
     public class GetEnrollmentDetailQuery : IRequest<EnrollmentDetailDTO>
     {
         public Guid EnrollmentID { get; set; }
-        public Guid CallerId { get; set; }
     }
 
     public class GetEnrollmentDetailQueryHandler : IRequestHandler<GetEnrollmentDetailQuery, EnrollmentDetailDTO>
     {
         private readonly IUnitOfWork _unitOfWork;
         private readonly IMapper _mapper;
+        private readonly ICurrentUser _currentUser;
 
-        public GetEnrollmentDetailQueryHandler(IUnitOfWork unitOfWork, IMapper mapper)
+        public GetEnrollmentDetailQueryHandler(IUnitOfWork unitOfWork, IMapper mapper, ICurrentUser currentUser)
         {
             _unitOfWork = unitOfWork;
             _mapper = mapper;
+            _currentUser = currentUser;
         }
 
         public async Task<EnrollmentDetailDTO> Handle(GetEnrollmentDetailQuery request, CancellationToken cancellationToken)
         {
+            if (!_currentUser.Id.HasValue)
+                throw new AuthenticateException("User must be authenticated.");
+
             var enrollment = await _unitOfWork
                 .GetRepository<IEnrollmentRepository>()
                 .GetEnrollmentDetailByID(request.EnrollmentID);
@@ -32,9 +37,11 @@ namespace Application.Features.Enrollments.Queries.GetEnrollmentDetail
             if (enrollment == null)
                 throw new NotFound("Enrollment detail not found");
 
-            // Basic authorization check: must be student or teacher of the course or admin
-            // (In a real app, this would be more complex, but we'll follow the legacy logic's ownership check if present)
-            // The legacy service didn't check CallerId for detail, but SubmitQuiz did.
+            // Basic authorization check
+            if (enrollment.StudentID != _currentUser.Id.Value && _currentUser.Role != "Admin")
+            {
+                 throw new ForbiddenException("You do not have permission to view this enrollment.");
+            }
 
             var dto = _mapper.Map<EnrollmentDetailDTO>(enrollment);
 

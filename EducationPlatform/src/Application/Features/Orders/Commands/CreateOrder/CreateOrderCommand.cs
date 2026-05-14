@@ -1,19 +1,18 @@
 using MediatR;
 using Application.Results;
-using Infrastructure.Interface;
+using Domain.Common.Interfaces;
 using AutoMapper;
 using Application.BusinessException;
 using Domain.CourseManagement.Aggregate;
 using Domain.OrderManagement.Aggregate;
 using Domain.OrderManagement.ValueObject;
-using Infrastructure.Persistence.Seeds;
+using Application.Interface;
 
 namespace Application.Features.Orders.Commands.CreateOrder
 {
     public class CreateOrderCommand : IRequest<OrderDTO>
     {
         public Guid CourseID { get; set; }
-        public Guid StudentID { get; set; }
         public List<Guid>? CouponIds { get; set; }
     }
 
@@ -21,15 +20,28 @@ namespace Application.Features.Orders.Commands.CreateOrder
     {
         private readonly IUnitOfWork _unitOfWork;
         private readonly IMapper _mapper;
+        private readonly ICurrentUser _currentUser;
+        private readonly IPaymentService _paymentService;
 
-        public CreateOrderCommandHandler(IUnitOfWork unitOfWork, IMapper mapper)
+        public CreateOrderCommandHandler(
+            IUnitOfWork unitOfWork, 
+            IMapper mapper, 
+            ICurrentUser currentUser,
+            IPaymentService paymentService)
         {
             _unitOfWork = unitOfWork;
             _mapper = mapper;
+            _currentUser = currentUser;
+            _paymentService = paymentService;
         }
 
         public async Task<OrderDTO> Handle(CreateOrderCommand request, CancellationToken cancellationToken)
         {
+            if (!_currentUser.Id.HasValue)
+                throw new AuthenticateException("User must be authenticated to create an order.");
+
+            Guid studentId = _currentUser.Id.Value;
+
             // Validate course existence
             var course = await _unitOfWork
                 .GetRepository<ICourseRepository>()
@@ -37,14 +49,6 @@ namespace Application.Features.Orders.Commands.CreateOrder
 
             if (course == null)
                 throw new NotFound($"Course with ID: {request.CourseID} not found.");
-
-            // Validate student existence
-            var student = await _unitOfWork
-                .GetRepository<IUserRepository>()
-                .GetByIdAsync(request.StudentID);
-
-            if (student == null)
-                throw new NotFound($"Student with ID: {request.StudentID} not found.");
 
             // Calculate discount from coupons
             decimal totalDiscount = 0;
@@ -62,7 +66,7 @@ namespace Application.Features.Orders.Commands.CreateOrder
                         continue;
 
                     // Validate coupon
-                    if (coupon.StudentID != request.StudentID || coupon.IsUsed)
+                    if (coupon.StudentID != studentId || coupon.IsUsed)
                         continue;
 
                     totalDiscount += coupon.DiscountAmount;
@@ -75,14 +79,14 @@ namespace Application.Features.Orders.Commands.CreateOrder
 
             // Apply domain - create commission from course price
             var commission = Commission.Create(
-                EnrollmentSeeder.PLATFORM_COMMISSION_RATE,
+                Order.PLATFORM_COMMISSION_RATE,
                 finalPrice);
 
             // Apply domain - create Order
             var order = new Order(
                 Guid.NewGuid(),
                 commission,
-                request.StudentID,
+                studentId,
                 request.CourseID,
                 null);
 
@@ -97,7 +101,17 @@ namespace Application.Features.Orders.Commands.CreateOrder
             _unitOfWork.GetRepository<IOrderRepository>().Add(order);
             await _unitOfWork.CommitAsync();
 
-            return _mapper.Map<OrderDTO>(order);
+            // Generate Payment Link
+            string checkoutUrl = await _paymentService.CreatePaymentLinkAsync(
+                order.OrderCode,
+                finalPrice,
+                $"Order {order.OrderCode} for course {course.Title}"
+            );
+
+            var dto = _mapper.Map<OrderDTO>(order);
+            dto.CheckoutUrl = checkoutUrl;
+
+            return dto;
         }
     }
 }

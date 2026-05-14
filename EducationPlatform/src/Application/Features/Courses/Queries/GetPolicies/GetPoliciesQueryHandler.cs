@@ -1,39 +1,34 @@
-using Application.Features.Courses.Queries.GetPolicies;
 using Application.Results;
 using AutoMapper;
-using AutoMapper.QueryableExtensions;
-using Infrastructure.Persistence;
+using Domain.Common.Interfaces;
+using Domain.CourseManagement.Aggregate;
 using MediatR;
-using Microsoft.EntityFrameworkCore;
 
 namespace Application.Features.Courses.Queries.GetPolicies
 {
     public class GetPoliciesQueryHandler : IRequestHandler<GetPoliciesQuery, IEnumerable<PolicyDTO>>
     {
-        private readonly EducationPlatformDBContext _context;
+        private readonly IUnitOfWork _unitOfWork;
         private readonly IMapper _mapper;
 
-        public GetPoliciesQueryHandler(EducationPlatformDBContext context, IMapper mapper)
+        public GetPoliciesQueryHandler(IUnitOfWork unitOfWork, IMapper mapper)
         {
-            _context = context;
+            _unitOfWork = unitOfWork;
             _mapper = mapper;
         }
 
         public async Task<IEnumerable<PolicyDTO>> Handle(GetPoliciesQuery request, CancellationToken cancellationToken)
         {
-            var query = _context.Policies
-                .AsNoTracking();
+            var policies = await _unitOfWork
+                .GetRepository<IPolicyRepository>()
+                .GetAllAsync();
 
             if (request.ActiveOnly)
             {
-                query = query.Where(p => p.IsActive);
+                policies = policies.Where(p => p.IsActive);
             }
 
-            var policies = await query
-                .ProjectTo<PolicyDTO>(_mapper.ConfigurationProvider)
-                .ToListAsync(cancellationToken);
-
-            return policies;
+            return _mapper.Map<IEnumerable<PolicyDTO>>(policies);
         }
     }
 }

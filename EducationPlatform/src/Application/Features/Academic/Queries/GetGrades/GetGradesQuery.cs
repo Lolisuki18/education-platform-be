@@ -1,6 +1,6 @@
 using Application.Results;
 using MediatR;
-using Infrastructure.Interface;
+using Domain.Common.Interfaces;
 using Application.BusinessException;
 using AutoMapper;
 

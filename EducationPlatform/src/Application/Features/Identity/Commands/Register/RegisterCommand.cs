@@ -1,5 +1,5 @@
 using MediatR;
-using Infrastructure.Interface;
+using Domain.Common.Interfaces;
 using Application.BusinessException;
 using Application.Helper;
 using Domain.IdentityManagement.Aggregate;

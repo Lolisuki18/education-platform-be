@@ -1,6 +1,6 @@
 using Domain.CourseManagement.Aggregate;
 using Domain.CourseManagement.Events;
-using Infrastructure.Interface;
+using Domain.Common.Interfaces;
 using MediatR;
 
 namespace Application.Features.Complaints.EventHandlers

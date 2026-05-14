@@ -1,5 +1,4 @@
 using Application.Results;
-using API.Helper;
 using API.Models.Enrollments;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -26,8 +25,7 @@ namespace API.Controllers
         [HttpGet]
         public async Task<ActionResult<ListEnrollmentsResponseDto>> ListEnrollments()
         {
-            var (userId, _) = CheckClaimHelper.CheckClaim(User);
-            var enrollments = await mediator.Send(new GetStudentEnrollmentsQuery { StudentID = userId });
+            var enrollments = await mediator.Send(new GetStudentEnrollmentsQuery());
             return Ok(new ListEnrollmentsResponseDto
             {
                 Enrollments = enrollments
@@ -37,11 +35,9 @@ namespace API.Controllers
         [HttpGet("{enrollmentId:guid}")]
         public async Task<ActionResult<ResumeEnrollmentResponseDto>> GetEnrollment(Guid enrollmentId)
         {
-            var (userId, _) = CheckClaimHelper.CheckClaim(User);
             var enrollment = await mediator.Send(new GetEnrollmentDetailQuery 
             { 
-                EnrollmentID = enrollmentId,
-                CallerId = userId
+                EnrollmentID = enrollmentId
             });
             return Ok(new ResumeEnrollmentResponseDto
             {
@@ -52,15 +48,12 @@ namespace API.Controllers
         [HttpPost("progress/lesson")]
         public async Task<IActionResult> UpdateLessonProgress([FromBody] UpdateLessonProgressRequestDto request)
         {
-            var (userId, _) = CheckClaimHelper.CheckClaim(User);
-
             await mediator.Send(new UpdateLessonProgressCommand
             {
                 EnrollmentID = request.EnrollmentId,
                 ChapterID    = request.ChapterId,
                 LessonID     = request.LessonId,
-                IsCompleted  = request.IsCompleted,
-                CallerId     = userId
+                IsCompleted  = request.IsCompleted
             });
 
             return Ok();
@@ -69,16 +62,13 @@ namespace API.Controllers
         [HttpPost("progress/quiz")]
         public async Task<ActionResult<UpdateQuizProgressResponseDto>> UpdateQuizProgress([FromBody] UpdateQuizProgressRequestDto request)
         {
-            var (userId, _) = CheckClaimHelper.CheckClaim(User);
-
             var result = await mediator.Send(new SubmitQuizCommand
             {
                 EnrollmentID    = request.EnrollmentId,
                 ChapterID       = request.ChapterId,
                 LessonID        = request.LessonId,
                 QuizID          = request.QuizId,
-                SelectedAnswers = request.SelectedAnswers,
-                CallerId        = userId
+                SelectedAnswers = request.SelectedAnswers
             });
 
             return Ok(new UpdateQuizProgressResponseDto

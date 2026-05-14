@@ -20,9 +20,6 @@ namespace Application.Features.Courses.ReviewCourse
 
         // ----- Optional admin note -----
         public string? AdminNote { get; set; }
-
-        // ----- Caller context (set by Controller) -----
-        public Guid CallerId { get; set; }
     }
 
     public class ViolatedChapterItem

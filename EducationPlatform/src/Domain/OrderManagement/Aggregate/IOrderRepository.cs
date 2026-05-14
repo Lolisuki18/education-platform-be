@@ -1,10 +1,9 @@
-using Domain.OrderManagement.Aggregate;
+using Domain.Common.Interfaces;
 
-namespace Infrastructure.Interface
+namespace Domain.OrderManagement.Aggregate
 {
     public interface IOrderRepository :
-        IGenericRepository<Order>,
-        IRepositoryBase
+        IGenericRepository<Order>
     {
         Task<IEnumerable<Order>> GetOrders(
             string? status,
@@ -63,4 +62,3 @@ namespace Infrastructure.Interface
                 int top);
     }
 }
-

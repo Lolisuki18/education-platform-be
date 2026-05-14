@@ -1,45 +1,39 @@
-using Application.Features.Complaints.Queries.GetComplaints;
 using Application.Results;
 using AutoMapper;
-using AutoMapper.QueryableExtensions;
-using Infrastructure.Persistence;
+using Domain.Common.Interfaces;
+using Domain.CourseManagement.Aggregate;
+using Domain.IdentityManagement.ValueObject;
 using MediatR;
-using Microsoft.EntityFrameworkCore;
+using Application.Interface;
 
 namespace Application.Features.Complaints.Queries.GetComplaints
 {
     public class GetComplaintsQueryHandler : IRequestHandler<GetComplaintsQuery, IEnumerable<ComplaintDTO>>
     {
-        private readonly EducationPlatformDBContext _context;
+        private readonly IUnitOfWork _unitOfWork;
         private readonly IMapper _mapper;
+        private readonly ICurrentUser _currentUser;
 
-        public GetComplaintsQueryHandler(EducationPlatformDBContext context, IMapper mapper)
+        public GetComplaintsQueryHandler(IUnitOfWork unitOfWork, IMapper mapper, ICurrentUser currentUser)
         {
-            _context = context;
+            _unitOfWork = unitOfWork;
             _mapper = mapper;
+            _currentUser = currentUser;
         }
 
         public async Task<IEnumerable<ComplaintDTO>> Handle(GetComplaintsQuery request, CancellationToken cancellationToken)
         {
-            var query = _context.Complaints
-                .AsNoTracking();
-
-            if (request.Status.HasValue)
+            Guid? teacherId = null;
+            if (_currentUser.Role == Role.Teacher.ToString())
             {
-                query = query.Where(c => c.Status == request.Status.Value);
+                teacherId = _currentUser.Id;
             }
 
-            if (request.TeacherId.HasValue)
-            {
-                query = query.Where(c => c.Course.TeacherID == request.TeacherId.Value);
-            }
+            var complaints = await _unitOfWork
+                .GetRepository<ICourseRepository>()
+                .GetComplaintsAsync(request.Status, teacherId);
 
-            var complaints = await query
-                .OrderByDescending(c => c.CreatedAt)
-                .ProjectTo<ComplaintDTO>(_mapper.ConfigurationProvider)
-                .ToListAsync(cancellationToken);
-
-            return complaints;
+            return _mapper.Map<IEnumerable<ComplaintDTO>>(complaints);
         }
     }
 }

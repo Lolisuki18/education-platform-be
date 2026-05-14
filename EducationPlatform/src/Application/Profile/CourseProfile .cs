@@ -8,5 +8,7 @@ public class CourseProfile : Profile
     {
         // Map từ Domain → DTO
         CreateMap<Course, CourseDTO>();
+        CreateMap<API.Models.Courses.ListCoursesRequestDto, Application.Features.Courses.Queries.GetLandingPage.GetLandingPageQuery>();
+        CreateMap<API.Models.Courses.ReviewCourseRequestDto, Application.Features.Courses.ReviewCourse.ReviewCourseCommand>();
     }
 }

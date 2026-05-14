@@ -8,7 +8,6 @@ namespace Infrastructure.Persistence.Seeds
 {
     public static class EnrollmentSeeder
     {
-        public const decimal PLATFORM_COMMISSION_RATE = 0.15m; // 15% platform fee
 
         public static async Task<EnrollmentSeedResult> SeedAsync(
             EducationPlatformDBContext context,
@@ -52,7 +51,7 @@ namespace Infrastructure.Persistence.Seeds
                 decimal totalPrice = price ?? 0;
 
                 var commission = price.HasValue
-                    ? Commission.Create(PLATFORM_COMMISSION_RATE, totalPrice)
+                    ? Commission.Create(Order.PLATFORM_COMMISSION_RATE, totalPrice)
                     : Commission.Create(0m, 0m); // free course
 
                 // Order created date spread

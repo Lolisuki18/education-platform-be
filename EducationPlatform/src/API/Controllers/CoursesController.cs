@@ -5,10 +5,9 @@ using Application.Features.Complaints.Queries.GetComplaints;
 using Application.Features.Complaints.Queries.GetComplaintDetail;
 using Application.Features.Complaints.Commands.CreateComplaint;
 using Application.Features.Complaints.Commands.ReviewComplaint;
-using Application.Features.Academic.Queries.GetGrades;
-using Application.Features.Academic.Queries.GetSubjects;
 using Application.Features.Academic.Queries.GetDefaultLessons;
-using API.Helper;
+using Application.Features.Courses.Queries.GetLandingPage;
+using Application.Features.Courses.Queries.GetCourseDetail;
 using API.Models.Courses;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -45,51 +44,21 @@ namespace API.Controllers
         [HttpGet]
         public async Task<ActionResult<ListCoursesResponseDto>> ListCourses([FromQuery] ListCoursesRequestDto request)
         {
-            var getCoursesQuery = new Application.Features.Courses.Queries.GetCourses.GetCoursesQuery
-            {
-                Title = request.Title,
-                GradeName = request.GradeName,
-                SubjectName = request.SubjectName,
-                PageIndex = request.PageIndex,
-                PageSize = request.PageSize
-            };
-
-            if (User.Identity?.IsAuthenticated == true)
-            {
-                var (userId, role) = CheckClaimHelper.CheckClaim(User);
-                getCoursesQuery.CallerId = userId;
-                getCoursesQuery.CallerRole = role;
-            }
-
-            var courses = await mediator.Send(getCoursesQuery);
-
-            var grades = await mediator.Send(new GetGradesQuery());
-            var subjects = await mediator.Send(new GetSubjectsQuery());
+            var query = mapper.Map<GetLandingPageQuery>(request);
+            var result = await mediator.Send(query);
 
             return Ok(new ListCoursesResponseDto
             {
-                Courses = courses,
-                Grades = grades,
-                Subjects = subjects
+                Courses = result.Courses.ToList(),
+                Grades = result.Grades.ToList(),
+                Subjects = result.Subjects.ToList()
             });
         }
 
         [HttpGet("{id:guid}")]
         public async Task<ActionResult<CourseDetailDTO>> GetCourseDetail(Guid id)
         {
-            var query = new Application.Features.Courses.Queries.GetCourseDetail.GetCourseDetailQuery
-            {
-                CourseID = id
-            };
-
-            if (User.Identity?.IsAuthenticated == true)
-            {
-                var (userId, role) = CheckClaimHelper.CheckClaim(User);
-                query.CallerId   = userId;
-                query.CallerRole = role;
-            }
-
-            var course = await mediator.Send(query);
+            var course = await mediator.Send(new GetCourseDetailQuery { CourseID = id });
             return Ok(course);
         }
 
@@ -97,30 +66,30 @@ namespace API.Controllers
         [HttpPost]
         public async Task<ActionResult<CreateCourseResponseDto>> CreateCourse([FromForm] CreateCourseRequestDto request)
         {
+            // Note: In a pure Vertical Slice, the file upload might also be inside the handler.
+            // But usually, we handle IFormFile in the Controller and pass the stream/path to the Command.
+            
             string thumbnailName = await storageService.SaveAsync(
                 request.Thumbnail.OpenReadStream(),
                 Path.GetExtension(request.Thumbnail.FileName).TrimStart('.'),
                 CancellationToken.None);
 
-            var (userId, role) = CheckClaimHelper.CheckClaim(User);
-            
-            // Map the request to MediatR command
-            var json = System.Text.Json.JsonSerializer.Serialize(request.CreateCourse);
-            var command = System.Text.Json.JsonSerializer.Deserialize<Application.Features.Courses.CreateCourse.CreateCourseCommand>(json);
-            
-            command!.ThumbnailName = thumbnailName;
-            command.CallerId = userId;
-            command.CallerRole = role;
+            var command = new Application.Features.Courses.CreateCourse.CreateCourseCommand
+            {
+                Title         = request.Title,
+                Description   = request.Description,
+                SubjectID     = request.SubjectID,
+                GradeID       = request.GradeID,
+                Price         = request.Price,
+                ThumbnailName = thumbnailName
+            };
 
-            // Send command via MediatR
             var courseId = await mediator.Send(command);
-            
-            await courseHub.Clients.All.SendAsync("CourseCreated", request.CreateCourse.Title);
 
             return Ok(new CreateCourseResponseDto
             {
-                Message = "Course submitted for admin review.",
-                Course = request.CreateCourse
+                CourseID = courseId,
+                Message  = "Course created successfully and is pending review."
             });
         }
 
@@ -133,9 +102,7 @@ namespace API.Controllers
             CancellationToken ct)
         {
             if (chunk == null || chunk.Length == 0)
-            {
                 return BadRequest("Empty chunk");
-            }
 
             await using var stream = chunk.OpenReadStream();
             await storageService.SaveChunkAsync(stream, uploadId, index, ct);
@@ -153,6 +120,7 @@ namespace API.Controllers
             var path = await storageService.CompleteUploadAsync(uploadId, extension, ct);
             var fullPath = storageService.GetFullPath(path);
 
+            // Fire and forget transcription
             _ = ExecuteTranscriptionAsync(fullPath);
 
             return Ok(new
@@ -173,13 +141,6 @@ namespace API.Controllers
         [HttpPost("complaints")]
         public async Task<ActionResult<CreateComplaintResponseDto>> CreateComplaint([FromForm] CreateComplaintRequestDto request)
         {
-            if (string.IsNullOrWhiteSpace(request.Reason))
-            {
-                return BadRequest("Reason is required.");
-            }
-
-            var (userId, _) = CheckClaimHelper.CheckClaim(User);
-
             string? imagePath = null;
             if (request.EvidenceImage != null && request.EvidenceImage.Length > 0)
             {
@@ -193,8 +154,7 @@ namespace API.Controllers
             {
                 CourseID          = request.CourseId,
                 Reason            = request.Reason,
-                EvidenceImagePath = imagePath,
-                StudentId         = userId
+                EvidenceImagePath = imagePath
             };
             
             await mediator.Send(command);
@@ -205,39 +165,20 @@ namespace API.Controllers
             });
         }
 
-        [Authorize(Roles = "Admin")]
+        [Authorize(Roles = "Admin,Teacher")]
         [HttpGet("complaints")]
         public async Task<ActionResult<IEnumerable<ComplaintDTO>>> ListComplaints([FromQuery] Domain.CourseManagement.Enum.ComplaintStatus? status)
         {
-            var (userId, role) = CheckClaimHelper.CheckClaim(User);
-            
-            var query = new GetComplaintsQuery
-            {
-                Status = status
-            };
-
-            if (role == Domain.IdentityManagement.ValueObject.Role.Teacher.ToString())
-            {
-                query.TeacherId = userId;
-            }
-
-            var complaints = await mediator.Send(query);
+            var complaints = await mediator.Send(new GetComplaintsQuery { Status = status });
             return Ok(complaints);
         }
 
         [Authorize(Roles = "Admin")]
         [HttpGet("complaints/{id:guid}")]
-        public async Task<ActionResult<ReviewComplaintResponseDto>> GetComplaintDetail(Guid id)
+        public async Task<ActionResult<ReviewComplaintResponseDto>> GetComplaintDetailForReview(Guid id)
         {
-            var (userId, role) = CheckClaimHelper.CheckClaim(User);
             var complaint = await mediator.Send(new GetComplaintDetailQuery { ComplaintID = id });
-            var course = await mediator.Send(
-                new Application.Features.Courses.Queries.GetCourseDetail.GetCourseDetailQuery
-                {
-                    CourseID   = complaint.CourseID,
-                    CallerId   = userId,
-                    CallerRole = role
-                });
+            var course = await mediator.Send(new GetCourseDetailQuery { CourseID = complaint.CourseID });
 
             return Ok(new ReviewComplaintResponseDto
             {
@@ -251,26 +192,15 @@ namespace API.Controllers
         [HttpPost("complaints/review")]
         public async Task<ActionResult<ReviewComplaintResponseDto>> ReviewComplaint([FromBody] ReviewComplaintRequestDto request)
         {
-            var (userId, _) = CheckClaimHelper.CheckClaim(User);
-            
-            var command = new ReviewComplaintCommand
+            await mediator.Send(new ReviewComplaintCommand
             {
                 ComplaintID = request.ComplaintID,
                 IsApproved  = request.IsApproved,
-                AdminNote   = request.AdminNote,
-                CallerId    = userId
-            };
-
-            await mediator.Send(command);
+                AdminNote   = request.AdminNote
+            });
 
             var complaint = await mediator.Send(new GetComplaintDetailQuery { ComplaintID = request.ComplaintID });
-            var course = await mediator.Send(
-                new Application.Features.Courses.Queries.GetCourseDetail.GetCourseDetailQuery
-                {
-                    CourseID   = complaint.CourseID,
-                    CallerId   = userId,
-                    CallerRole = "Admin"
-                });
+            var course = await mediator.Send(new GetCourseDetailQuery { CourseID = complaint.CourseID });
 
             return Ok(new ReviewComplaintResponseDto
             {
@@ -282,16 +212,9 @@ namespace API.Controllers
 
         [Authorize(Roles = "Admin")]
         [HttpGet("review/{id:guid}")]
-        public async Task<ActionResult<ReviewCourseResponseDto>> GetReviewCourse(Guid id)
+        public async Task<ActionResult<ReviewCourseResponseDto>> GetCourseForReview(Guid id)
         {
-            var (userId, role) = CheckClaimHelper.CheckClaim(User);
-            var course = await mediator.Send(
-                new Application.Features.Courses.Queries.GetCourseDetail.GetCourseDetailQuery
-                {
-                    CourseID   = id,
-                    CallerId   = userId,
-                    CallerRole = role
-                });
+            var course = await mediator.Send(new GetCourseDetailQuery { CourseID = id });
             var policies = await mediator.Send(new GetPoliciesQuery());
 
             return Ok(new ReviewCourseResponseDto
@@ -306,34 +229,12 @@ namespace API.Controllers
         [HttpPost("review")]
         public async Task<ActionResult<ReviewCourseResponseDto>> ReviewCourse([FromBody] ReviewCourseRequestDto request)
         {
-            var (userId, _) = CheckClaimHelper.CheckClaim(User);
-
-            // Build the MediatR command from API request DTO
-            var command = new Application.Features.Courses.ReviewCourse.ReviewCourseCommand
-            {
-                CourseID        = request.CourseID,
-                ViolatedPolicyIDs = request.ViolatedPolicyIDs,
-                ViolatedChapters  = request.ViolatedChapters?
-                    .Select(x => new Application.Features.Courses.ReviewCourse.ViolatedChapterItem
-                    {
-                        ViolatedChapterId = x.ViolatedChapterId,
-                        AdminNote         = x.AdminNote
-                    }).ToList(),
-                AdminNote  = request.AdminNote,
-                CallerId   = userId
-            };
-
+            var command = mapper.Map<Application.Features.Courses.ReviewCourse.ReviewCourseCommand>(request);
             await mediator.Send(command);
 
             await courseHub.Clients.All.SendAsync("CourseReviewed", request.CourseID);
 
-            var course = await mediator.Send(
-                new Application.Features.Courses.Queries.GetCourseDetail.GetCourseDetailQuery
-                {
-                    CourseID   = request.CourseID,
-                    CallerId   = userId,
-                    CallerRole = "Admin"
-                });
+            var course = await mediator.Send(new GetCourseDetailQuery { CourseID = request.CourseID });
             var policies = await mediator.Send(new GetPoliciesQuery());
 
             return Ok(new ReviewCourseResponseDto
@@ -352,7 +253,7 @@ namespace API.Controllers
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"❌ Transcription error: {ex.Message}");
+                Console.WriteLine($"Transcription error: {ex.Message}");
             }
         }
     }
