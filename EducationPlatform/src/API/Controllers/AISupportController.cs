@@ -1,5 +1,6 @@
 using Application.Interface;
 using API.Models.AISupport;
+using API.Models.Common;
 using API.Helper;
 using Application.Features.Courses.Queries.GetCourseDetail;
 using Application.Features.Enrollments.Queries.GetStudentEnrollments;
@@ -29,14 +30,14 @@ namespace API.Controllers
         }
 
         [HttpGet("load")]
-        public async Task<ActionResult<AISupportLoadResponseDto>> Load([FromQuery] AISupportLoadRequestDto request)
+        public async Task<ActionResult<ApiResponse<AISupportLoadResponseDto>>> Load([FromQuery] AISupportLoadRequestDto request)
         {
             var (userId, _) = CheckClaimHelper.CheckClaim(User);
             var enrollments = (await mediator.Send(new GetStudentEnrollmentsQuery())).ToList();
 
             var response = new AISupportLoadResponseDto
             {
-                Enrollments = enrollments,
+                Enrollments          = enrollments,
                 SelectedEnrollmentId = request.SelectedEnrollmentId
             };
 
@@ -47,7 +48,7 @@ namespace API.Controllers
                 {
                     var courseDetail = await mediator.Send(new GetCourseDetailQuery
                     {
-                        CourseID   = enrollment.CourseID
+                        CourseID = enrollment.CourseID
                     });
                     response.SelectedCourse = courseDetail;
                     response.Chapters = courseDetail.Chapters.OrderBy(c => c.Order).ToList();
@@ -67,14 +68,14 @@ namespace API.Controllers
             if (request.SelectedLessonId.HasValue && response.Lessons.Count > 0)
             {
                 response.SelectedLessonId = request.SelectedLessonId;
-                response.SelectedLesson = response.Lessons.FirstOrDefault(l => l.LessonID == request.SelectedLessonId);
+                response.SelectedLesson   = response.Lessons.FirstOrDefault(l => l.LessonID == request.SelectedLessonId);
             }
 
-            return Ok(response);
+            return Ok(ApiResponse<AISupportLoadResponseDto>.Success(response));
         }
 
         [HttpPost("generate-quiz")]
-        public async Task<ActionResult<GenerateQuizResponseDto>> GenerateQuiz([FromBody] GenerateQuizRequestDto request)
+        public async Task<ActionResult<ApiResponse<GenerateQuizResponseDto>>> GenerateQuiz([FromBody] GenerateQuizRequestDto request)
         {
             var (userId, _) = CheckClaimHelper.CheckClaim(User);
 
@@ -83,19 +84,19 @@ namespace API.Controllers
 
             if (enrollment == null)
             {
-                return NotFound("Enrollment not found.");
+                return NotFound(ApiResponse.Success("Enrollment not found.", 404));
             }
 
             var courseDetail = await mediator.Send(new GetCourseDetailQuery
             {
-                CourseID   = enrollment.CourseID
+                CourseID = enrollment.CourseID
             });
             var chapter = courseDetail.Chapters.FirstOrDefault(c => c.ChapterID == request.ChapterId);
-            var lesson = chapter?.Lessons.FirstOrDefault(l => l.LessonID == request.LessonId);
+            var lesson  = chapter?.Lessons.FirstOrDefault(l => l.LessonID == request.LessonId);
 
             if (lesson == null)
             {
-                return NotFound("Lesson not found.");
+                return NotFound(ApiResponse.Success("Lesson not found.", 404));
             }
 
             string transcript = await storageService.GetTranscriptFromVideoAsync(
@@ -107,10 +108,10 @@ namespace API.Controllers
                 courseDetail.Subject.Name,
                 transcript);
 
-            return Ok(new GenerateQuizResponseDto
+            return Ok(ApiResponse<GenerateQuizResponseDto>.Success(new GenerateQuizResponseDto
             {
                 GeneratedQuiz = quiz
-            });
+            }));
         }
     }
 }

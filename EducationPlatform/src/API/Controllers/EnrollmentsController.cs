@@ -1,5 +1,6 @@
 using Application.Results;
 using API.Models.Enrollments;
+using API.Models.Common;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using MediatR;
@@ -23,30 +24,30 @@ namespace API.Controllers
         }
 
         [HttpGet]
-        public async Task<ActionResult<ListEnrollmentsResponseDto>> ListEnrollments()
+        public async Task<ActionResult<ApiResponse<ListEnrollmentsResponseDto>>> ListEnrollments()
         {
             var enrollments = await mediator.Send(new GetStudentEnrollmentsQuery());
-            return Ok(new ListEnrollmentsResponseDto
+            return Ok(ApiResponse<ListEnrollmentsResponseDto>.Success(new ListEnrollmentsResponseDto
             {
                 Enrollments = enrollments
-            });
+            }));
         }
 
         [HttpGet("{enrollmentId:guid}")]
-        public async Task<ActionResult<ResumeEnrollmentResponseDto>> GetEnrollment(Guid enrollmentId)
+        public async Task<ActionResult<ApiResponse<ResumeEnrollmentResponseDto>>> GetEnrollment(Guid enrollmentId)
         {
-            var enrollment = await mediator.Send(new GetEnrollmentDetailQuery 
-            { 
+            var enrollment = await mediator.Send(new GetEnrollmentDetailQuery
+            {
                 EnrollmentID = enrollmentId
             });
-            return Ok(new ResumeEnrollmentResponseDto
+            return Ok(ApiResponse<ResumeEnrollmentResponseDto>.Success(new ResumeEnrollmentResponseDto
             {
                 Enrollment = enrollment
-            });
+            }));
         }
 
         [HttpPost("progress/lesson")]
-        public async Task<IActionResult> UpdateLessonProgress([FromBody] UpdateLessonProgressRequestDto request)
+        public async Task<ActionResult<ApiResponse>> UpdateLessonProgress([FromBody] UpdateLessonProgressRequestDto request)
         {
             await mediator.Send(new UpdateLessonProgressCommand
             {
@@ -56,11 +57,11 @@ namespace API.Controllers
                 IsCompleted  = request.IsCompleted
             });
 
-            return Ok();
+            return Ok(ApiResponse.Success("Lesson progress updated successfully."));
         }
 
         [HttpPost("progress/quiz")]
-        public async Task<ActionResult<UpdateQuizProgressResponseDto>> UpdateQuizProgress([FromBody] UpdateQuizProgressRequestDto request)
+        public async Task<ActionResult<ApiResponse<UpdateQuizProgressResponseDto>>> UpdateQuizProgress([FromBody] UpdateQuizProgressRequestDto request)
         {
             var result = await mediator.Send(new SubmitQuizCommand
             {
@@ -71,11 +72,11 @@ namespace API.Controllers
                 SelectedAnswers = request.SelectedAnswers
             });
 
-            return Ok(new UpdateQuizProgressResponseDto
+            return Ok(ApiResponse<UpdateQuizProgressResponseDto>.Success(new UpdateQuizProgressResponseDto
             {
-                IsCorrect = result.IsCorrect,
+                IsCorrect   = result.IsCorrect,
                 Explanation = result.Explanation
-            });
+            }));
         }
     }
 }

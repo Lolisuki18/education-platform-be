@@ -2,6 +2,7 @@ using System.Security.Claims;
 using Application.Results;
 using API.Hubs;
 using API.Models.Auth;
+using API.Models.Common;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -29,7 +30,7 @@ namespace API.Controllers
         }
 
         [HttpPost("login")]
-        public async Task<ActionResult<LoginResponseDto>> Login([FromBody] LoginRequestDto request)
+        public async Task<ActionResult<ApiResponse<LoginResponseDto>>> Login([FromBody] LoginRequestDto request)
         {
             var token = await mediator.Send(new LoginCommand
             {
@@ -37,15 +38,15 @@ namespace API.Controllers
                 Password = request.Password
             });
 
-            return Ok(new LoginResponseDto
+            return Ok(ApiResponse<LoginResponseDto>.Success(new LoginResponseDto
             {
                 AccessToken = token.Token,
                 RefreshToken = token.RefreshToken
-            });
+            }, "Login successful"));
         }
 
         [HttpPost("register")]
-        public async Task<IActionResult> Register([FromBody] RegisterRequestDto request)
+        public async Task<ActionResult<ApiResponse>> Register([FromBody] RegisterRequestDto request)
         {
             await mediator.Send(new RegisterCommand
             {
@@ -57,30 +58,30 @@ namespace API.Controllers
                 Role = request.Role
             });
 
-            return Accepted();
+            return Accepted(ApiResponse.Success("Registration successful. Please check your email to verify your account.", 202));
         }
 
         [HttpPost("verify-email")]
-        public async Task<IActionResult> VerifyEmail([FromBody] VerifyEmailRequestDto request)
+        public async Task<ActionResult<ApiResponse>> VerifyEmail([FromBody] VerifyEmailRequestDto request)
         {
             await mediator.Send(new VerifyEmailCommand { Otp = request.Otp });
-            return NoContent();
+            return Ok(ApiResponse.Success("Email verified successfully."));
         }
 
         [HttpPost("refresh-token")]
-        public async Task<ActionResult<LoginResponseDto>> RefreshToken([FromBody] string refreshToken)
+        public async Task<ActionResult<ApiResponse<LoginResponseDto>>> RefreshToken([FromBody] string refreshToken)
         {
             var token = await mediator.Send(new RefreshTokenCommand { RefreshToken = refreshToken });
-            return Ok(new LoginResponseDto
+            return Ok(ApiResponse<LoginResponseDto>.Success(new LoginResponseDto
             {
                 AccessToken = token.Token,
                 RefreshToken = token.RefreshToken
-            });
+            }, "Token refreshed successfully"));
         }
 
         [Authorize]
         [HttpPost("logout")]
-        public async Task<IActionResult> Logout()
+        public async Task<ActionResult<ApiResponse>> Logout()
         {
             var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
 
@@ -89,7 +90,7 @@ namespace API.Controllers
                 await AuthHub.ForceLogout(hubContext, userId);
             }
 
-            return NoContent();
+            return Ok(ApiResponse.Success("Logged out successfully."));
         }
     }
 }
