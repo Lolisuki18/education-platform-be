@@ -87,4 +87,4 @@ Sau khi khởi chạy, bạn có thể truy cập Swagger UI tại: `https://loc
 - **Lê Nguyễn An Ninh (Lolisuki18)** (Lead Developer)
 - **Phan Huỳnh Hải Phượng (boncloudy)** (Developer)
 - **Phùng Đức Tiệp (TiepDaCoder)** (Developer)
-- Dự án được phát triển cho môn học **PRM (Mobile Application Development)** - FPT University.
+  ❤️Dự án được phát triển cho môn học **PRM (Mobile Application Development)** - FPT University. ❤️
