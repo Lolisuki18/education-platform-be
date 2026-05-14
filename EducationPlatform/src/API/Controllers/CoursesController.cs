@@ -5,12 +5,16 @@ using Application.Features.Complaints.Queries.GetComplaints;
 using Application.Features.Complaints.Queries.GetComplaintDetail;
 using Application.Features.Complaints.Commands.CreateComplaint;
 using Application.Features.Complaints.Commands.ReviewComplaint;
+using Application.Features.Academic.Queries.GetGrades;
+using Application.Features.Academic.Queries.GetSubjects;
+using Application.Features.Academic.Queries.GetDefaultLessons;
 using API.Helper;
 using API.Models.Courses;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.SignalR;
 using API.Hubs;
+using MediatR;
 
 namespace API.Controllers
 {
@@ -18,22 +22,19 @@ namespace API.Controllers
     [Route("api/courses")]
     public class CoursesController : ControllerBase
     {
-        private readonly IAcademicService academicService;
         private readonly IStorageService storageService;
         private readonly ISpeechToTextService speechService;
         private readonly IHubContext<CourseHub> courseHub;
-        private readonly MediatR.IMediator mediator;
+        private readonly IMediator mediator;
         private readonly AutoMapper.IMapper mapper;
 
         public CoursesController(
-            IAcademicService academicService,
             IStorageService storageService,
             ISpeechToTextService speechService,
             IHubContext<CourseHub> courseHub,
-            MediatR.IMediator mediator,
+            IMediator mediator,
             AutoMapper.IMapper mapper)
         {
-            this.academicService = academicService;
             this.storageService = storageService;
             this.speechService = speechService;
             this.courseHub = courseHub;
@@ -62,8 +63,8 @@ namespace API.Controllers
 
             var courses = await mediator.Send(getCoursesQuery);
 
-            var grades = await academicService.GetGrades();
-            var subjects = await academicService.GetSubjects();
+            var grades = await mediator.Send(new GetGradesQuery());
+            var subjects = await mediator.Send(new GetSubjectsQuery());
 
             return Ok(new ListCoursesResponseDto
             {
@@ -164,7 +165,7 @@ namespace API.Controllers
         [HttpGet("default-lessons")]
         public async Task<IActionResult> GetDefaultLessons([FromQuery] Guid subjectId, [FromQuery] Guid gradeId)
         {
-            var defaultLessons = await academicService.GetDefaultLessons(subjectId, gradeId);
+            var defaultLessons = await mediator.Send(new GetDefaultLessonsQuery { SubjectId = subjectId, GradeId = gradeId });
             return Ok(defaultLessons);
         }
 

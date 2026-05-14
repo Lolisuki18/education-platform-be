@@ -15,7 +15,6 @@ namespace Application
             services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(ApplicationDI).Assembly));
 
             // Đăng ký các service
-            services.AddScoped<IAcademicService, AcademicService>();
             services.AddScoped<IStorageService, StorageService>();
             services.AddScoped<ISpeechToTextService, SpeechToTextService>();
             services.AddScoped<IAIService, AIService>();

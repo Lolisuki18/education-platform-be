@@ -1,4 +1,3 @@
-using Application.Interface;
 using API.Models.Statistics;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
@@ -8,6 +7,8 @@ using Application.Features.Statistics.Queries.GetAnalyticsGrowth;
 using Application.Features.Statistics.Queries.GetAnalyticsDemandAndSupply;
 using Application.Features.Statistics.Queries.GetAnalyticsNormalizedGrowth;
 using Application.Features.Statistics.Queries.GetTopPerformance;
+using Application.Features.Academic.Queries.GetGrades;
+using Application.Features.Academic.Queries.GetSubjects;
 
 namespace API.Controllers
 {
@@ -17,14 +18,10 @@ namespace API.Controllers
     public class StatisticsController : ControllerBase
     {
         private readonly IMediator mediator;
-        private readonly IAcademicService academicService;
 
-        public StatisticsController(
-            IMediator mediator,
-            IAcademicService academicService)
+        public StatisticsController(IMediator mediator)
         {
             this.mediator = mediator;
-            this.academicService = academicService;
         }
 
         [HttpGet("summary")]
@@ -33,8 +30,8 @@ namespace API.Controllers
             request.Query.From ??= DateTime.Now.AddMonths(-1);
             request.Query.To ??= DateTime.Now;
 
-            var grades = await academicService.GetGrades();
-            var subjects = await academicService.GetSubjects();
+            var grades = await mediator.Send(new GetGradesQuery());
+            var subjects = await mediator.Send(new GetSubjectsQuery());
             
             var summary = await mediator.Send(new GetSummaryStatisticQuery
             {
