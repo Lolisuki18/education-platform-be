@@ -37,6 +37,8 @@ namespace Infrastructure
                        .ConfigureWarnings(w => w.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning));
             });
 
+            services.AddScoped<Application.Interface.IApplicationDBContext>(sp => sp.GetRequiredService<EducationPlatformDBContext>());
+
             services.AddScoped<IAIImprovementSessionRepository, AIImprovementSessionRepository>();
             services.AddScoped<IAuditRepository, AuditLogRepository>();
             services.AddScoped<ICourseRepository, CourseRepository>();

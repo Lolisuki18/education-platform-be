@@ -3,6 +3,10 @@ using Application.Features.Academic.Queries.GetSubjects;
 using Application.Features.Statistics.Queries.GetSummaryStatistic;
 using Application.Results;
 using MediatR;
+using Application.Interface;
+using AutoMapper;
+using AutoMapper.QueryableExtensions;
+using Microsoft.EntityFrameworkCore;
 
 namespace Application.Features.Statistics.Queries.GetSummaryStatistics
 {
@@ -21,20 +25,32 @@ namespace Application.Features.Statistics.Queries.GetSummaryStatistics
 
     public class GetSummaryStatisticsQueryHandler : IRequestHandler<GetSummaryStatisticsQuery, SummaryStatisticsResult>
     {
+        private readonly IApplicationDBContext _context;
+        private readonly IMapper _mapper;
         private readonly IMediator _mediator;
 
-        public GetSummaryStatisticsQueryHandler(IMediator mediator)
+        public GetSummaryStatisticsQueryHandler(IApplicationDBContext context, IMapper mapper, IMediator mediator)
         {
+            _context = context;
+            _mapper = mapper;
             _mediator = mediator;
         }
 
         public async Task<SummaryStatisticsResult> Handle(GetSummaryStatisticsQuery request, CancellationToken cancellationToken)
         {
-            var from = request.From ?? DateTime.Now.AddMonths(-1);
-            var to = request.To ?? DateTime.Now;
+            var from = request.From ?? DateTime.UtcNow.AddMonths(-1);
+            var to = request.To ?? DateTime.UtcNow;
 
-            var grades = await _mediator.Send(new GetGradesQuery(), cancellationToken);
-            var subjects = await _mediator.Send(new GetSubjectsQuery(), cancellationToken);
+            var grades = await _context.Grades
+                .AsNoTracking()
+                .ProjectTo<GradeDTO>(_mapper.ConfigurationProvider)
+                .ToListAsync(cancellationToken);
+
+            var subjects = await _context.Subjects
+                .AsNoTracking()
+                .ProjectTo<SubjectDTO>(_mapper.ConfigurationProvider)
+                .ToListAsync(cancellationToken);
+
             var summary = await _mediator.Send(new GetSummaryStatisticQuery
             {
                 From = from,

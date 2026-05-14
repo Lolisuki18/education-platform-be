@@ -15,29 +15,40 @@ namespace Application.Features.Courses.CreateCourse
     {
         private readonly IUnitOfWork _unitOfWork;
         private readonly ICourseRepository _courseRepository;
+        private readonly IStorageService _storageService;
 
-        public CreateCourseCommandHandler(IUnitOfWork unitOfWork, ICourseRepository courseRepository)
+        public CreateCourseCommandHandler(IUnitOfWork unitOfWork, ICourseRepository courseRepository, IStorageService storageService)
         {
             _unitOfWork = unitOfWork;
             _courseRepository = courseRepository;
+            _storageService = storageService;
         }
 
         public async Task<Guid> Handle(CreateCourseCommand request, CancellationToken cancellationToken)
         {
+            string thumbnailName = request.ThumbnailName;
+            if (request.ThumbnailFile != null)
+            {
+                thumbnailName = await _storageService.SaveAsync(
+                    request.ThumbnailFile.OpenReadStream(),
+                    Path.GetExtension(request.ThumbnailFile.FileName).TrimStart('.'),
+                    cancellationToken);
+            }
+
             // Apply domain logic: create the Course aggregate
             var course = new Domain.CourseManagement.Aggregate.Course(
                 Guid.NewGuid(),
                 request.Title,
                 request.Description,
                 request.Price,
-                request.ThumbnailName,
+                thumbnailName,
                 request.Slug,
                 request.Prerequisites,
                 request.LearningOutcomes,
                 request.CallerId,
                 request.GradeID,
                 request.SubjectID,
-                DateTime.Now);
+                DateTime.UtcNow);
 
             var chapters = new List<Chapter>();
             var lessons = new List<Lesson>();

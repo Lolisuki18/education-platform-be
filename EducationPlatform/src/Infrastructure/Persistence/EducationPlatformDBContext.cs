@@ -1,3 +1,4 @@
+using Application.Interface;
 using Domain.AcademicManagement.Aggregate;
 using Domain.AcademicManagement.Entity;
 using Domain.AIManagement.Aggregate;
@@ -13,7 +14,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Infrastructure.Persistence
 {
-    public class EducationPlatformDBContext : DbContext
+    public class EducationPlatformDBContext : DbContext, IApplicationDBContext
     {
         public EducationPlatformDBContext(
             DbContextOptions<EducationPlatformDBContext> options)

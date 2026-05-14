@@ -1,5 +1,4 @@
 using Application.Results;
-using API.Models.Enrollments;
 using API.Models.Common;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -24,59 +23,31 @@ namespace API.Controllers
         }
 
         [HttpGet]
-        public async Task<ActionResult<ApiResponse<ListEnrollmentsResponseDto>>> ListEnrollments()
+        public async Task<ActionResult<ApiResponse<IEnumerable<EnrollmentDTO>>>> ListEnrollments()
         {
-            var enrollments = await mediator.Send(new GetStudentEnrollmentsQuery());
-            return Ok(ApiResponse<ListEnrollmentsResponseDto>.Success(new ListEnrollmentsResponseDto
-            {
-                Enrollments = enrollments
-            }));
+            var result = await mediator.Send(new GetStudentEnrollmentsQuery());
+            return Ok(ApiResponse<IEnumerable<EnrollmentDTO>>.Success(result));
         }
 
-        [HttpGet("{enrollmentId:guid}")]
-        public async Task<ActionResult<ApiResponse<ResumeEnrollmentResponseDto>>> GetEnrollment(Guid enrollmentId)
+        [HttpGet("{EnrollmentID:guid}")]
+        public async Task<ActionResult<ApiResponse<EnrollmentDetailDTO>>> GetEnrollment([FromRoute] GetEnrollmentDetailQuery query)
         {
-            var enrollment = await mediator.Send(new GetEnrollmentDetailQuery
-            {
-                EnrollmentID = enrollmentId
-            });
-            return Ok(ApiResponse<ResumeEnrollmentResponseDto>.Success(new ResumeEnrollmentResponseDto
-            {
-                Enrollment = enrollment
-            }));
+            var result = await mediator.Send(query);
+            return Ok(ApiResponse<EnrollmentDetailDTO>.Success(result));
         }
 
         [HttpPost("progress/lesson")]
-        public async Task<ActionResult<ApiResponse>> UpdateLessonProgress([FromBody] UpdateLessonProgressRequestDto request)
+        public async Task<ActionResult<ApiResponse>> UpdateLessonProgress([FromBody] UpdateLessonProgressCommand command)
         {
-            await mediator.Send(new UpdateLessonProgressCommand
-            {
-                EnrollmentID = request.EnrollmentId,
-                ChapterID    = request.ChapterId,
-                LessonID     = request.LessonId,
-                IsCompleted  = request.IsCompleted
-            });
-
+            await mediator.Send(command);
             return Ok(ApiResponse.Success("Lesson progress updated successfully."));
         }
 
         [HttpPost("progress/quiz")]
-        public async Task<ActionResult<ApiResponse<UpdateQuizProgressResponseDto>>> UpdateQuizProgress([FromBody] UpdateQuizProgressRequestDto request)
+        public async Task<ActionResult<ApiResponse<SubmitQuizResult>>> UpdateQuizProgress([FromBody] SubmitQuizCommand command)
         {
-            var result = await mediator.Send(new SubmitQuizCommand
-            {
-                EnrollmentID    = request.EnrollmentId,
-                ChapterID       = request.ChapterId,
-                LessonID        = request.LessonId,
-                QuizID          = request.QuizId,
-                SelectedAnswers = request.SelectedAnswers
-            });
-
-            return Ok(ApiResponse<UpdateQuizProgressResponseDto>.Success(new UpdateQuizProgressResponseDto
-            {
-                IsCorrect   = result.IsCorrect,
-                Explanation = result.Explanation
-            }));
+            var result = await mediator.Send(command);
+            return Ok(ApiResponse<SubmitQuizResult>.Success(result));
         }
     }
 }

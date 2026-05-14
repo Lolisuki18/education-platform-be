@@ -1,5 +1,6 @@
 using Domain.CourseManagement.Enum;
 using MediatR;
+using Microsoft.AspNetCore.Http;
 
 namespace Application.Features.Courses.CreateCourse
 {
@@ -12,6 +13,7 @@ namespace Application.Features.Courses.CreateCourse
         public string Description { get; set; } = string.Empty;
         public decimal? Price { get; set; }
         public string ThumbnailName { get; set; } = string.Empty;
+        public IFormFile? ThumbnailFile { get; set; }
         public string? Slug { get; set; } = string.Empty;
         public string Prerequisites { get; set; } = string.Empty;
         public string LearningOutcomes { get; set; } = string.Empty;

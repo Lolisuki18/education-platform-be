@@ -27,47 +27,36 @@ namespace API.Controllers
         }
 
         [HttpGet("summary")]
-        public async Task<ActionResult<ApiResponse<SummaryStatisticsResponseDto>>> GetSummary([FromQuery] SummaryStatisticsRequestDto request)
+        public async Task<ActionResult<ApiResponse<SummaryStatisticsResult>>> GetSummary([FromQuery] GetSummaryStatisticsQuery query)
         {
-            var query = mapper.Map<GetSummaryStatisticsQuery>(request);
             var result = await mediator.Send(query);
-
-            return Ok(ApiResponse<SummaryStatisticsResponseDto>.Success(new SummaryStatisticsResponseDto
-            {
-                Grades = result.Grades,
-                Subjects = result.Subjects,
-                Summary = result.Summary
-            }));
+            return Ok(ApiResponse<SummaryStatisticsResult>.Success(result));
         }
 
         [HttpGet("analytics/growth")]
-        public async Task<ActionResult<ApiResponse<Application.Results.AnalyticsGrowthDTO>>> GetAnalyticsGrowth([FromQuery] AnalyticsGrowthRequestDto request)
+        public async Task<ActionResult<ApiResponse<Application.Results.AnalyticsGrowthDTO>>> GetAnalyticsGrowth([FromQuery] GetAnalyticsGrowthQuery query)
         {
-            var query = mapper.Map<GetAnalyticsGrowthQuery>(request);
             var data = await mediator.Send(query);
             return Ok(ApiResponse<Application.Results.AnalyticsGrowthDTO>.Success(data));
         }
 
         [HttpGet("analytics/demand-supply")]
-        public async Task<ActionResult<ApiResponse<Application.Results.AnalyticsGrowthDTO>>> GetAnalyticsDemandAndSupply([FromQuery] AnalyticsGrowthRequestDto request)
+        public async Task<ActionResult<ApiResponse<Application.Results.AnalyticsGrowthDTO>>> GetAnalyticsDemandAndSupply([FromQuery] GetAnalyticsDemandAndSupplyQuery query)
         {
-            var query = mapper.Map<GetAnalyticsDemandAndSupplyQuery>(request);
             var data = await mediator.Send(query);
             return Ok(ApiResponse<Application.Results.AnalyticsGrowthDTO>.Success(data));
         }
 
         [HttpGet("analytics/normalized-growth")]
-        public async Task<ActionResult<ApiResponse<Application.Results.AnalyticsGrowthDTO>>> GetAnalyticsNormalizedGrowth([FromQuery] AnalyticsGrowthRequestDto request)
+        public async Task<ActionResult<ApiResponse<Application.Results.AnalyticsGrowthDTO>>> GetAnalyticsNormalizedGrowth([FromQuery] GetAnalyticsNormalizedGrowthQuery query)
         {
-            var query = mapper.Map<GetAnalyticsNormalizedGrowthQuery>(request);
             var data = await mediator.Send(query);
             return Ok(ApiResponse<Application.Results.AnalyticsGrowthDTO>.Success(data));
         }
 
         [HttpGet("analytics/top-performance")]
-        public async Task<ActionResult<ApiResponse<Application.Results.TopPerformanceDTO>>> GetTopPerformance([FromQuery] TopPerformanceRequestDto request)
+        public async Task<ActionResult<ApiResponse<Application.Results.TopPerformanceDTO>>> GetTopPerformance([FromQuery] GetTopPerformanceQuery query)
         {
-            var query = mapper.Map<GetTopPerformanceQuery>(request);
             var data = await mediator.Send(query);
             return Ok(ApiResponse<Application.Results.TopPerformanceDTO>.Success(data));
         }

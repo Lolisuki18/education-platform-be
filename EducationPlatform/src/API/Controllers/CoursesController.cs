@@ -8,6 +8,7 @@ using Application.Features.Complaints.Commands.ReviewComplaint;
 using Application.Features.Academic.Queries.GetDefaultLessons;
 using Application.Features.Courses.Queries.GetLandingPage;
 using Application.Features.Courses.Queries.GetCourseDetail;
+using Application.Features.Courses.CreateCourse;
 using API.Models.Courses;
 using API.Models.Common;
 using Microsoft.AspNetCore.Authorization;
@@ -43,17 +44,10 @@ namespace API.Controllers
         }
 
         [HttpGet]
-        public async Task<ActionResult<ApiResponse<ListCoursesResponseDto>>> ListCourses([FromQuery] ListCoursesRequestDto request)
+        public async Task<ActionResult<ApiResponse<LandingPageResult>>> ListCourses([FromQuery] GetLandingPageQuery query)
         {
-            var query = mapper.Map<GetLandingPageQuery>(request);
             var result = await mediator.Send(query);
-
-            return Ok(ApiResponse<ListCoursesResponseDto>.Success(new ListCoursesResponseDto
-            {
-                Courses  = result.Courses.ToList(),
-                Grades   = result.Grades.ToList(),
-                Subjects = result.Subjects.ToList()
-            }));
+            return Ok(ApiResponse<LandingPageResult>.Success(result));
         }
 
         [HttpGet("{id:guid}")]
@@ -65,30 +59,15 @@ namespace API.Controllers
 
         [Authorize(Roles = "Teacher")]
         [HttpPost]
-        public async Task<ActionResult<ApiResponse<CreateCourseResponseDto>>> CreateCourse([FromForm] CreateCourseRequestDto request)
+        public async Task<ActionResult<ApiResponse<Guid>>> CreateCourse([FromForm] CreateCourseCommand command)
         {
-            string thumbnailName = await storageService.SaveAsync(
-                request.Thumbnail.OpenReadStream(),
-                Path.GetExtension(request.Thumbnail.FileName).TrimStart('.'),
-                CancellationToken.None);
-
-            var command = new Application.Features.Courses.CreateCourse.CreateCourseCommand
-            {
-                Title         = request.CreateCourse.Title,
-                Description   = request.CreateCourse.Description,
-                SubjectID     = request.CreateCourse.SubjectID,
-                GradeID       = request.CreateCourse.GradeID,
-                Price         = request.CreateCourse.Price,
-                ThumbnailName = thumbnailName
-            };
+            // Inject caller info from claims
+            command.CallerId = Guid.Parse(User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value!);
+            command.CallerRole = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value!;
 
             var courseId = await mediator.Send(command);
 
-            return Ok(ApiResponse<CreateCourseResponseDto>.Success(new CreateCourseResponseDto
-            {
-                CourseID = courseId,
-                Message  = "Course created successfully and is pending review."
-            }, "Course created", 200));
+            return Ok(ApiResponse<Guid>.Success(courseId, "Course created successfully and is pending review."));
         }
 
         [Authorize(Roles = "Teacher")]
