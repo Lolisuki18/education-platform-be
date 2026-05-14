@@ -1,9 +1,13 @@
 using Application.Results;
-using Application.Interface;
 using API.Helper;
 using API.Models.Enrollments;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using MediatR;
+using Application.Features.Enrollments.Queries.GetStudentEnrollments;
+using Application.Features.Enrollments.Queries.GetEnrollmentDetail;
+using Application.Features.Enrollments.Commands.UpdateLessonProgress;
+using Application.Features.Enrollments.Commands.SubmitQuiz;
 
 namespace API.Controllers
 {
@@ -12,18 +16,18 @@ namespace API.Controllers
     [Authorize(Roles = "Student")]
     public class EnrollmentsController : ControllerBase
     {
-        private readonly IEnrollmentService enrollmentService;
+        private readonly IMediator mediator;
 
-        public EnrollmentsController(IEnrollmentService enrollmentService)
+        public EnrollmentsController(IMediator mediator)
         {
-            this.enrollmentService = enrollmentService;
+            this.mediator = mediator;
         }
 
         [HttpGet]
         public async Task<ActionResult<ListEnrollmentsResponseDto>> ListEnrollments()
         {
             var (userId, _) = CheckClaimHelper.CheckClaim(User);
-            var enrollments = await enrollmentService.GetStudentEnrollments(userId);
+            var enrollments = await mediator.Send(new GetStudentEnrollmentsQuery { StudentID = userId });
             return Ok(new ListEnrollmentsResponseDto
             {
                 Enrollments = enrollments
@@ -33,7 +37,12 @@ namespace API.Controllers
         [HttpGet("{enrollmentId:guid}")]
         public async Task<ActionResult<ResumeEnrollmentResponseDto>> GetEnrollment(Guid enrollmentId)
         {
-            var enrollment = await enrollmentService.GetEnrollmentDetail(enrollmentId);
+            var (userId, _) = CheckClaimHelper.CheckClaim(User);
+            var enrollment = await mediator.Send(new GetEnrollmentDetailQuery 
+            { 
+                EnrollmentID = enrollmentId,
+                CallerId = userId
+            });
             return Ok(new ResumeEnrollmentResponseDto
             {
                 Enrollment = enrollment
@@ -45,14 +54,14 @@ namespace API.Controllers
         {
             var (userId, _) = CheckClaimHelper.CheckClaim(User);
 
-            await enrollmentService.UpdateLessonProgress(
-                request.EnrollmentId,
-                request.ChapterId,
-                request.LessonId,
-                request.PlayedSeconds,
-                request.Duration,
-                request.IsCompleted,
-                userId);
+            await mediator.Send(new UpdateLessonProgressCommand
+            {
+                EnrollmentID = request.EnrollmentId,
+                ChapterID    = request.ChapterId,
+                LessonID     = request.LessonId,
+                IsCompleted  = request.IsCompleted,
+                CallerId     = userId
+            });
 
             return Ok();
         }
@@ -62,18 +71,20 @@ namespace API.Controllers
         {
             var (userId, _) = CheckClaimHelper.CheckClaim(User);
 
-            var result = await enrollmentService.UpdateQuizProgress(
-                request.EnrollmentId,
-                request.ChapterId,
-                request.LessonId,
-                request.QuizId,
-                request.SelectedAnswers,
-                userId);
+            var result = await mediator.Send(new SubmitQuizCommand
+            {
+                EnrollmentID    = request.EnrollmentId,
+                ChapterID       = request.ChapterId,
+                LessonID        = request.LessonId,
+                QuizID          = request.QuizId,
+                SelectedAnswers = request.SelectedAnswers,
+                CallerId        = userId
+            });
 
             return Ok(new UpdateQuizProgressResponseDto
             {
-                IsCorrect = result.isCorrect,
-                Explanation = result.explanation
+                IsCorrect = result.IsCorrect,
+                Explanation = result.Explanation
             });
         }
     }

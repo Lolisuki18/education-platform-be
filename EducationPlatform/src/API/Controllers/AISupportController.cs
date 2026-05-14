@@ -1,7 +1,8 @@
 using Application.Interface;
-using Application.Features.Courses.Queries.GetCourseDetail;
-using API.Helper;
 using API.Models.AISupport;
+using API.Helper;
+using Application.Features.Courses.Queries.GetCourseDetail;
+using Application.Features.Enrollments.Queries.GetStudentEnrollments;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -14,18 +15,15 @@ namespace API.Controllers
     public class AISupportController : ControllerBase
     {
         private readonly IStorageService storageService;
-        private readonly IEnrollmentService enrollmentService;
         private readonly IAIService aiService;
         private readonly IMediator mediator;
 
         public AISupportController(
             IStorageService storageService,
-            IEnrollmentService enrollmentService,
             IAIService aiService,
             IMediator mediator)
         {
             this.storageService = storageService;
-            this.enrollmentService = enrollmentService;
             this.aiService = aiService;
             this.mediator = mediator;
         }
@@ -34,7 +32,7 @@ namespace API.Controllers
         public async Task<ActionResult<AISupportLoadResponseDto>> Load([FromQuery] AISupportLoadRequestDto request)
         {
             var (userId, _) = CheckClaimHelper.CheckClaim(User);
-            var enrollments = (await enrollmentService.GetStudentEnrollments(userId)).ToList();
+            var enrollments = (await mediator.Send(new GetStudentEnrollmentsQuery { StudentID = userId })).ToList();
 
             var response = new AISupportLoadResponseDto
             {
@@ -82,8 +80,8 @@ namespace API.Controllers
         {
             var (userId, _) = CheckClaimHelper.CheckClaim(User);
 
-            var enrollment = (await enrollmentService.GetStudentEnrollments(userId))
-                .FirstOrDefault(e => e.EnrollmentID == request.EnrollmentId);
+            var enrollments = await mediator.Send(new GetStudentEnrollmentsQuery { StudentID = userId });
+            var enrollment = enrollments.FirstOrDefault(e => e.EnrollmentID == request.EnrollmentId);
 
             if (enrollment == null)
             {
