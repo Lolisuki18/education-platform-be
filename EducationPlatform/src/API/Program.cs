@@ -9,6 +9,8 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.IdentityModel.Tokens;
 using API.Hubs;
+using API.Middleware;
+using Microsoft.OpenApi.Models;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -70,9 +72,61 @@ builder.Services.AddAuthentication(options =>
     };
 });
 
+// ====================
+// Swagger Configuration
+// ====================
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen(c =>
+{
+    c.SwaggerDoc("v1", new OpenApiInfo { Title = "Education Platform API", Version = "v1" });
+    c.EnableAnnotations();
+
+    // JWT Configuration for Swagger
+    c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+    {
+        Description = "JWT Authorization header using the Bearer scheme. Example: \"Authorization: Bearer {token}\"",
+        Name = "Authorization",
+        In = ParameterLocation.Header,
+        Type = SecuritySchemeType.Http,
+        Scheme = "bearer"
+    });
+
+    c.AddSecurityRequirement(new OpenApiSecurityRequirement
+    {
+        {
+            new OpenApiSecurityScheme
+            {
+                Reference = new OpenApiReference
+                {
+                    Type = ReferenceType.SecurityScheme,
+                    Id = "Bearer"
+                }
+            },
+            new string[] {}
+        }
+    });
+});
+
 builder.Services.AddSignalR();
 
 var app = builder.Build();
+
+// ====================
+// Global Exception Handling
+// ====================
+app.UseMiddleware<ExceptionHandlingMiddleware>();
+
+// ====================
+// Swagger UI
+// ====================
+if (app.Environment.IsDevelopment())
+{
+    app.UseSwagger();
+    app.UseSwaggerUI(c =>
+    {
+        c.SwaggerEndpoint("/swagger/v1/swagger.json", "Education Platform API v1");
+    });
+}
 
 // ====================
 // Serve media files from storage
@@ -104,12 +158,8 @@ using (var scope = app.Services.CreateScope())
     {
         try
         {
-            // Create DB if it doesn’t exist and apply all migrations
             await db.Database.MigrateAsync();
-
-            // Always seed after migration
             await Seeder.SeedAsync(db);
-
             Console.WriteLine("Database migrated and seeded successfully.");
             break;
         }
@@ -126,7 +176,6 @@ using (var scope = app.Services.CreateScope())
 // Middleware
 // ====================
 app.UseHsts();
-
 app.UseHttpsRedirection();
 app.UseRouting();
 

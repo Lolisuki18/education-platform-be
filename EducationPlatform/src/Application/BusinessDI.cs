@@ -2,6 +2,7 @@ using AutoMapper;
 using Application.Implementation;
 using Application.Interface;
 using Microsoft.Extensions.DependencyInjection;
+using FluentValidation;
 
 namespace Application
 {
@@ -12,7 +13,14 @@ namespace Application
             services.AddAutoMapper(typeof(ApplicationDI).Assembly);
 
             // Register MediatR
-            services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(ApplicationDI).Assembly));
+            services.AddMediatR(cfg =>
+            {
+                cfg.RegisterServicesFromAssembly(typeof(ApplicationDI).Assembly);
+                cfg.AddOpenBehavior(typeof(Common.Behaviors.ValidationBehavior<,>));
+            });
+
+            // Register FluentValidation
+            services.AddValidatorsFromAssembly(typeof(ApplicationDI).Assembly);
 
             // Đăng ký các service
             services.AddScoped<IStorageService, StorageService>();
