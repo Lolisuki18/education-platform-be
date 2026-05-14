@@ -87,6 +87,13 @@ namespace Application.Results
         public decimal Value { get; set; }
     }
 
+    public class ComparisonRangeDTO
+    {
+        public DateTime? From { get; set; }
+        public DateTime? To { get; set; }
+        public string Label { get; set; } = default!;
+    }
+
     // ======================= INSIGHT =======================
     public class TopPerformanceDTO
     {

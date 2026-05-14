@@ -1,4 +1,4 @@
-using Application.Queries.Statistics;
+using Application.Results;
 
 namespace API.Models.Statistics
 {
