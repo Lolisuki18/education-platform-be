@@ -1,0 +1,29 @@
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Design;
+using Microsoft.Extensions.Configuration;
+
+namespace Infrastructure.Persistence
+{
+    public class EducationPlatformDBContextFactory
+        : IDesignTimeDbContextFactory<EducationPlatformDBContext>
+    {
+        public EducationPlatformDBContext CreateDbContext(string[] args)
+        {
+            // Build configuration
+            var configuration = new ConfigurationBuilder()
+                .SetBasePath(Directory.GetCurrentDirectory())
+                .AddJsonFile("appsettings.json", optional: false)
+                .Build();
+
+            // Get connection string
+            var connectionString = configuration.GetConnectionString("Default");
+
+            // Build DbContext
+            var optionsBuilder = new DbContextOptionsBuilder<EducationPlatformDBContext>();
+            optionsBuilder.UseSqlServer(connectionString);
+
+            return new EducationPlatformDBContext(optionsBuilder.Options);
+        }
+    }
+}
+
