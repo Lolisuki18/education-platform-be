@@ -16,8 +16,6 @@ namespace Application
 
             // Đăng ký các service
             services.AddScoped<IAcademicService, AcademicService>();
-            services.AddScoped<IIdentityService, IdentityService>();
-            services.AddScoped<IOrderService, OrderService>();
             services.AddScoped<IStorageService, StorageService>();
             services.AddScoped<IStatisticService, StatisticService>();
             services.AddScoped<ISpeechToTextService, SpeechToTextService>();

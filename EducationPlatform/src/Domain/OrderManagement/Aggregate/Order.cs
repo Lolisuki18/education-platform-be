@@ -1,12 +1,14 @@
+using Domain.Common;
 using Domain.CourseManagement.Aggregate;
 using Domain.DomainExceptions;
 using Domain.IdentityManagement.Aggregate;
 using Domain.OrderManagement.Enum;
+using Domain.OrderManagement.Events;
 using Domain.OrderManagement.ValueObject;
 
 namespace Domain.OrderManagement.Aggregate
 {
-    public class Order
+    public class Order : BaseEntity
     {
         #region Attributes
         #endregion
@@ -65,6 +67,8 @@ namespace Domain.OrderManagement.Aggregate
         {
             Status = OrderStatus.Pending;
             PaidAt = paidAt ?? DateTime.Now;
+
+            AddDomainEvent(new OrderPaidEvent(OrderID, StudentID, CourseID, PaidAt.Value));
         }
         #endregion
     }

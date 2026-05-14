@@ -1,12 +1,15 @@
 using System.Security.Claims;
 using Application.Results;
-using Application.Interface;
-using Application.Commands.Identity;
+using API.Hubs;
+using API.Models.Auth;
+using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.SignalR;
-using API.Hubs;
-using API.Models.Auth;
+using Application.Features.Identity.Commands.Login;
+using Application.Features.Identity.Commands.Register;
+using Application.Features.Identity.Commands.VerifyEmail;
+using Application.Features.Identity.Commands.RefreshToken;
 
 namespace API.Controllers
 {
@@ -14,21 +17,21 @@ namespace API.Controllers
     [Route("api/auth")]
     public class AuthController : ControllerBase
     {
-        private readonly IIdentityService identityService;
+        private readonly IMediator mediator;
         private readonly IHubContext<AuthHub> hubContext;
 
         public AuthController(
-            IIdentityService identityService,
+            IMediator mediator,
             IHubContext<AuthHub> hubContext)
         {
-            this.identityService = identityService;
+            this.mediator = mediator;
             this.hubContext = hubContext;
         }
 
         [HttpPost("login")]
         public async Task<ActionResult<LoginResponseDto>> Login([FromBody] LoginRequestDto request)
         {
-            var token = await identityService.Login(new LoginDto
+            var token = await mediator.Send(new LoginCommand
             {
                 Email = request.Email,
                 Password = request.Password
@@ -44,7 +47,7 @@ namespace API.Controllers
         [HttpPost("register")]
         public async Task<IActionResult> Register([FromBody] RegisterRequestDto request)
         {
-            await identityService.Register(new RegisterDto
+            await mediator.Send(new RegisterCommand
             {
                 Email = request.Email,
                 Password = request.Password,
@@ -60,8 +63,19 @@ namespace API.Controllers
         [HttpPost("verify-email")]
         public async Task<IActionResult> VerifyEmail([FromBody] VerifyEmailRequestDto request)
         {
-            await identityService.VerifyEmail(request.Otp);
+            await mediator.Send(new VerifyEmailCommand { Otp = request.Otp });
             return NoContent();
+        }
+
+        [HttpPost("refresh-token")]
+        public async Task<ActionResult<LoginResponseDto>> RefreshToken([FromBody] string refreshToken)
+        {
+            var token = await mediator.Send(new RefreshTokenCommand { RefreshToken = refreshToken });
+            return Ok(new LoginResponseDto
+            {
+                AccessToken = token.Token,
+                RefreshToken = token.RefreshToken
+            });
         }
 
         [Authorize]

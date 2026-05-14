@@ -1,16 +1,18 @@
 using System.Security.Cryptography;
 using System.Text;
 using Application.Results;
-using Application.Interface;
-using Application.Commands.Order;
 using Application.Features.Courses.Queries.GetCourseDetail;
-using Application.Queries.Order;
+using Application.Features.Orders.Queries.GetCoupons;
+using Application.Features.Orders.Queries.GetOrders;
+using Application.Features.Orders.Commands.CreateOrder;
+using Application.Features.Orders.Commands.FinishOrder;
 using API.Helper;
 using API.Models.Orders;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json;
+using Domain.OrderManagement.Enum;
 
 namespace API.Controllers
 {
@@ -18,19 +20,16 @@ namespace API.Controllers
     [Route("api/orders")]
     public class OrdersController : ControllerBase
     {
-        private readonly IOrderService orderService;
         private readonly HttpClient httpClient;
         private readonly IConfiguration config;
         private readonly IMediator mediator;
 
         public OrdersController(
             IConfiguration config,
-            IOrderService orderService,
             IHttpClientFactory factory,
             IMediator mediator)
         {
             this.config = config;
-            this.orderService = orderService;
             httpClient = factory.CreateClient("PayOSClient");
             this.mediator = mediator;
         }
@@ -40,7 +39,11 @@ namespace API.Controllers
         public async Task<ActionResult<IEnumerable<CouponDTO>>> ListCoupons()
         {
             var (userId, role) = CheckClaimHelper.CheckClaim(User);
-            var coupons = await orderService.GetCoupons(userId, role);
+            var coupons = await mediator.Send(new GetCouponsQuery 
+            { 
+                CallerId = userId, 
+                CallerRole = role 
+            });
             return Ok(coupons);
         }
 
@@ -50,14 +53,14 @@ namespace API.Controllers
         {
             var (userId, role) = CheckClaimHelper.CheckClaim(User);
 
-            var query = new QueryOrderDto
+            var orders = await mediator.Send(new GetOrdersQuery
             {
-                OrderStatus = request.Status,
-                PageIndex = request.Page,
-                PageSize = request.PageSize
-            };
-
-            var orders = await orderService.GetOrders(query, userId, role);
+                OrderStatus = Enum.TryParse<OrderStatus>(request.Status, true, out var s) ? s : null,
+                PageIndex   = request.Page,
+                PageSize    = request.PageSize,
+                CallerId    = userId,
+                CallerRole  = role
+            });
 
             return Ok(new ListOrdersResponseDto
             {
@@ -85,9 +88,9 @@ namespace API.Controllers
         {
             var (userId, role) = CheckClaimHelper.CheckClaim(User);
 
-            var order = await orderService.CreateOrder(new CreateOrderDto
+            var order = await mediator.Send(new CreateOrderCommand
             {
-                CourseID = request.CourseId,
+                CourseID  = request.CourseId,
                 StudentID = userId,
                 CouponIds = request.SelectedCouponIds
             });
@@ -175,7 +178,7 @@ namespace API.Controllers
 
             if (response.IsSuccess)
             {
-                await orderService.FinishOrder(orderCode);
+                await mediator.Send(new FinishOrderCommand { OrderCode = orderCode });
                 response.Message = "Payment successful! Your course is now available.";
             }
             else
