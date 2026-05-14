@@ -10,7 +10,7 @@ namespace Application
     {
         public static IServiceCollection AddApplication(this IServiceCollection services)
         {
-            services.AddAutoMapper(typeof(ApplicationDI).Assembly);
+            services.AddAutoMapper(cfg => cfg.AddMaps(typeof(ApplicationDI).Assembly));
 
             // Register MediatR
             services.AddMediatR(cfg =>
