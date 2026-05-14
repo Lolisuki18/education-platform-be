@@ -1,6 +1,8 @@
 using Application.Results;
 using MediatR;
 using Domain.Common.Interfaces;
+using Domain.EnrollmentManagement.Aggregate;
+using Domain.OrderManagement.Aggregate;
 using System.Linq;
 
 namespace Application.Features.Statistics.Queries.GetTopPerformance

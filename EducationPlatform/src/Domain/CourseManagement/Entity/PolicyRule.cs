@@ -13,6 +13,7 @@ namespace Domain.CourseManagement.Entity
         public string Description { get; private set; }
 
         public Guid PolicyID { get; private set; }
+        public bool IsActive { get; private set; } = true;
         #endregion
 
         protected PolicyRule() { }

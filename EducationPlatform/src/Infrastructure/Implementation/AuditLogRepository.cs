@@ -6,7 +6,8 @@ namespace Infrastructure.Implementation
 {
     public class AuditLogRepository :
         GenericRepository<AuditLog>,
-        IAuditLogRepository
+        IAuditRepository
+
     {
         #region Attributes
         #endregion

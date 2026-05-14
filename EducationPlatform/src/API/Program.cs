@@ -29,6 +29,7 @@ builder.Services.AddHttpClient("PayOSClient")
 // ====================
 builder.Services.AddInfrastructure();
 builder.Services.AddApplication();
+builder.Services.AddAutoMapper(typeof(API.Helper.MappingProfile));
 
 // ====================
 // JWT Authentication

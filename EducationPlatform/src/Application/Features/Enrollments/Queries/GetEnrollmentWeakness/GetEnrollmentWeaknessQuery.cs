@@ -2,6 +2,7 @@ using Application.Results;
 using MediatR;
 using Domain.Common.Interfaces;
 using Application.BusinessException;
+using Domain.EnrollmentManagement.Aggregate;
 
 namespace Application.Features.Enrollments.Queries.GetEnrollmentWeakness
 {

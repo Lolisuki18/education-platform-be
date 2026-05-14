@@ -2,6 +2,7 @@ using MediatR;
 using Application.Results;
 using Domain.Common.Interfaces;
 using Application.BusinessException;
+using Domain.IdentityManagement.Aggregate;
 using Application.Helper;
 
 namespace Application.Features.Identity.Commands.RefreshToken

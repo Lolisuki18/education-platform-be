@@ -1,6 +1,7 @@
 using MediatR;
 using Domain.Common.Interfaces;
 using Application.BusinessException;
+using Domain.IdentityManagement.Aggregate;
 
 namespace Application.Features.Identity.Commands.VerifyEmail
 {

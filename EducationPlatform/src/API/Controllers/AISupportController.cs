@@ -32,7 +32,7 @@ namespace API.Controllers
         public async Task<ActionResult<AISupportLoadResponseDto>> Load([FromQuery] AISupportLoadRequestDto request)
         {
             var (userId, _) = CheckClaimHelper.CheckClaim(User);
-            var enrollments = (await mediator.Send(new GetStudentEnrollmentsQuery { StudentID = userId })).ToList();
+            var enrollments = (await mediator.Send(new GetStudentEnrollmentsQuery())).ToList();
 
             var response = new AISupportLoadResponseDto
             {
@@ -47,9 +47,7 @@ namespace API.Controllers
                 {
                     var courseDetail = await mediator.Send(new GetCourseDetailQuery
                     {
-                        CourseID   = enrollment.CourseID,
-                        CallerId   = userId,
-                        CallerRole = "Student"
+                        CourseID   = enrollment.CourseID
                     });
                     response.SelectedCourse = courseDetail;
                     response.Chapters = courseDetail.Chapters.OrderBy(c => c.Order).ToList();
@@ -80,7 +78,7 @@ namespace API.Controllers
         {
             var (userId, _) = CheckClaimHelper.CheckClaim(User);
 
-            var enrollments = await mediator.Send(new GetStudentEnrollmentsQuery { StudentID = userId });
+            var enrollments = await mediator.Send(new GetStudentEnrollmentsQuery());
             var enrollment = enrollments.FirstOrDefault(e => e.EnrollmentID == request.EnrollmentId);
 
             if (enrollment == null)
@@ -90,9 +88,7 @@ namespace API.Controllers
 
             var courseDetail = await mediator.Send(new GetCourseDetailQuery
             {
-                CourseID   = enrollment.CourseID,
-                CallerId   = userId,
-                CallerRole = "Student"
+                CourseID   = enrollment.CourseID
             });
             var chapter = courseDetail.Chapters.FirstOrDefault(c => c.ChapterID == request.ChapterId);
             var lesson = chapter?.Lessons.FirstOrDefault(l => l.LessonID == request.LessonId);

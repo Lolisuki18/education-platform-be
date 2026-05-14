@@ -126,7 +126,7 @@ namespace Infrastructure.Implementation
                     newValue: newValue
                 );
 
-                GetRepository<IAuditLogRepository>().Add(auditLog);
+                GetRepository<IAuditRepository>().Add(auditLog);
             }
         }
         #endregion

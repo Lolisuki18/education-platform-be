@@ -6,6 +6,7 @@ using Domain.OrderManagement.Enum;
 using Domain.IdentityManagement.ValueObject;
 using Application.BusinessException;
 using Application.Interface;
+using Domain.OrderManagement.Aggregate;
 
 namespace Application.Features.Orders.Queries.GetOrders
 {

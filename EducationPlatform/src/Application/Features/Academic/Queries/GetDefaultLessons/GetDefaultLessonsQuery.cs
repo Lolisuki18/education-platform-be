@@ -2,6 +2,7 @@ using Application.Results;
 using MediatR;
 using Domain.Common.Interfaces;
 using Application.BusinessException;
+using Domain.AcademicManagement.Aggregate;
 using AutoMapper;
 
 namespace Application.Features.Academic.Queries.GetDefaultLessons

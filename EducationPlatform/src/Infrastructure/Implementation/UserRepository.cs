@@ -45,6 +45,25 @@ namespace Infrastructure.Implementation
                 .FirstOrDefaultAsync(u => u.EmailOtp == otp);
         }
 
+        public async Task<User?> GetUserForLogin(string email, string password)
+        {
+            var user = await GetUserByEmail(email);
+            if (user == null || !user.Password.Verify(password))
+                return null;
+            return user;
+        }
+
+        public async Task<User?> GetUserForRefreshToken(string refreshToken)
+        {
+            return await GetByRefreshToken(refreshToken);
+        }
+
+        public async Task<User?> GetUserForVerification(string email, string verificationCode)
+        {
+            return await context.Users
+                .FirstOrDefaultAsync(u => u.Email == email && u.EmailOtp == verificationCode);
+        }
+
         public async Task<(int TotalUsers, int TotalTeachers, int TotalStudents)> Summary(DateTime? from, DateTime? to)
         {
             var query = context.Users.AsQueryable();

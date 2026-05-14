@@ -1,6 +1,8 @@
 using Domain.CourseManagement.Aggregate;
 using Domain.CourseManagement.Events;
 using Domain.Common.Interfaces;
+using Domain.EnrollmentManagement.Aggregate;
+using Domain.OrderManagement.Aggregate;
 using MediatR;
 
 namespace Application.Features.Complaints.EventHandlers
@@ -20,9 +22,7 @@ namespace Application.Features.Complaints.EventHandlers
             
             // 1. Get already-approved complaints for this course
             var approvedComplaints = await courseRepo.GetApprovedByCoursesAsync(notification.CourseId);
-            var totalApproved = approvedComplaints.Count(); // Current one is already approved in DB at this point? 
-            // Wait, this handler runs during CommitAsync, so the current one is still in the ChangeTracker but not yet in DB unless we query the ChangeTracker.
-            // Actually, the legacy code did totalApproved = approvedComplaints.Count() + 1.
+            var totalApproved = approvedComplaints.Count();
             
             var complaintCount = totalApproved + 1; // current + previous
 
@@ -70,7 +70,6 @@ namespace Application.Features.Complaints.EventHandlers
                     }
 
                     // Cleanup: Remove the complaints history as they are resolved by course removal
-                    // Current complaint needs to be fetched from repo if we want to remove it too
                     var currentComplaint = await courseRepo.GetComplaintDetailByID(notification.ComplaintId);
                     var allToRemove = approvedComplaints.ToList();
                     if (currentComplaint != null) allToRemove.Add(currentComplaint);

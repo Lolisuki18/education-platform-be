@@ -76,11 +76,11 @@ namespace API.Controllers
 
             var command = new Application.Features.Courses.CreateCourse.CreateCourseCommand
             {
-                Title         = request.Title,
-                Description   = request.Description,
-                SubjectID     = request.SubjectID,
-                GradeID       = request.GradeID,
-                Price         = request.Price,
+                Title         = request.CreateCourse.Title,
+                Description   = request.CreateCourse.Description,
+                SubjectID     = request.CreateCourse.SubjectID,
+                GradeID       = request.CreateCourse.GradeID,
+                Price         = request.CreateCourse.Price,
                 ThumbnailName = thumbnailName
             };
 
@@ -141,20 +141,12 @@ namespace API.Controllers
         [HttpPost("complaints")]
         public async Task<ActionResult<CreateComplaintResponseDto>> CreateComplaint([FromForm] CreateComplaintRequestDto request)
         {
-            string? imagePath = null;
-            if (request.EvidenceImage != null && request.EvidenceImage.Length > 0)
-            {
-                imagePath = await storageService.SaveAsync(
-                    request.EvidenceImage.OpenReadStream(),
-                    Path.GetExtension(request.EvidenceImage.FileName).TrimStart('.'),
-                    CancellationToken.None);
-            }
-
             var command = new CreateComplaintCommand
             {
-                CourseID          = request.CourseId,
-                Reason            = request.Reason,
-                EvidenceImagePath = imagePath
+                CourseID               = request.CourseId,
+                Reason                 = request.Reason,
+                EvidenceFileStream     = request.EvidenceImage?.OpenReadStream(),
+                EvidenceFileExtension  = request.EvidenceImage != null ? Path.GetExtension(request.EvidenceImage.FileName) : null
             };
             
             await mediator.Send(command);

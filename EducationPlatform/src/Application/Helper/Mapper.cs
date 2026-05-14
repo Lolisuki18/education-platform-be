@@ -12,7 +12,7 @@ using Domain.OrderManagement.Aggregate;
 
 namespace Application.Helper
 {
-    public class Mapper : Profile
+    public class Mapper : AutoMapper.Profile
     {
         public Mapper()
         {

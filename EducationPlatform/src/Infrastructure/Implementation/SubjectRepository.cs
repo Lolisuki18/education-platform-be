@@ -19,6 +19,16 @@ namespace Infrastructure.Implementation
         public SubjectRepository(EducationPlatformDBContext context) : base(context) { }
 
         #region Methods
+        public async Task<IEnumerable<Subject>> GetSubjectsByGrade(Guid gradeId)
+        {
+            // Assuming there is a relation or we just return subjects if they are linked.
+            // Wait, looking at the models, if a Subject has a mapping to Grade or DefaultLesson links them?
+            // Since it's requested, let's implement a simple query.
+            return await context.Set<Subject>()
+                .Where(s => s.DefaultLessons.Any(dl => dl.GradeID == gradeId))
+                .ToListAsync();
+        }
+
         public async Task<IEnumerable<DefaultLesson>> GetDefaultLessons(
             Guid subjectId,
             Guid gradeId)

@@ -2,6 +2,7 @@ using Application.Results;
 using MediatR;
 using Domain.Common.Interfaces;
 using Domain.CourseManagement.Aggregate;
+using Domain.EnrollmentManagement.Aggregate;
 using Application.Enums;
 using System.Linq;
 

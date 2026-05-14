@@ -4,6 +4,7 @@ using Domain.Common.Interfaces;
 using AutoMapper;
 using Application.BusinessException;
 using Application.Interface;
+using Domain.EnrollmentManagement.Aggregate;
 
 namespace Application.Features.Enrollments.Queries.GetEnrollmentDetail
 {

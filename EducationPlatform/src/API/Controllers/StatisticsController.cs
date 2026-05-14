@@ -7,6 +7,7 @@ using Application.Features.Statistics.Queries.GetAnalyticsGrowth;
 using Application.Features.Statistics.Queries.GetAnalyticsDemandAndSupply;
 using Application.Features.Statistics.Queries.GetAnalyticsNormalizedGrowth;
 using Application.Features.Statistics.Queries.GetTopPerformance;
+using AutoMapper;
 
 namespace API.Controllers
 {
@@ -16,20 +17,19 @@ namespace API.Controllers
     public class StatisticsController : ControllerBase
     {
         private readonly IMediator mediator;
+        private readonly IMapper mapper;
 
-        public StatisticsController(IMediator mediator)
+        public StatisticsController(IMediator mediator, IMapper mapper)
         {
             this.mediator = mediator;
+            this.mapper = mapper;
         }
 
         [HttpGet("summary")]
         public async Task<ActionResult<SummaryStatisticsResponseDto>> GetSummary([FromQuery] SummaryStatisticsRequestDto request)
         {
-            var result = await mediator.Send(new GetSummaryStatisticsQuery
-            {
-                From = request.Query.From,
-                To = request.Query.To
-            });
+            var query = mapper.Map<GetSummaryStatisticsQuery>(request);
+            var result = await mediator.Send(query);
 
             return Ok(new SummaryStatisticsResponseDto
             {
@@ -42,69 +42,32 @@ namespace API.Controllers
         [HttpGet("analytics/growth")]
         public async Task<ActionResult<AnalyticsResponseDto>> GetAnalyticsGrowth([FromQuery] AnalyticsGrowthRequestDto request)
         {
-            var data = await mediator.Send(new GetAnalyticsGrowthQuery
-            {
-                Type = request.Query.Type,
-                From = request.Query.From,
-                To = request.Query.To,
-                GroupBy = request.Query.GroupBy,
-                UserRole = request.Query.UserRole,
-                CourseGradeId = request.Query.CourseGradeId,
-                CourseSubjectId = request.Query.CourseSubjectId,
-                EnrollmentGradeId = request.Query.EnrollmentGradeId,
-                EnrollmentSubjectId = request.Query.EnrollmentSubjectId,
-                RevenueType = request.Query.RevenueType,
-                ComparisonRanges = request.Query.ComparisonRanges
-            });
+            var query = mapper.Map<GetAnalyticsGrowthQuery>(request);
+            var data = await mediator.Send(query);
             return Ok(new AnalyticsResponseDto { Data = data });
         }
 
         [HttpGet("analytics/demand-supply")]
         public async Task<ActionResult<AnalyticsResponseDto>> GetAnalyticsDemandAndSupply([FromQuery] AnalyticsGrowthRequestDto request)
         {
-            var data = await mediator.Send(new GetAnalyticsDemandAndSupplyQuery
-            {
-                From = request.Query.From,
-                To = request.Query.To,
-                GroupBy = request.Query.GroupBy,
-                CourseGradeId = request.Query.CourseGradeId,
-                CourseSubjectId = request.Query.CourseSubjectId,
-                EnrollmentGradeId = request.Query.EnrollmentGradeId,
-                EnrollmentSubjectId = request.Query.EnrollmentSubjectId
-            });
+            var query = mapper.Map<GetAnalyticsDemandAndSupplyQuery>(request);
+            var data = await mediator.Send(query);
             return Ok(new AnalyticsResponseDto { Data = data });
         }
 
         [HttpGet("analytics/normalized-growth")]
         public async Task<ActionResult<AnalyticsResponseDto>> GetAnalyticsNormalizedGrowth([FromQuery] AnalyticsGrowthRequestDto request)
         {
-            var data = await mediator.Send(new GetAnalyticsNormalizedGrowthQuery
-            {
-                Type = request.Query.Type,
-                From = request.Query.From,
-                To = request.Query.To,
-                GroupBy = request.Query.GroupBy,
-                UserRole = request.Query.UserRole,
-                CourseGradeId = request.Query.CourseGradeId,
-                CourseSubjectId = request.Query.CourseSubjectId,
-                EnrollmentGradeId = request.Query.EnrollmentGradeId,
-                EnrollmentSubjectId = request.Query.EnrollmentSubjectId,
-                RevenueType = request.Query.RevenueType
-            });
+            var query = mapper.Map<GetAnalyticsNormalizedGrowthQuery>(request);
+            var data = await mediator.Send(query);
             return Ok(new AnalyticsResponseDto { Data = data });
         }
 
         [HttpGet("analytics/top-performance")]
         public async Task<ActionResult<AnalyticsResponseDto>> GetTopPerformance([FromQuery] TopPerformanceRequestDto request)
         {
-            var data = await mediator.Send(new GetTopPerformanceQuery
-            {
-                From = request.Query.From,
-                To = request.Query.To,
-                GradeId = request.Query.GradeId,
-                SubjectId = request.Query.SubjectId,
-                Top = request.Query.Top
-            });
+            var query = mapper.Map<GetTopPerformanceQuery>(request);
+            var data = await mediator.Send(query);
             return Ok(new AnalyticsResponseDto { Data = data });
         }
     }
