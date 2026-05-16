@@ -27,9 +27,6 @@ namespace Application.Features.Orders.EventHandlers
                 .GetRepository<IEnrollmentRepository>()
                 .Add(enrollment);
 
-            // Note: We don't call CommitAsync here because the dispatcher 
-            // is already inside a SaveChanges cycle or a Transaction scope 
-            // initiated by the Command Handler.
             await Task.CompletedTask;
         }
     }

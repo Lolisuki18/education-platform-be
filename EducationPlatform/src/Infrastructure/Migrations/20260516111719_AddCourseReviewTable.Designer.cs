@@ -3,6 +3,7 @@ using System;
 using Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Infrastructure.Migrations
 {
     [DbContext(typeof(EducationPlatformDBContext))]
-    partial class EducationPlatformDBContextModelSnapshot : ModelSnapshot
+    [Migration("20260516111719_AddCourseReviewTable")]
+    partial class AddCourseReviewTable
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -455,8 +458,7 @@ namespace Infrastructure.Migrations
                         .HasColumnType("uuid");
 
                     b.Property<string>("Comment")
-                        .HasMaxLength(2000)
-                        .HasColumnType("character varying(2000)");
+                        .HasColumnType("text");
 
                     b.Property<Guid>("CourseID")
                         .HasColumnType("uuid");
@@ -477,10 +479,6 @@ namespace Infrastructure.Migrations
                         .HasColumnType("timestamp with time zone");
 
                     b.HasKey("Id");
-
-                    b.HasIndex("CourseID");
-
-                    b.HasIndex("StudentID");
 
                     b.ToTable("CourseReviews");
                 });
@@ -1059,25 +1057,6 @@ namespace Infrastructure.Migrations
                         .HasForeignKey("CourseID")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
-                });
-
-            modelBuilder.Entity("Domain.CourseManagement.Entity.CourseReview", b =>
-                {
-                    b.HasOne("Domain.CourseManagement.Aggregate.Course", "Course")
-                        .WithMany()
-                        .HasForeignKey("CourseID")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("Domain.IdentityManagement.Aggregate.User", "Student")
-                        .WithMany()
-                        .HasForeignKey("StudentID")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.Navigation("Course");
-
-                    b.Navigation("Student");
                 });
 
             modelBuilder.Entity("Domain.CourseManagement.Entity.Lesson", b =>

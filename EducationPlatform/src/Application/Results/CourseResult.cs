@@ -164,6 +164,21 @@ namespace Application.Results
         public Guid PolicyID { get; set; }
     }
 
+    public class CourseReviewDTO
+    {
+        public Guid CourseReviewID { get; set; }
+
+        public string CourseName { get; set; }
+
+        public string Reviewer { get; set; }
+
+        public string Comment { get; set; }
+
+        public float Rating { get; set; }
+
+        public DateTime CreatedAt { get; set; }
+    }
+
 }
 
 

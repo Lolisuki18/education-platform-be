@@ -45,6 +45,7 @@ namespace Infrastructure.Persistence
         public DbSet<Policy> Policies => Set<Policy>();
         public DbSet<ViolatedPolicy> ViolatedPolicies => Set<ViolatedPolicy>();
         public DbSet<PolicyRule> PolicyRules => Set<PolicyRule>();
+        public DbSet<CourseReview> CourseReviews => Set<CourseReview>();
 
         // ====================
         // Payment Management
@@ -793,6 +794,40 @@ namespace Infrastructure.Persistence
                 entity.HasOne(lp => lp.Quiz)
                       .WithMany()
                       .HasForeignKey(lp => lp.QuizID)
+                      .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            // ====================
+            // CourseReview (Entity)
+            // ====================
+            modelBuilder.Entity<CourseReview>(entity =>
+            {
+                entity.HasKey(r => r.Id);
+
+                entity.Property(r => r.Rating)
+                      .IsRequired();
+
+                entity.Property(r => r.Comment)
+                      .HasMaxLength(2000);
+
+                entity.Property(r => r.CreatedAt)
+                      .IsRequired();
+
+                entity.Property(r => r.CourseID)
+                      .IsRequired();
+
+                entity.Property(r => r.StudentID)
+                      .IsRequired();
+
+                // Relationships
+                entity.HasOne(r => r.Course)
+                      .WithMany()
+                      .HasForeignKey(r => r.CourseID)
+                      .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(r => r.Student)
+                      .WithMany()
+                      .HasForeignKey(r => r.StudentID)
                       .OnDelete(DeleteBehavior.Restrict);
             });
 

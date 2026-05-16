@@ -11,6 +11,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Xunit;
 using Domain.CourseManagement.Events;
+using Application.Interface;
 
 namespace UnitTests.Application.Features.Courses.CreateCourse
 {
@@ -18,16 +19,19 @@ namespace UnitTests.Application.Features.Courses.CreateCourse
     {
         private readonly Mock<IUnitOfWork> _mockUnitOfWork;
         private readonly Mock<ICourseRepository> _mockCourseRepository;
+        private readonly Mock<IStorageService> _mockStorageService;
         private readonly CreateCourseCommandHandler _handler;
 
         public CreateCourseCommandHandlerTests()
         {
             _mockUnitOfWork = new Mock<IUnitOfWork>();
             _mockCourseRepository = new Mock<ICourseRepository>();
+            _mockStorageService = new Mock<IStorageService>();
 
             _handler = new CreateCourseCommandHandler(
                 _mockUnitOfWork.Object,
-                _mockCourseRepository.Object);
+                _mockCourseRepository.Object,
+                _mockStorageService.Object);
         }
 
         [Fact]
