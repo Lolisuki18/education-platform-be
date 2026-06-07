@@ -153,12 +153,6 @@ namespace Infrastructure.Implementation
                 }
             };
         }
-
-        public async Task<User?> GetUserById(Guid id)
-        {
-            return await context.Users.FirstOrDefaultAsync(u => u.UserID == id);
-
-        }
         #endregion
     }
 }

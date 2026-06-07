@@ -33,7 +33,7 @@ namespace Application.Features.Users.Queries
                 throw new AuthenticateException("User must be authenticated.");
 
             var userId = request.UserId == Guid.Empty ? _currentUser.Id.Value : request.UserId;
-            var user = await _unitOfWork.GetRepository<IUserRepository>().GetUserById(userId);
+            var user = await _unitOfWork.GetRepository<IUserRepository>().GetByIdAsync(userId);
 
             if (user == null)
                 throw new NotFound("User detail not found");

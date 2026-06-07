@@ -73,6 +73,8 @@ namespace Domain.IdentityManagement.Aggregate
             CreatedAt = createdAt ?? DateTime.Now;
         }
 
+
+
         #region Methods
         public void GenerateEmailOtp(TimeSpan lifetime)
         {
@@ -117,6 +119,13 @@ namespace Domain.IdentityManagement.Aggregate
         public void RevokeRefreshToken()
         {
             RefreshToken = null;
+        }
+
+        public void UpdateProfile(string? name, string? phone, string? bio)
+        {
+            Name = name ?? Name;
+            Phone = phone ?? Phone;
+            Bio = bio ?? Bio;
         }
         #endregion
     }
