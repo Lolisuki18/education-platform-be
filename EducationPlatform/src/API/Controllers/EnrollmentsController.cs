@@ -3,10 +3,9 @@ using API.Models.Common;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using MediatR;
-using Application.Features.Enrollments.Queries.GetStudentEnrollments;
 using Application.Features.Enrollments.Queries.GetEnrollmentDetail;
-using Application.Features.Enrollments.Commands.UpdateLessonProgress;
-using Application.Features.Enrollments.Commands.SubmitQuiz;
+using Application.Features.Enrollments.Commands;
+using Application.Features.Enrollments.Queries;
 
 namespace API.Controllers
 {

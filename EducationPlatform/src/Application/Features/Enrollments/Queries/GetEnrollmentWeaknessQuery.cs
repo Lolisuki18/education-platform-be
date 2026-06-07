@@ -4,7 +4,7 @@ using Domain.Common.Interfaces;
 using Application.BusinessException;
 using Domain.EnrollmentManagement.Aggregate;
 
-namespace Application.Features.Enrollments.Queries.GetEnrollmentWeakness
+namespace Application.Features.Enrollments.Queries
 {
     public class GetEnrollmentWeaknessQuery : IRequest<IEnumerable<StudentWeaknessDTO>>
     {
@@ -51,9 +51,6 @@ namespace Application.Features.Enrollments.Queries.GetEnrollmentWeakness
                         ChapterId = chapter.ChapterID,
                         LessonId = lesson.LessonID,
                         LessonTitle = lesson.Lesson?.Title ?? "",
-                        // Note: lesson.CalculateCorrectQuizRate() is an extension or domain method
-                        // We should ensure it's accessible or move it to a helper.
-                        // Assuming it's a domain method on LessonProgress entity.
                         CompletionRate = (decimal)lesson.QuizProgresses.Count(q => q.IsCorrect) / lesson.QuizProgresses.Count,
                         FailedQuizCount = failedQuiz
                     });

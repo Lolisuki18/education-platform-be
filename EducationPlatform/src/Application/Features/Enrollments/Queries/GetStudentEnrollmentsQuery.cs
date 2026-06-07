@@ -6,7 +6,7 @@ using Application.Interface;
 using Application.BusinessException;
 using Domain.EnrollmentManagement.Aggregate;
 
-namespace Application.Features.Enrollments.Queries.GetStudentEnrollments
+namespace Application.Features.Enrollments.Queries
 {
     public class GetStudentEnrollmentsQuery : IRequest<IEnumerable<EnrollmentDTO>>
     {

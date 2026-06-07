@@ -4,7 +4,7 @@ using Application.BusinessException;
 using Application.Interface;
 using Domain.EnrollmentManagement.Aggregate;
 
-namespace Application.Features.Enrollments.Commands.SubmitQuiz
+namespace Application.Features.Enrollments.Commands
 {
     public record SubmitQuizResult(bool IsCorrect, string Explanation);
 

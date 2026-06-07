@@ -3,10 +3,10 @@ using API.Models.AISupport;
 using API.Models.Common;
 using API.Helper;
 using Application.Features.Courses.Queries.GetCourseDetail;
-using Application.Features.Enrollments.Queries.GetStudentEnrollments;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Application.Features.Enrollments.Queries;
 
 namespace API.Controllers
 {
@@ -37,7 +37,7 @@ namespace API.Controllers
 
             var response = new AISupportLoadResponseDto
             {
-                Enrollments          = enrollments,
+                Enrollments = enrollments,
                 SelectedEnrollmentId = request.SelectedEnrollmentId
             };
 
@@ -68,7 +68,7 @@ namespace API.Controllers
             if (request.SelectedLessonId.HasValue && response.Lessons.Count > 0)
             {
                 response.SelectedLessonId = request.SelectedLessonId;
-                response.SelectedLesson   = response.Lessons.FirstOrDefault(l => l.LessonID == request.SelectedLessonId);
+                response.SelectedLesson = response.Lessons.FirstOrDefault(l => l.LessonID == request.SelectedLessonId);
             }
 
             return Ok(ApiResponse<AISupportLoadResponseDto>.Success(response));
@@ -92,7 +92,7 @@ namespace API.Controllers
                 CourseID = enrollment.CourseID
             });
             var chapter = courseDetail.Chapters.FirstOrDefault(c => c.ChapterID == request.ChapterId);
-            var lesson  = chapter?.Lessons.FirstOrDefault(l => l.LessonID == request.LessonId);
+            var lesson = chapter?.Lessons.FirstOrDefault(l => l.LessonID == request.LessonId);
 
             if (lesson == null)
             {
