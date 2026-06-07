@@ -9,6 +9,8 @@ namespace Domain.IdentityManagement.Aggregate
         Task<User?> GetUserForLogin(string email, string password);
         Task<User?> GetUserForRefreshToken(string refreshToken);
         Task<User?> GetUserForVerification(string email, string verificationCode);
+
+        Task<User?> GetUserById(Guid id);
         
         // Aliases for Application layer consistency
         Task<User?> GetUserByOTP(string otp);

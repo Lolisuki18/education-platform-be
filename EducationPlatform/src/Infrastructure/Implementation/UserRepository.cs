@@ -1,8 +1,9 @@
 using Domain.Common.Interfaces;
-using Infrastructure.Persistence;
 using Domain.IdentityManagement.Aggregate;
 using Domain.IdentityManagement.ValueObject;
+using Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
+using System.Numerics;
 
 namespace Infrastructure.Implementation
 {
@@ -151,6 +152,12 @@ namespace Infrastructure.Implementation
                     data.Select(x => (x.Label, (decimal)x.Count)).ToList()
                 }
             };
+        }
+
+        public async Task<User?> GetUserById(Guid id)
+        {
+            return await context.Users.FirstOrDefaultAsync(u => u.UserID == id);
+
         }
         #endregion
     }
