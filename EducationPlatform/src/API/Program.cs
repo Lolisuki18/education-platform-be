@@ -1,3 +1,4 @@
+using System.Data.Common;
 using System.Text;
 using Application;
 using Infrastructure;
@@ -14,16 +15,20 @@ using Microsoft.OpenApi.Models;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// ====================
+// 1. Core Configuration
+// ====================
 // Fix PostgreSQL DateTime issue
 AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
 
 // ====================
-// Web API
+// 2. Web API Services
 // ====================
 builder.Services.AddControllers();
 builder.Services.AddProblemDetails();
 builder.Services.AddExceptionHandler<ValidationExceptionHandler>();
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
+
 builder.Services.AddHttpClient("PayOSClient")
     .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
     {
@@ -31,14 +36,27 @@ builder.Services.AddHttpClient("PayOSClient")
     });
 
 // ====================
-// Dependency Injection (layered)
+// 3. CORS Configuration (Crucial for Flutter Web / Swagger)
+// ====================
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowAll", policy =>
+    {
+        policy.AllowAnyOrigin()
+              .AllowAnyMethod()
+              .AllowAnyHeader();
+    });
+});
+
+// ====================
+// 4. Dependency Injection (Layered)
 // ====================
 builder.Services.AddInfrastructure();
 builder.Services.AddApplication();
 builder.Services.AddAutoMapper(cfg => cfg.AddMaps(typeof(API.Helper.MappingProfile).Assembly));
 
 // ====================
-// JWT Authentication
+// 5. JWT Authentication & SignalR Setup
 // ====================
 var jwtSettings = builder.Configuration.GetSection("JwtSettings");
 var secretKey = jwtSettings["SecretKey"];
@@ -58,9 +76,7 @@ builder.Services.AddAuthentication(options =>
         ValidateIssuerSigningKey = true,
         ValidIssuer = jwtSettings["Issuer"],
         ValidAudience = jwtSettings["Audience"],
-        IssuerSigningKey = new SymmetricSecurityKey(
-            Encoding.UTF8.GetBytes(secretKey!)
-        ),
+        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey!)),
         ClockSkew = TimeSpan.Zero
     };
 
@@ -68,8 +84,19 @@ builder.Services.AddAuthentication(options =>
     {
         OnMessageReceived = context =>
         {
-            // Read JWT from cookie
+            // Read JWT from cookie (For Web browsers)
             var token = context.Request.Cookies["access_token"];
+
+            // Read JWT from query string (For Flutter SignalR Websockets)
+            var accessToken = context.Request.Query["access_token"];
+            var path = context.HttpContext.Request.Path;
+
+            if (!string.IsNullOrEmpty(accessToken) &&
+                (path.StartsWithSegments("/authHub") || path.StartsWithSegments("/courseHub")))
+            {
+                token = accessToken;
+            }
+
             if (!string.IsNullOrEmpty(token))
             {
                 context.Token = token;
@@ -80,7 +107,7 @@ builder.Services.AddAuthentication(options =>
 });
 
 // ====================
-// Swagger Configuration
+// 6. Swagger Configuration
 // ====================
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
@@ -109,19 +136,25 @@ builder.Services.AddSwaggerGen(c =>
                     Id = "Bearer"
                 }
             },
-            new string[] {}
+            Array.Empty<string>()
         }
     });
 });
 
 builder.Services.AddSignalR();
 
+// ========================================================================
+// BUID THE APP
+// ========================================================================
 var app = builder.Build();
 
 app.UseExceptionHandler();
 
+// Apply CORS middleware before Authentication/Authorization
+app.UseCors("AllowAll");
+
 // ====================
-// Swagger UI
+// 7. Environment Specific Setup
 // ====================
 if (app.Environment.IsDevelopment())
 {
@@ -132,12 +165,17 @@ if (app.Environment.IsDevelopment())
         c.RoutePrefix = string.Empty; // Set Swagger as the root page
     });
 }
+else
+{
+    // Only use HTTPS redirection in Production to avoid Android Emulator issues
+    app.UseHsts();
+    app.UseHttpsRedirection();
+}
 
 // ====================
-// Serve media files from storage
+// 8. Storage & Media Files
 // ====================
 var storageRootPath = builder.Configuration["Storage:RootPath"];
-
 if (string.IsNullOrWhiteSpace(storageRootPath))
 {
     throw new Exception("Storage:RootPath is not configured.");
@@ -151,7 +189,6 @@ if (!Directory.Exists(storageRootPath))
 }
 
 app.UseStaticFiles();
-
 app.UseStaticFiles(new StaticFileOptions
 {
     FileProvider = new PhysicalFileProvider(storageRootPath),
@@ -159,7 +196,7 @@ app.UseStaticFiles(new StaticFileOptions
 });
 
 // ====================
-// DB Migration & Seeding
+// 9. DB Migration & Seeding
 // ====================
 using (var scope = app.Services.CreateScope())
 {
@@ -172,12 +209,12 @@ using (var scope = app.Services.CreateScope())
         {
             await db.Database.MigrateAsync();
             await Seeder.SeedAsync(db);
-            Console.WriteLine("Database migrated and seeded successfully.");
+            Console.WriteLine("[Database] Migrated and seeded successfully.");
             break;
         }
-        catch (SqlException)
+        catch (DbException ex) // Handle both PostgreSQL and SQL Server issues safely
         {
-            Console.WriteLine($"Database not ready, retrying in 5s... ({i + 1}/{retries})");
+            Console.WriteLine($"[Database] Not ready, retrying in 5s... ({i + 1}/{retries}). Error: {ex.Message}");
             await Task.Delay(5000);
             if (i == retries - 1) throw;
         }
@@ -185,17 +222,15 @@ using (var scope = app.Services.CreateScope())
 }
 
 // ====================
-// Middleware
+// 10. Middleware Pipeline
 // ====================
-app.UseHsts();
-app.UseHttpsRedirection();
 app.UseRouting();
 
 app.UseAuthentication();
 app.UseAuthorization();
 
 // ====================
-// Endpoints
+// 11. Endpoints & Hubs
 // ====================
 app.MapControllers();
 app.MapHub<AuthHub>("/authHub");
