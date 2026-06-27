@@ -19,6 +19,9 @@ namespace Domain.CourseManagement.Aggregate
             Guid? teacherId,
             Role? callerRole);
 
+        Task<Course?> GetCourseMetadataByID(
+            Guid courseId);
+
         Task<Course?> GetCourseDetailByID(
             Guid courseId);
 

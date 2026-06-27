@@ -24,20 +24,17 @@ namespace API.Controllers
     public class CoursesController : ControllerBase
     {
         private readonly IStorageService storageService;
-        private readonly ISpeechToTextService speechService;
         private readonly IHubContext<CourseHub> courseHub;
         private readonly IMediator mediator;
         private readonly AutoMapper.IMapper mapper;
 
         public CoursesController(
             IStorageService storageService,
-            ISpeechToTextService speechService,
             IHubContext<CourseHub> courseHub,
             IMediator mediator,
             AutoMapper.IMapper mapper)
         {
             this.storageService = storageService;
-            this.speechService = speechService;
             this.courseHub = courseHub;
             this.mediator = mediator;
             this.mapper = mapper;
@@ -61,10 +58,6 @@ namespace API.Controllers
         [HttpPost]
         public async Task<ActionResult<ApiResponse<Guid>>> CreateCourse([FromForm] CreateCourseCommand command)
         {
-            // Inject caller info from claims
-            command.CallerId = Guid.Parse(User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value!);
-            command.CallerRole = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value!;
-
             var courseId = await mediator.Send(command);
 
             return Ok(ApiResponse<Guid>.Success(courseId, "Course created successfully and is pending review."));
@@ -93,9 +86,6 @@ namespace API.Controllers
         {
             var path = await storageService.CompleteUploadAsync(request.UploadId, request.Extension, ct);
             var fullPath = storageService.GetFullPath(path);
-
-            // Fire and forget transcription
-            _ = ExecuteTranscriptionAsync(fullPath);
 
             return Ok(ApiResponse<object>.Success(new
             {
@@ -209,18 +199,6 @@ namespace API.Controllers
                 Course   = course,
                 Policies = policies
             }));
-        }
-
-        private async Task ExecuteTranscriptionAsync(string fullPath)
-        {
-            try
-            {
-                await speechService.TranscribeVideo(fullPath);
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Transcription error: {ex.Message}");
-            }
         }
     }
 }

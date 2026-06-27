@@ -8,6 +8,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
+using Application.BusinessException;
 
 namespace Application.Features.Courses.CreateCourse
 {
@@ -16,16 +17,25 @@ namespace Application.Features.Courses.CreateCourse
         private readonly IUnitOfWork _unitOfWork;
         private readonly ICourseRepository _courseRepository;
         private readonly IStorageService _storageService;
+        private readonly ICurrentUser _currentUser;
 
-        public CreateCourseCommandHandler(IUnitOfWork unitOfWork, ICourseRepository courseRepository, IStorageService storageService)
+        public CreateCourseCommandHandler(
+            IUnitOfWork unitOfWork,
+            ICourseRepository courseRepository,
+            IStorageService storageService,
+            ICurrentUser currentUser)
         {
             _unitOfWork = unitOfWork;
             _courseRepository = courseRepository;
             _storageService = storageService;
+            _currentUser = currentUser;
         }
 
         public async Task<Guid> Handle(CreateCourseCommand request, CancellationToken cancellationToken)
         {
+            if (!_currentUser.Id.HasValue)
+                throw new AuthenticateException("User must be authenticated.");
+
             string thumbnailName = request.ThumbnailName;
             if (request.ThumbnailFile != null)
             {
@@ -45,16 +55,10 @@ namespace Application.Features.Courses.CreateCourse
                 request.Slug,
                 request.Prerequisites,
                 request.LearningOutcomes,
-                request.CallerId,
+                _currentUser.Id.Value,
                 request.GradeID,
                 request.SubjectID,
                 DateTime.UtcNow);
-
-            var chapters = new List<Chapter>();
-            var lessons = new List<Lesson>();
-            var quizzes = new List<Quiz>();
-            var assignments = new List<Assignment>();
-            var materials = new List<Material>();
 
             foreach (var chapterDto in request.Chapters)
             {
@@ -82,8 +86,6 @@ namespace Application.Features.Courses.CreateCourse
                             quizDto.Answer.CorrectAnswers,
                             quizDto.Answer.Options,
                             quizDto.Answer.TrueOrFalse);
-
-                        quizzes.Add(quiz);
                     }
 
                     foreach (var materialDto in lessonDto.Materials)
@@ -93,8 +95,6 @@ namespace Application.Features.Courses.CreateCourse
                             materialDto.Description,
                             materialDto.Url,
                             materialDto.Type);
-
-                        materials.Add(material);
                     }
 
                     foreach (var assignmentDto in lessonDto.Assignments)
@@ -103,27 +103,16 @@ namespace Application.Features.Courses.CreateCourse
                             assignmentDto.Title,
                             assignmentDto.Description,
                             assignmentDto.MaxScore);
-
-                        assignments.Add(assignment);
                     }
-
-                    lessons.Add(lesson);
                 }
-
-                chapters.Add(chapter);
             }
 
             // Apply persistence
             await _unitOfWork.BeginTransactionAsync();
             
             _courseRepository.Add(course);
-            _courseRepository.AddChapters(chapters);
-            _courseRepository.AddLessons(lessons);
-            _courseRepository.AddQuizzes(quizzes);
-            _courseRepository.AddAssignments(assignments);
-            _courseRepository.AddMaterials(materials);
             
-            await _unitOfWork.CommitAsync(request.CallerId.ToString());
+            await _unitOfWork.CommitAsync(_currentUser.Id.Value.ToString());
 
             return course.CourseID;
         }

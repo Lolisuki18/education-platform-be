@@ -5,7 +5,6 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Domain.AcademicManagement.Aggregate;
-using Domain.AIManagement.Aggregate;
 using Domain.AuditManagement.Aggregate;
 using Domain.CourseManagement.Aggregate;
 using Domain.EnrollmentManagement.Aggregate;
@@ -39,7 +38,6 @@ namespace Infrastructure
 
             services.AddScoped<Application.Interface.IApplicationDBContext>(sp => sp.GetRequiredService<EducationPlatformDBContext>());
 
-            services.AddScoped<IAIImprovementSessionRepository, AIImprovementSessionRepository>();
             services.AddScoped<IAuditRepository, AuditLogRepository>();
             services.AddScoped<ICourseRepository, CourseRepository>();
             services.AddScoped<ICourseReviewRepository, CourseReviewRepository>();

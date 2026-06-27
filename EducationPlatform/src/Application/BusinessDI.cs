@@ -24,8 +24,6 @@ namespace Application
 
             // Đăng ký các service
             services.AddScoped<IStorageService, StorageService>();
-            services.AddScoped<ISpeechToTextService, SpeechToTextService>();
-            services.AddScoped<IAIService, AIService>();
            
 
             return services;

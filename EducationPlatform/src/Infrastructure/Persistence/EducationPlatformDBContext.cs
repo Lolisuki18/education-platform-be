@@ -1,8 +1,6 @@
 using Application.Interface;
 using Domain.AcademicManagement.Aggregate;
 using Domain.AcademicManagement.Entity;
-using Domain.AIManagement.Aggregate;
-using Domain.AIManagement.Entity;
 using Domain.AuditManagement.Aggregate;
 using Domain.CourseManagement.Aggregate;
 using Domain.CourseManagement.Entity;
@@ -63,12 +61,6 @@ namespace Infrastructure.Persistence
         public DbSet<LessonProgress> LessonProgresses => Set<LessonProgress>();
         public DbSet<QuizProgress> QuizProgresses => Set<QuizProgress>();
 
-        // ====================
-        // AI Management
-        // ====================
-        public DbSet<AIImprovementSession> AIImprovementSessions => Set<AIImprovementSession>();
-        public DbSet<AIAssignment> AIAssignments => Set<AIAssignment>();
-        public DbSet<AISubmission> AISubmissions => Set<AISubmission>();
 
         // ====================
         // Audit Management
@@ -831,92 +823,6 @@ namespace Infrastructure.Persistence
                       .OnDelete(DeleteBehavior.Restrict);
             });
 
-            // ====================
-            // AIImprovementSession (Aggregate Root)
-            // ====================
-            modelBuilder.Entity<AIImprovementSession>(entity =>
-            {
-                entity.HasKey(s => s.SessionID);
-
-                entity.Property(s => s.Status)
-                      .IsRequired();
-
-                entity.Property(s => s.Insight)
-                      .HasMaxLength(2000);
-
-                entity.Property(s => s.CreatedAt)
-                      .IsRequired();
-
-                entity.Property(s => s.CompletedAt);
-
-                entity.Property(s => s.StudentID)
-                      .IsRequired();
-
-                entity.Property(s => s.CourseID)
-                      .IsRequired();
-
-                entity.Property(s => s.EnrollmentID)
-                      .IsRequired();
-
-                // ----- AIAssignments (Internal Entity)
-                entity.HasMany(s => s.AIAssignments)
-                      .WithOne()
-                      .HasForeignKey(a => a.SessionID)
-                      .OnDelete(DeleteBehavior.Cascade);
-            });
-
-
-            // ====================
-            // AIAssignment (Internal Entity)
-            // ====================
-            modelBuilder.Entity<AIAssignment>(entity =>
-            {
-                entity.HasKey(a => a.AIAssignmentID);
-
-                entity.Property(a => a.Question)
-                      .IsRequired()
-                      .HasMaxLength(2000);
-
-                entity.Property(a => a.Guidance)
-                      .HasMaxLength(2000);
-
-                entity.Property(a => a.SessionID)
-                      .IsRequired();
-
-                entity.Property(a => a.LessonID)
-                      .IsRequired();
-
-                // ----- AISubmission (Internal Entity)
-                entity.HasOne(a => a.AISubmission)
-                      .WithOne()
-                      .HasForeignKey<AISubmission>(s => s.AIAssignmentID)
-                      .OnDelete(DeleteBehavior.Restrict);
-            });
-
-
-            // ====================
-            // AISubmission (Internal Entity)
-            // ====================
-            modelBuilder.Entity<AISubmission>(entity =>
-            {
-                entity.HasKey(s => s.AISubmissionID);
-
-                entity.Property(s => s.Answer)
-                      .IsRequired()
-                      .HasMaxLength(4000);
-
-                entity.Property(s => s.Feedback)
-                      .HasMaxLength(2000);
-
-                entity.Property(s => s.IsCorrect)
-                      .IsRequired();
-
-                entity.Property(s => s.SubmittedAt)
-                      .IsRequired();
-
-                entity.Property(s => s.AIAssignmentID)
-                      .IsRequired();
-            });
 
             // ====================
             // AuditLog (Aggregate Root)

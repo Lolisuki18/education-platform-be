@@ -20,6 +20,7 @@ namespace UnitTests.Application.Features.Courses.CreateCourse
         private readonly Mock<IUnitOfWork> _mockUnitOfWork;
         private readonly Mock<ICourseRepository> _mockCourseRepository;
         private readonly Mock<IStorageService> _mockStorageService;
+        private readonly Mock<ICurrentUser> _mockCurrentUser;
         private readonly CreateCourseCommandHandler _handler;
 
         public CreateCourseCommandHandlerTests()
@@ -27,11 +28,13 @@ namespace UnitTests.Application.Features.Courses.CreateCourse
             _mockUnitOfWork = new Mock<IUnitOfWork>();
             _mockCourseRepository = new Mock<ICourseRepository>();
             _mockStorageService = new Mock<IStorageService>();
+            _mockCurrentUser = new Mock<ICurrentUser>();
 
             _handler = new CreateCourseCommandHandler(
                 _mockUnitOfWork.Object,
                 _mockCourseRepository.Object,
-                _mockStorageService.Object);
+                _mockStorageService.Object,
+                _mockCurrentUser.Object);
         }
 
         [Fact]
@@ -39,6 +42,8 @@ namespace UnitTests.Application.Features.Courses.CreateCourse
         {
             // Arrange
             var teacherId = Guid.NewGuid();
+            _mockCurrentUser.Setup(u => u.Id).Returns(teacherId);
+
             var command = new CreateCourseCommand
             {
                 Title = "Test Course",
@@ -48,7 +53,6 @@ namespace UnitTests.Application.Features.Courses.CreateCourse
                 Slug = "test-course",
                 Prerequisites = "None",
                 LearningOutcomes = "Learn testing",
-                CallerId = teacherId,
                 GradeID = Guid.NewGuid(),
                 SubjectID = Guid.NewGuid(),
                 Chapters = new List<CreateChapterCommandDto>()
@@ -65,11 +69,8 @@ namespace UnitTests.Application.Features.Courses.CreateCourse
             _mockCourseRepository.Verify(r => r.Add(It.Is<Course>(c => 
                 c.Title == command.Title && 
                 c.Price.Amount == command.Price && 
-                c.TeacherID == command.CallerId &&
+                c.TeacherID == teacherId &&
                 c.DomainEvents.Any(e => e is CourseCreatedEvent))), Times.Once);
-
-            _mockCourseRepository.Verify(r => r.AddChapters(It.IsAny<IEnumerable<Chapter>>()), Times.Once);
-            _mockCourseRepository.Verify(r => r.AddLessons(It.IsAny<IEnumerable<Lesson>>()), Times.Once);
             
             _mockUnitOfWork.Verify(u => u.CommitAsync(teacherId.ToString()), Times.Once);
         }

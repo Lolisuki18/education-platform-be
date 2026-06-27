@@ -19,8 +19,7 @@ namespace Infrastructure.Persistence.Interceptors
 
         public override InterceptionResult<int> SavingChanges(DbContextEventData eventData, InterceptionResult<int> result)
         {
-            DispatchDomainEvents(eventData.Context).GetAwaiter().GetResult();
-            return base.SavingChanges(eventData, result);
+            throw new InvalidOperationException("Use SaveChangesAsync instead of SaveChanges when using Domain Events to avoid Sync-over-Async blocking issues.");
         }
 
         public override async ValueTask<InterceptionResult<int>> SavingChangesAsync(DbContextEventData eventData, InterceptionResult<int> result, CancellationToken cancellationToken = default)

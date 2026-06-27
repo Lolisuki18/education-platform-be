@@ -6,9 +6,6 @@ namespace Application.Features.Courses.CreateCourse
 {
     public class CreateCourseCommand : IRequest<Guid>
     {
-        public Guid CallerId { get; set; }
-        public string CallerRole { get; set; } = string.Empty;
-
         public string Title { get; set; } = string.Empty;
         public string Description { get; set; } = string.Empty;
         public decimal? Price { get; set; }

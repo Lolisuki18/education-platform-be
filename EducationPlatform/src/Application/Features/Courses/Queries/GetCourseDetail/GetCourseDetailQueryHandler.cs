@@ -39,12 +39,12 @@ namespace Application.Features.Courses.Queries.GetCourseDetail
                 role = parsed;
             }
 
-            // ---------- 2. Fetch via Repository ----------
-            var course = await _unitOfWork
+            // ---------- 2. Fetch Metadata first ----------
+            var courseMetadata = await _unitOfWork
                 .GetRepository<ICourseRepository>()
-                .GetCourseDetailByID(request.CourseID);
+                .GetCourseMetadataByID(request.CourseID);
 
-            if (course == null)
+            if (courseMetadata == null)
                 throw new NotFound($"Course with ID: {request.CourseID} is not found");
 
             // ---------- 3. Visibility guard: public / student → must be Published ----------
@@ -53,14 +53,33 @@ namespace Application.Features.Courses.Queries.GetCourseDetail
 
             if (!isAdmin && !isTeacher)
             {
-                if (course.Status != CourseStatus.Published)
+                if (courseMetadata.Status != CourseStatus.Published)
                     throw new NotFound($"Course with ID: {request.CourseID} is not found");
             }
 
-            // ---------- 4. Map to DTO ----------
+            // ---------- 4. Determine if detailed chapters are needed ----------
+            // Only Admin or the Teacher who owns the course is allowed to see the chapters/lessons content
+            bool canViewChapters = isAdmin || (isTeacher && _currentUser.Id.HasValue && courseMetadata.TeacherID == _currentUser.Id.Value);
+
+            Course? course = null;
+            if (canViewChapters)
+            {
+                course = await _unitOfWork
+                    .GetRepository<ICourseRepository>()
+                    .GetCourseDetailByID(request.CourseID);
+            }
+            else
+            {
+                course = courseMetadata;
+            }
+
+            if (course == null)
+                throw new NotFound($"Course with ID: {request.CourseID} is not found");
+
+            // ---------- 5. Map to DTO ----------
             var dto = _mapper.Map<CourseDetailDTO>(course);
 
-            // ---------- 5. Apply visibility rules on DTO ----------
+            // ---------- 6. Apply visibility rules on DTO ----------
             // Students and anonymous users cannot see course content (only metadata)
             if (role == Role.Student || role == null)
             {

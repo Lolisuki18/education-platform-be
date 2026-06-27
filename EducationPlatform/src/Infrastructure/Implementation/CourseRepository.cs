@@ -89,6 +89,18 @@ namespace Infrastructure.Implementation
         }
 
 
+        public async Task<Course?> GetCourseMetadataByID(Guid courseId)
+        {
+            return await context.Courses
+                .Include(c => c.Teacher)
+                .Include(c => c.Grade)
+                .Include(c => c.Subject)
+                .Include(c => c.ViolatedPolicies)
+                    .ThenInclude(vp => vp.Policy)
+                        .ThenInclude(p => p.PolicyRules)
+                .FirstOrDefaultAsync(c => c.CourseID == courseId);
+        }
+
         public async Task<Course?> GetCourseDetailByID(Guid courseId)
         {
             return await context.Courses
