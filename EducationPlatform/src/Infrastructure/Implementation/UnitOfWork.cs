@@ -130,6 +130,26 @@ namespace Infrastructure.Implementation
             }
         }
         #endregion
+
+        public async ValueTask DisposeAsync()
+        {
+            if (transaction != null)
+            {
+                try
+                {
+                    await transaction.RollbackAsync();
+                }
+                catch
+                {
+                    // Nuốt lỗi nếu connection hoặc transaction đã bị đóng băng trước đó
+                }
+                finally
+                {
+                    await transaction.DisposeAsync();
+                    transaction = null;
+                }
+            }
+        }
     }
 }
 

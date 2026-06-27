@@ -108,11 +108,22 @@ namespace Application.Features.Courses.CreateCourse
             }
 
             // Apply persistence
-            await _unitOfWork.BeginTransactionAsync();
-            
-            _courseRepository.Add(course);
-            
-            await _unitOfWork.CommitAsync(_currentUser.Id.Value.ToString());
+            try
+            {
+                await _unitOfWork.BeginTransactionAsync();
+                
+                _courseRepository.Add(course);
+                
+                await _unitOfWork.CommitAsync(_currentUser.Id.Value.ToString());
+            }
+            catch
+            {
+                if (request.ThumbnailFile != null && thumbnailName != request.ThumbnailName)
+                {
+                    await _storageService.DeleteAsync(thumbnailName);
+                }
+                throw;
+            }
 
             return course.CourseID;
         }

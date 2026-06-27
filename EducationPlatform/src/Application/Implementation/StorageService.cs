@@ -133,6 +133,16 @@ namespace Application.Implementation
         {
             return Path.Combine(root, relativePath.Replace("/", Path.DirectorySeparatorChar.ToString()));
         }
+
+        public Task DeleteAsync(string relativePath)
+        {
+            var fullPath = GetFullPath(relativePath);
+            if (System.IO.File.Exists(fullPath))
+            {
+                System.IO.File.Delete(fullPath);
+            }
+            return Task.CompletedTask;
+        }
         #endregion
     }
 }

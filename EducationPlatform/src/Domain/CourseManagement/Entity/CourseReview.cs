@@ -44,7 +44,7 @@ namespace Domain.CourseManagement.Entity
         public void UpdateReview(float rating, string? comment)
         {
             Rating = rating;
-            Comment = comment;
+            Comment = string.IsNullOrWhiteSpace(comment) ? Comment : comment;
         }
 
         public void DeleteReview()

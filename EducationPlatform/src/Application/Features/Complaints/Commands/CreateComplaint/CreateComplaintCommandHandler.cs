@@ -60,12 +60,23 @@ namespace Application.Features.Complaints.Commands.CreateComplaint
                 imagePath);
 
             // 4. Persist
-            await _unitOfWork.BeginTransactionAsync();
-            
-            var courseRepo = _unitOfWork.GetRepository<ICourseRepository>();
-            courseRepo.CreateComplaint(complaint);
+            try
+            {
+                await _unitOfWork.BeginTransactionAsync();
+                
+                var courseRepo = _unitOfWork.GetRepository<ICourseRepository>();
+                courseRepo.CreateComplaint(complaint);
 
-            await _unitOfWork.CommitAsync(studentId.ToString());
+                await _unitOfWork.CommitAsync(studentId.ToString());
+            }
+            catch
+            {
+                if (request.EvidenceFileStream != null && imagePath != null)
+                {
+                    await _storageService.DeleteAsync(imagePath);
+                }
+                throw;
+            }
 
             return complaint.ComplaintID;
         }

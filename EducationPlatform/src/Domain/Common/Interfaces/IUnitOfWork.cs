@@ -1,6 +1,6 @@
 namespace Domain.Common.Interfaces
 {
-    public interface IUnitOfWork
+    public interface IUnitOfWork : System.IAsyncDisposable
     {
         T GetRepository<T>() where T : class;
 

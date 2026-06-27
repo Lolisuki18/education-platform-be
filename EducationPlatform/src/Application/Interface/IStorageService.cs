@@ -25,6 +25,8 @@ namespace Application.Interface
             CancellationToken ct);
 
         string GetFullPath(string relativePath);
+
+        Task DeleteAsync(string relativePath);
     }
 }
 

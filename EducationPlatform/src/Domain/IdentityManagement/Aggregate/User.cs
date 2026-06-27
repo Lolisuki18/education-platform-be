@@ -123,9 +123,9 @@ namespace Domain.IdentityManagement.Aggregate
 
         public void UpdateProfile(string? name, string? phone, string? bio)
         {
-            Name = name ?? Name;
-            Phone = phone ?? Phone;
-            Bio = bio ?? Bio;
+            Name = string.IsNullOrWhiteSpace(name) ? Name : name;
+            Phone = string.IsNullOrWhiteSpace(phone) ? Phone : phone;
+            Bio = string.IsNullOrWhiteSpace(bio) ? Bio : bio;
         }
         #endregion
     }
