@@ -79,6 +79,13 @@ namespace Domain.EnrollmentManagement.Entity
 
             return Math.Round((decimal)correct * 100 / total, 2);
         }
+
+        public QuizProgress AddQuizProgress(Guid quizId)
+        {
+            var quizProgress = new QuizProgress(Guid.NewGuid(), LessonProgressID, quizId);
+            quizProgresses.Add(quizProgress);
+            return quizProgress;
+        }
         #endregion
     }
 }

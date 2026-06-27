@@ -109,8 +109,7 @@ namespace Infrastructure.Implementation
             var chp = cp.ChapterProgresses.FirstOrDefault(x => x.ChapterID == chapterId);
             if (chp == null)
             {
-                chp = new ChapterProgress(Guid.NewGuid(), cp.CourseProgressID, chapterId);
-                cp.ChapterProgresses.ToList().Add(chp);
+                chp = cp.AddChapterProgress(chapterId);
                 context.ChapterProgresses.Add(chp);
             }
 
@@ -118,8 +117,7 @@ namespace Infrastructure.Implementation
             var lp = chp.LessonProgresses.FirstOrDefault(x => x.LessonID == lessonId);
             if (lp == null)
             {
-                lp = new LessonProgress(Guid.NewGuid(), chp.ChapterProgressID, lessonId);
-                chp.LessonProgresses.ToList().Add(lp);
+                lp = chp.AddLessonProgress(lessonId);
                 context.LessonProgresses.Add(lp);
             }
 
@@ -168,7 +166,7 @@ namespace Infrastructure.Implementation
             var chp = cp.ChapterProgresses.FirstOrDefault(x => x.ChapterID == chapterId);
             if (chp == null)
             {
-                chp = new ChapterProgress(Guid.NewGuid(), cp.CourseProgressID, chapterId);
+                chp = cp.AddChapterProgress(chapterId);
                 context.ChapterProgresses.Add(chp);
             }
 
@@ -176,7 +174,7 @@ namespace Infrastructure.Implementation
             var lp = chp.LessonProgresses.FirstOrDefault(x => x.LessonID == lessonId);
             if (lp == null)
             {
-                lp = new LessonProgress(Guid.NewGuid(), chp.ChapterProgressID, lessonId);
+                lp = chp.AddLessonProgress(lessonId);
                 context.LessonProgresses.Add(lp);
             }
 
@@ -219,7 +217,7 @@ namespace Infrastructure.Implementation
             var qp = lp.QuizProgresses.FirstOrDefault(x => x.QuizID == quizId);
             if (qp == null)
             {
-                qp = new QuizProgress(Guid.NewGuid(), lp.LessonProgressID, quizId);
+                qp = lp.AddQuizProgress(quizId);
                 context.QuizProgresses.Add(qp);
             }
 

@@ -9,7 +9,8 @@ namespace Domain.OrderManagement.Aggregate
             string? status,
             int pageIndex,
             int pageSize,
-            Guid? teacherId);
+            Guid? teacherId,
+            Guid? studentId);
 
         Task<Order?> GetOrderByOrderCode(
             long orderCode);

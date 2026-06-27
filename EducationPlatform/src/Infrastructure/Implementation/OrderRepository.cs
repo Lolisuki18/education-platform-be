@@ -23,7 +23,8 @@ namespace Infrastructure.Implementation
             string? status,
             int pageIndex,
             int pageSize,
-            Guid? teacherId)
+            Guid? teacherId,
+            Guid? studentId)
         {
             pageIndex = pageIndex < 1 ? 1 : pageIndex;
             pageSize = pageSize <= 0 ? 10 : pageSize;
@@ -45,6 +46,12 @@ namespace Infrastructure.Implementation
                     context.Courses.Any(c =>
                         c.CourseID == o.CourseID &&
                         c.TeacherID == teacherId.Value));
+            }
+
+            // ---- Student filter ----
+            if (studentId.HasValue)
+            {
+                query = query.Where(o => o.StudentID == studentId.Value);
             }
 
             // ---- Sorting + paging ----

@@ -42,13 +42,17 @@ namespace Application.Features.Orders.Queries.GetOrders
             // Teacher scoping
             Guid? teacherId = role == Role.Teacher ? _currentUser.Id : null;
 
+            // Student scoping
+            Guid? studentId = role == Role.Student ? _currentUser.Id : null;
+
             var list = await _unitOfWork
                 .GetRepository<IOrderRepository>()
                 .GetOrders(
                     request.OrderStatus?.ToString(),
                     request.PageIndex,
                     request.PageSize,
-                    teacherId);
+                    teacherId,
+                    studentId);
 
             if (list == null || !list.Any())
                 throw new NotFound("Order list is not found or empty");

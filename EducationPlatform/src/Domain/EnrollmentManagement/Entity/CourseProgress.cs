@@ -35,10 +35,11 @@ namespace Domain.EnrollmentManagement.Entity
         }
 
         #region Methods
-        public void AddChapterProgress(Guid chapterId)
+        public ChapterProgress AddChapterProgress(Guid chapterId)
         {
             var chapterProgress = new ChapterProgress(Guid.NewGuid(), CourseProgressID, chapterId);
             chapterProgresses.Add(chapterProgress);
+            return chapterProgress;
         }
 
         public void RecalculateCompletion()

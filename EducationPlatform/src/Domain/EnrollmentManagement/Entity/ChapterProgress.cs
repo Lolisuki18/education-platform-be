@@ -40,10 +40,11 @@ namespace Domain.EnrollmentManagement.Entity
             ChapterID = chapterId;
         }
 
-        public void AddLessonProgress(Guid lessonId)
+        public LessonProgress AddLessonProgress(Guid lessonId)
         {
-            var lessonProgress = new LessonProgress(Guid.NewGuid(), CourseProgressID, lessonId);
+            var lessonProgress = new LessonProgress(Guid.NewGuid(), ChapterProgressID, lessonId);
             lessonProgresses.Add(lessonProgress);
+            return lessonProgress;
         }
 
         public void RecalculateCompletion()
