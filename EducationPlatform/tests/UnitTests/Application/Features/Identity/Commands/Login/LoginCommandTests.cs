@@ -1,4 +1,4 @@
-﻿using Xunit;
+using Xunit;
 using Moq;
 using System;
 using System.Threading;
@@ -32,7 +32,7 @@ public class LoginCommandTests
     {
         // Arrange
         var email = "test@gmail.com";
-        var password = "123456";
+        var password = "12345678";
 
         var user = new User(
             Guid.NewGuid(),
@@ -79,7 +79,7 @@ public class LoginCommandTests
         var command = new LoginCommand
         {
             Email = "notfound@gmail.com",
-            Password = "123456"
+            Password = "12345678"
         };
 
         // Act & Assert
