@@ -44,14 +44,14 @@ namespace Application.Features.Enrollments.Commands
                 throw new ForbiddenException("You are not the owner of this enrollment");
 
             await _unitOfWork.BeginTransactionAsync();
-            
+
             var result = await _unitOfWork
                 .GetRepository<IEnrollmentRepository>()
                 .UpsertQuizProgress(
-                    request.EnrollmentID, 
-                    request.ChapterID, 
-                    request.LessonID, 
-                    request.QuizID, 
+                    request.EnrollmentID,
+                    request.ChapterID,
+                    request.LessonID,
+                    request.QuizID,
                     request.SelectedAnswers);
 
             await _unitOfWork.CommitAsync(_currentUser.Id.Value.ToString());

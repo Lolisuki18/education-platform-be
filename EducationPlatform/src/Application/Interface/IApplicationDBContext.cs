@@ -15,9 +15,9 @@ namespace Application.Interface
         DbSet<User> Users { get; }
         DbSet<Enrollment> Enrollments { get; }
         DbSet<Order> Orders { get; }
-        
+
         // Add other sets as needed for queries
-        
+
         Task<int> SaveChangesAsync(CancellationToken cancellationToken);
     }
 }

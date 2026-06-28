@@ -46,7 +46,7 @@ namespace UnitTests.Application.Features.Complaints.Queries.GetComplaintDetail
         {
             // Arrange
             var query = new GetComplaintDetailQuery { ComplaintID = Guid.NewGuid() };
-            
+
             // Mock repository trả về null để giả lập không tìm thấy Complaint
             _mockCourseRepository
                 .Setup(r => r.GetComplaintDetailByID(query.ComplaintID))

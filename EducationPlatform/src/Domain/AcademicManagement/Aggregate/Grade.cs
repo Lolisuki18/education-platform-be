@@ -16,7 +16,7 @@ namespace Domain.AcademicManagement.Aggregate
         protected Grade() { }
 
         public Grade(
-            Guid gradeId, 
+            Guid gradeId,
             string name)
         {
             if (gradeId == Guid.Empty)

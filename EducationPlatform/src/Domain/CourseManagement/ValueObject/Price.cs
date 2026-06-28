@@ -37,7 +37,7 @@ namespace Domain.CourseManagement.ValueObject
         }
 
         public override bool Equals(object? obj)
-        { 
+        {
             return obj is CoursePrice other && Amount == other.Amount;
         }
 

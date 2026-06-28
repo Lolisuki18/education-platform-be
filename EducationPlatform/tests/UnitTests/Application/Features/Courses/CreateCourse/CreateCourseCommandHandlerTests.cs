@@ -65,13 +65,13 @@ namespace UnitTests.Application.Features.Courses.CreateCourse
             result.Should().NotBeEmpty();
 
             _mockUnitOfWork.Verify(u => u.BeginTransactionAsync(), Times.Once);
-            
-            _mockCourseRepository.Verify(r => r.Add(It.Is<Course>(c => 
-                c.Title == command.Title && 
-                c.Price.Amount == command.Price && 
+
+            _mockCourseRepository.Verify(r => r.Add(It.Is<Course>(c =>
+                c.Title == command.Title &&
+                c.Price.Amount == command.Price &&
                 c.TeacherID == teacherId &&
                 c.DomainEvents.Any(e => e is CourseCreatedEvent))), Times.Once);
-            
+
             _mockUnitOfWork.Verify(u => u.CommitAsync(teacherId.ToString()), Times.Once);
         }
     }

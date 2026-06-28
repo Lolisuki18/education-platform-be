@@ -17,10 +17,10 @@ namespace Domain.CourseManagement.Entity
         protected Assignment() { }
 
         public Assignment(
-            Guid assignmentId, 
-            string title, 
-            string description, 
-            int maxScore, 
+            Guid assignmentId,
+            string title,
+            string description,
+            int maxScore,
             Guid lessonId)
         {
             AssignmentID = assignmentId;

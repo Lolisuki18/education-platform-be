@@ -68,8 +68,8 @@ namespace Infrastructure.Persistence.Seeds
                 // Simulate payment (80% success)
                 //if (random.NextDouble() > 0.2)
                 //{
-                    var paidAt = RandomDateBetween(random, createdAt, endDate);
-                    order.StudentPaid(paidAt);
+                var paidAt = RandomDateBetween(random, createdAt, endDate);
+                order.StudentPaid(paidAt);
                 //}
 
                 orders.Add(order);

@@ -59,7 +59,7 @@ namespace Application.Features.StudentReview.Command
 
             //4. Find the student by studentId
             var student = await _unitOfWork.GetRepository<IUserRepository>().GetByIdAsync(currentStudentId);
-            if(student == null) throw new NotFound("Student not found.");
+            if (student == null) throw new NotFound("Student not found.");
 
             //5. Create a new review and add it to the CourseReview 
 

@@ -31,11 +31,11 @@ namespace API.Controllers
         [HttpGet]
         public async Task<ActionResult<ApiResponse<IEnumerable<CourseReviewDTO>>>> GetCourseReviews(Guid courseId, [FromQuery] int pageIndex = 1, [FromQuery] int pageSize = 10)
         {
-            var result = await _mediator.Send(new GetCourseReviewsQuery 
-            { 
-                CourseId = courseId, 
-                PageIndex = pageIndex, 
-                PageSize = pageSize 
+            var result = await _mediator.Send(new GetCourseReviewsQuery
+            {
+                CourseId = courseId,
+                PageIndex = pageIndex,
+                PageSize = pageSize
             });
             return Ok(ApiResponse<IEnumerable<CourseReviewDTO>>.Success(result));
         }

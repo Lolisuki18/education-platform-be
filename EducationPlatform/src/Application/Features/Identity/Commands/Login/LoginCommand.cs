@@ -28,7 +28,7 @@ namespace Application.Features.Identity.Commands.Login
             var user = await _unitOfWork
                 .GetRepository<IUserRepository>()
                 .GetUserByEmail(request.Email);
-            
+
             if (user == null)
                 throw new NotFound($"User with email: {request.Email} not found.");
 

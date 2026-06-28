@@ -111,9 +111,9 @@ namespace Application.Features.Courses.CreateCourse
             try
             {
                 await _unitOfWork.BeginTransactionAsync();
-                
+
                 _courseRepository.Add(course);
-                
+
                 await _unitOfWork.CommitAsync(_currentUser.Id.Value.ToString());
             }
             catch

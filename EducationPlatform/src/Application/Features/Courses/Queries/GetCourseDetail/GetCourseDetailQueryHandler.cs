@@ -48,7 +48,7 @@ namespace Application.Features.Courses.Queries.GetCourseDetail
                 throw new NotFound($"Course with ID: {request.CourseID} is not found");
 
             // ---------- 3. Visibility guard: public / student → must be Published ----------
-            bool isAdmin   = role == Role.Admin;
+            bool isAdmin = role == Role.Admin;
             bool isTeacher = role == Role.Teacher;
 
             if (!isAdmin && !isTeacher)

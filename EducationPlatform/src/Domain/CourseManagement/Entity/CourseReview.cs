@@ -9,7 +9,7 @@ namespace Domain.CourseManagement.Entity
         #endregion
 
         #region Properties
-         public Guid Id { get; private set; }
+        public Guid Id { get; private set; }
 
         public Guid CourseID { get; private set; }
 
@@ -24,14 +24,14 @@ namespace Domain.CourseManagement.Entity
         public DateTime? UpdatedAt { get; private set; }
 
         public DateTime? DeleteAt { get; private set; }
- 
+
         public virtual Course Course { get; private set; } = null!;
         public virtual User Student { get; private set; } = null!;
         #endregion
 
         protected CourseReview() { }
 
-       public CourseReview(Guid courseId, Guid studentId, float rating, string? comment)
+        public CourseReview(Guid courseId, Guid studentId, float rating, string? comment)
         {
             Id = Guid.NewGuid();
             CourseID = courseId;

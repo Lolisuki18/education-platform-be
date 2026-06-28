@@ -39,8 +39,8 @@ namespace API.Controllers
             var orders = await mediator.Send(new GetOrdersQuery
             {
                 OrderStatus = Enum.TryParse<OrderStatus>(request.Status, true, out var s) ? s : null,
-                PageIndex   = request.Page,
-                PageSize    = request.PageSize
+                PageIndex = request.Page,
+                PageSize = request.PageSize
             });
 
             return Ok(ApiResponse<ListOrdersResponseDto>.Success(new ListOrdersResponseDto
@@ -63,7 +63,7 @@ namespace API.Controllers
         {
             var order = await mediator.Send(new CreateOrderCommand
             {
-                CourseID  = request.CourseId,
+                CourseID = request.CourseId,
                 CouponIds = request.SelectedCouponIds
             });
 
@@ -84,7 +84,7 @@ namespace API.Controllers
             var returnData = new ReturnOrderResponseDto
             {
                 OrderCode = orderCode,
-                Status    = status,
+                Status = status,
                 IsSuccess = isSuccess
             };
 

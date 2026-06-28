@@ -34,7 +34,7 @@ namespace Infrastructure.Persistence.Seeds
             for (int i = 1; i <= courseCount; i++)
             {
                 var isRejected = random.Next(0, 14) == 0;
-                
+
                 DateTime reviewDate = DateTime.Now.AddDays(-random.Next(0, 10));
 
                 var teacherId = teacherIds[random.Next(teacherIds.Count)];

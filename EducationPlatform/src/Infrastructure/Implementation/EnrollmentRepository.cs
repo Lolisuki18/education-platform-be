@@ -18,7 +18,7 @@ namespace Infrastructure.Implementation
         #endregion
 
         public EnrollmentRepository(EducationPlatformDBContext context) : base(context) { }
-        
+
         #region Methods
 
         public async Task<IEnumerable<Enrollment>> GetStudentEnrollments(Guid studentId)

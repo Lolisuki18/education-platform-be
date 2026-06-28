@@ -30,9 +30,9 @@ namespace UnitTests.Application.Features.Academic.Queries.GetDefaultLessons
 
             // Mock UnitOfWork trả về SubjectRepository
             _mockUnitOfWork.Setup(u => u.GetRepository<ISubjectRepository>())
-                        .Returns(_mockISubjectRepository.Object); 
+                        .Returns(_mockISubjectRepository.Object);
             //Khởi tạo handler
-            _mockHandler = new GetDefaultLessonsQueryHandler(_mockUnitOfWork.Object,_mockMapper.Object);
+            _mockHandler = new GetDefaultLessonsQueryHandler(_mockUnitOfWork.Object, _mockMapper.Object);
         }
 
         [Fact]
@@ -44,7 +44,7 @@ namespace UnitTests.Application.Features.Academic.Queries.GetDefaultLessons
             var gradeId = Guid.NewGuid();
 
             //create query object with subjectId and gradeId
-            var query = new GetDefaultLessonsQuery { SubjectId = subjectId , GradeId = gradeId};
+            var query = new GetDefaultLessonsQuery { SubjectId = subjectId, GradeId = gradeId };
 
             //simulate the repository to return an empty list for default lessons
             _mockISubjectRepository.Setup(r => r.GetDefaultLessons(query.SubjectId, query.GradeId))

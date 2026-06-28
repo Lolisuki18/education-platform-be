@@ -24,8 +24,8 @@ namespace Application.Features.Orders.Commands.CreateOrder
         private readonly IPaymentService _paymentService;
 
         public CreateOrderCommandHandler(
-            IUnitOfWork unitOfWork, 
-            IMapper mapper, 
+            IUnitOfWork unitOfWork,
+            IMapper mapper,
             ICurrentUser currentUser,
             IPaymentService paymentService)
         {

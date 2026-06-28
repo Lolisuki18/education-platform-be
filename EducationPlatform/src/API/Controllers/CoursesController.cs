@@ -89,7 +89,7 @@ namespace API.Controllers
 
             return Ok(ApiResponse<object>.Success(new
             {
-                url           = path,
+                url = path,
                 transcriptUrl = (string?)null
             }, "Upload completed successfully."));
         }
@@ -107,10 +107,10 @@ namespace API.Controllers
         {
             var command = new CreateComplaintCommand
             {
-                CourseID               = request.CourseId,
-                Reason                 = request.Reason,
-                EvidenceFileStream     = request.EvidenceImage?.OpenReadStream(),
-                EvidenceFileExtension  = request.EvidenceImage != null ? Path.GetExtension(request.EvidenceImage.FileName) : null
+                CourseID = request.CourseId,
+                Reason = request.Reason,
+                EvidenceFileStream = request.EvidenceImage?.OpenReadStream(),
+                EvidenceFileExtension = request.EvidenceImage != null ? Path.GetExtension(request.EvidenceImage.FileName) : null
             };
 
             await mediator.Send(command);
@@ -139,8 +139,8 @@ namespace API.Controllers
             return Ok(ApiResponse<ReviewComplaintResponseDto>.Success(new ReviewComplaintResponseDto
             {
                 Complaint = complaint,
-                Course    = course,
-                Message   = "Complaint detail loaded."
+                Course = course,
+                Message = "Complaint detail loaded."
             }));
         }
 
@@ -151,8 +151,8 @@ namespace API.Controllers
             await mediator.Send(new ReviewComplaintCommand
             {
                 ComplaintID = request.ComplaintID,
-                IsApproved  = request.IsApproved,
-                AdminNote   = request.AdminNote
+                IsApproved = request.IsApproved,
+                AdminNote = request.AdminNote
             });
 
             var complaint = await mediator.Send(new GetComplaintDetailQuery { ComplaintID = request.ComplaintID });
@@ -160,9 +160,9 @@ namespace API.Controllers
 
             return Ok(ApiResponse<ReviewComplaintResponseDto>.Success(new ReviewComplaintResponseDto
             {
-                Message   = "Complaint reviewed successfully.",
+                Message = "Complaint reviewed successfully.",
                 Complaint = complaint,
-                Course    = course
+                Course = course
             }));
         }
 
@@ -175,9 +175,9 @@ namespace API.Controllers
 
             return Ok(ApiResponse<ReviewCourseResponseDto>.Success(new ReviewCourseResponseDto
             {
-                Course   = course,
+                Course = course,
                 Policies = policies,
-                Message  = "Course loaded for review."
+                Message = "Course loaded for review."
             }));
         }
 
@@ -195,8 +195,8 @@ namespace API.Controllers
 
             return Ok(ApiResponse<ReviewCourseResponseDto>.Success(new ReviewCourseResponseDto
             {
-                Message  = "Course reviewed successfully.",
-                Course   = course,
+                Message = "Course reviewed successfully.",
+                Course = course,
                 Policies = policies
             }));
         }

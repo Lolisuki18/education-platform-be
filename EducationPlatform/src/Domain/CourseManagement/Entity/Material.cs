@@ -20,11 +20,11 @@ namespace Domain.CourseManagement.Entity
         protected Material() { }
 
         public Material(
-            Guid materialId, 
+            Guid materialId,
             string name,
             string description,
-            string url, 
-            MaterialType type, 
+            string url,
+            MaterialType type,
             Guid lessonId)
         {
             MaterialID = materialId;

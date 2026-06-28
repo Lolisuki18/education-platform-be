@@ -52,7 +52,7 @@ namespace Infrastructure
             // ----- Application Services -----
             services.AddHttpContextAccessor();
             services.AddScoped<Application.Interface.ICurrentUser, Infrastructure.Services.CurrentUser>();
-            
+
             services.AddScoped<Application.Interface.IPaymentService, Infrastructure.Services.PayOSPaymentService>();
             services.AddScoped<Domain.Common.Interfaces.INotificationService,
                                Infrastructure.Services.LogNotificationService>();

@@ -15,7 +15,7 @@ namespace Application.Features.Complaints.Commands.CreateComplaint
         private readonly IStorageService _storageService;
 
         public CreateComplaintCommandHandler(
-            IUnitOfWork unitOfWork, 
+            IUnitOfWork unitOfWork,
             ICurrentUser currentUser,
             IStorageService storageService)
         {
@@ -63,7 +63,7 @@ namespace Application.Features.Complaints.Commands.CreateComplaint
             try
             {
                 await _unitOfWork.BeginTransactionAsync();
-                
+
                 var courseRepo = _unitOfWork.GetRepository<ICourseRepository>();
                 courseRepo.CreateComplaint(complaint);
 

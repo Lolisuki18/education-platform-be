@@ -19,11 +19,11 @@ namespace Application.Features.Complaints.EventHandlers
         public async Task Handle(ComplaintApprovedEvent notification, CancellationToken cancellationToken)
         {
             var courseRepo = _unitOfWork.GetRepository<ICourseRepository>();
-            
+
             // 1. Get already-approved complaints for this course
             var approvedComplaints = await courseRepo.GetApprovedByCoursesAsync(notification.CourseId);
             var totalApproved = approvedComplaints.Count();
-            
+
             var complaintCount = totalApproved + 1; // current + previous
 
             if (complaintCount >= 2)
@@ -40,7 +40,7 @@ namespace Application.Features.Complaints.EventHandlers
                     var orderRepo = _unitOfWork.GetRepository<IOrderRepository>();
 
                     var studentIds = await enrollmentRepo.GetEnrolledStudentIdsByCourseId(course.CourseID);
-                    
+
                     // 7.5% per student compensation
                     var couponAmount = course.Price.Amount * 0.075m;
                     var coupons = studentIds.Select(studentId =>
@@ -73,7 +73,7 @@ namespace Application.Features.Complaints.EventHandlers
                     var currentComplaint = await courseRepo.GetComplaintDetailByID(notification.ComplaintId);
                     var allToRemove = approvedComplaints.ToList();
                     if (currentComplaint != null) allToRemove.Add(currentComplaint);
-                    
+
                     courseRepo.RemoveComplaints(allToRemove);
                 }
             }

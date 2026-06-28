@@ -16,7 +16,7 @@ namespace Application.Results
         public string Slug { get; set; } = string.Empty;
         public string? Prerequisites { get; set; } = string.Empty;
         public string? LearningOutcomes { get; set; } = string.Empty;
-        public DateTime? RejectedAt { get; set; } 
+        public DateTime? RejectedAt { get; set; }
         public DateTime? PublishedAt { get; set; }
         public UserDTO Teacher { get; set; } = new UserDTO();
         public GradeDTO Grade { get; set; } = new GradeDTO();

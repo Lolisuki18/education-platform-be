@@ -25,11 +25,11 @@ namespace Application.Helper
             CreateMap<DefaultLesson, DefaultLessonDTO>();
 
             // ----- Order Domain -----
-            CreateMap<Order,  OrderDTO>();
+            CreateMap<Order, OrderDTO>();
             CreateMap<Coupon, CouponDTO>();
 
             // ----- Course Domain -----
-            CreateMap<PolicyRule,PolicyRuleDTO>();
+            CreateMap<PolicyRule, PolicyRuleDTO>();
             CreateMap<Policy, PolicyDTO>()
                 .ForMember(d => d.PolicyRules, opt => opt.MapFrom(s => s.PolicyRules));
             CreateMap<ViolatedPolicy, ViolatedPolicyDTO>()

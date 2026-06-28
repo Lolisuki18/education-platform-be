@@ -17,7 +17,7 @@ namespace Application.Features.Courses.CreateCourse
 
         public Task Handle(CourseCreatedEvent notification, CancellationToken cancellationToken)
         {
-            _logger.LogInformation("Domain Event triggered: Course '{Title}' (ID: {CourseId}) was created successfully.", 
+            _logger.LogInformation("Domain Event triggered: Course '{Title}' (ID: {CourseId}) was created successfully.",
                 notification.Title, notification.CourseId);
 
             return Task.CompletedTask;

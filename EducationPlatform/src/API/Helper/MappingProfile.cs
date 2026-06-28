@@ -10,7 +10,7 @@ namespace API.Helper
         {
             // Redundant mappings for Courses and Statistics have been removed.
             // Mediating Commands/Queries are now used directly as DTOs.
-            
+
             CreateMap<ReviewCourseRequestDto, ReviewCourseCommand>();
         }
     }

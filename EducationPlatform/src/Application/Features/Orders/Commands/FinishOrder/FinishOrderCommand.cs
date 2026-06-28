@@ -39,7 +39,7 @@ namespace Application.Features.Orders.Commands.FinishOrder
             // Apply persistence
             await _unitOfWork.BeginTransactionAsync();
             _unitOfWork.GetRepository<IOrderRepository>().Update(order.OrderID, order);
-            
+
             // The DomainEventDispatcherInterceptor will catch the OrderPaidEvent 
             // and dispatch it to the OrderPaidEventHandler during CommitAsync.
             await _unitOfWork.CommitAsync(order.StudentID.ToString());

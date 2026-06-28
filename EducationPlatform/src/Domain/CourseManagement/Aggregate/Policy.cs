@@ -23,7 +23,7 @@ namespace Domain.CourseManagement.Aggregate
         protected Policy() { }
 
         public Policy(
-            Guid policyId, 
+            Guid policyId,
             string name)
         {
             if (policyId == Guid.Empty)

@@ -24,7 +24,7 @@ namespace Application
 
             // Đăng ký các service
             services.AddScoped<IStorageService, StorageService>();
-           
+
 
             return services;
         }

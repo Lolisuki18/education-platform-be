@@ -23,8 +23,8 @@ namespace Infrastructure.Implementation
             return await context.CourseReviews
                 .Include(r => r.Course)
                 .Include(r => r.Student)
-                .Where(r => r.CourseID == courseId && r.DeleteAt == null) 
-                .OrderByDescending(r => r.CreatedAt) 
+                .Where(r => r.CourseID == courseId && r.DeleteAt == null)
+                .OrderByDescending(r => r.CreatedAt)
                 .Skip((pageIndex - 1) * pageSize)
                 .Take(pageSize)
                 .AsNoTracking()
@@ -32,4 +32,4 @@ namespace Infrastructure.Implementation
         }
     }
 }
-  
+

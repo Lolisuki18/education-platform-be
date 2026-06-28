@@ -41,7 +41,7 @@ namespace Application.Features.Enrollments.Queries.GetEnrollmentDetail
             // Basic authorization check
             if (enrollment.StudentID != _currentUser.Id.Value && _currentUser.Role != "Admin")
             {
-                 throw new ForbiddenException("You do not have permission to view this enrollment.");
+                throw new ForbiddenException("You do not have permission to view this enrollment.");
             }
 
             var dto = _mapper.Map<EnrollmentDetailDTO>(enrollment);
