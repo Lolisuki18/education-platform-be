@@ -36,7 +36,7 @@ namespace UnitTests.Application.Features.Academic.Queries.GetDefaultLessons
         }
 
         [Fact]
-        public Task Handle_DefaultLessonsListIsEmptyOrNull_ShouldThrowNotFoundException()
+        public async Task Handle_DefaultLessonsListIsEmptyOrNull_ShouldThrowNotFoundException()
         {
             //1.Arrange : prepare for query
             // initialize subjectId and gradeId for request query

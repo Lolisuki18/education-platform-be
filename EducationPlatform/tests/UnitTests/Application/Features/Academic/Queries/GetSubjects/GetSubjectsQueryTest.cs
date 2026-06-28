@@ -1,5 +1,4 @@
-﻿using Application.BusinessException;
-using Application.Features.Academic.Queries.GetGrades;
+using Application.BusinessException;
 using Application.Features.Academic.Queries.GetSubjects;
 using Application.Results;
 using AutoMapper;
@@ -9,7 +8,10 @@ using FluentAssertions;
 using Moq;
 using System;
 using System.Collections.Generic;
-using System.Text;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
+using Xunit;
 
 namespace UnitTests.Application.Features.Academic.Queries.GetSubjects
 {
@@ -25,28 +27,34 @@ namespace UnitTests.Application.Features.Academic.Queries.GetSubjects
             _mockUnitOfWork = new Mock<IUnitOfWork>();
             _mockMapper = new Mock<IMapper>();
             _mockISubjectRepository = new Mock<ISubjectRepository>();
+
             // Mock UnitOfWork trả về SubjectRepository
             _mockUnitOfWork.Setup(u => u.GetRepository<ISubjectRepository>())
                         .Returns(_mockISubjectRepository.Object);
-            //Khởi tạo handler
+
+            // Khởi tạo handler
             _mockHandler = new GetSubjectsQueryHandler(_mockUnitOfWork.Object, _mockMapper.Object);
         }
+
         [Fact]
-        public Task Handle_SubjectListIsEmptyOrNull_ShouldThrowNotFoundException()
+        public async Task Handle_SubjectListIsEmptyOrNull_ShouldThrowNotFoundException()
         {
-            //1.Arrange : prepare for query
+            // 1. Arrange
             var query = new GetSubjectsQuery();
-            //simulate the repository to return an empty list for subjects
             _mockISubjectRepository.Setup(r => r.GetAllAsync())
                                     .ReturnsAsync(new List<Subject>());
-            //2.Act: call the handler to handle the query
+
+            // 2. Act
             Func<Task> act = async () => await _mockHandler.Handle(query, CancellationToken.None);
-            // 3. Assert: verify that the handler throws a NotFoundException when the list of subjects is empty
-            return act.Should().ThrowAsync<NotFound>().WithMessage("Subject list is empty or was not found");
+
+            // 3. Assert
+            await act.Should().ThrowAsync<NotFound>().WithMessage("Subject list is empty or was not found");
         }
+
         [Fact]
         public async Task Handle_ValidRequest_ShouldReturnMappedDefaultSubjectList()
         {
+            // 1. Arrange
             var query = new GetSubjectsQuery();
 
             var subject = new Subject(
@@ -69,8 +77,14 @@ namespace UnitTests.Application.Features.Academic.Queries.GetSubjects
             };
             var expectedDTOList = new List<SubjectDTO> { subjectDTO };
 
+            _mockMapper
+                .Setup(m => m.Map<IEnumerable<SubjectDTO>>(subjectList))
+                .Returns(expectedDTOList);
+
+            // 2. Act
             var result = await _mockHandler.Handle(query, CancellationToken.None);
 
+            // 3. Assert
             result.Should().NotBeNull();
             result.Should().BeEquivalentTo(expectedDTOList);
         }
