@@ -40,7 +40,16 @@ namespace Application.Helper
                 IsBodyHtml = true
             };
 
-            await smtp.SendMailAsync(message);
+            try
+            {
+                await smtp.SendMailAsync(message);
+            }
+            catch (Exception ex)
+            {
+                // Prevent SMTP downtime or local test environment issues from crashing user registration/actions.
+                // In production, failed emails should be queued or retried asynchronously.
+                Console.WriteLine($"[EmailHelper] Failed to send email to {toEmail}: {ex.Message}");
+            }
         }
 
         private static string BuildOtpTemplate(string otp)

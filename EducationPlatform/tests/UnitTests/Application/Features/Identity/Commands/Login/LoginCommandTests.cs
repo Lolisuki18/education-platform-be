@@ -1,120 +1,169 @@
-using Xunit;
-using Moq;
-using System;
-using System.Threading;
-using System.Threading.Tasks;
+using Application.BusinessException;
 using Application.Features.Identity.Commands.Login;
 using Domain.Common.Interfaces;
 using Domain.IdentityManagement.Aggregate;
 using Domain.IdentityManagement.ValueObject;
-using Application.BusinessException;
+using FluentAssertions;
+using Moq;
+using System;
+using System.Threading;
+using System.Threading.Tasks;
+using Xunit;
 
-public class LoginCommandTests
+namespace UnitTests.Application.Features.Identity.Commands.Login
 {
-    private readonly Mock<IUnitOfWork> _unitOfWorkMock;
-    private readonly Mock<IUserRepository> _userRepoMock;
-    private readonly LoginCommandHandler _handler;
-
-    public LoginCommandTests()
+    public class LoginCommandTests
     {
-        _unitOfWorkMock = new Mock<IUnitOfWork>();
-        _userRepoMock = new Mock<IUserRepository>();
+        private readonly Mock<IUnitOfWork> _mockUnitOfWork;
+        private readonly Mock<IUserRepository> _mockUserRepository;
+        private readonly LoginCommandHandler _handler;
 
-        _unitOfWorkMock
-            .Setup(u => u.GetRepository<IUserRepository>())
-            .Returns(_userRepoMock.Object);
-
-        _handler = new LoginCommandHandler(_unitOfWorkMock.Object);
-    }
-
-    [Fact]
-    public async Task Login_Success_ShouldReturnToken()
-    {
-        // Arrange
-        var email = "test@gmail.com";
-        var password = "12345678";
-
-        var user = new User(
-            Guid.NewGuid(),
-            email,
-            password,
-            "0123456789",
-            "Test User",
-            null,
-            Role.Student,
-            null,
-            true // verified
-        );
-
-        _userRepoMock
-            .Setup(r => r.GetUserByEmail(email))
-            .ReturnsAsync(user);
-
-        var command = new LoginCommand
+        public LoginCommandTests()
         {
-            Email = email,
-            Password = password
-        };
+            _mockUnitOfWork = new Mock<IUnitOfWork>();
+            _mockUserRepository = new Mock<IUserRepository>();
 
-        // Act
-        var result = await _handler.Handle(command, CancellationToken.None);
+            _mockUnitOfWork
+                .Setup(u => u.GetRepository<IUserRepository>())
+                .Returns(_mockUserRepository.Object);
 
-        // Assert
-        Assert.NotNull(result);
-        Assert.False(string.IsNullOrEmpty(result.Token));
-        Assert.False(string.IsNullOrEmpty(result.RefreshToken));
+            _handler = new LoginCommandHandler(_mockUnitOfWork.Object);
+        }
 
-        _unitOfWorkMock.Verify(u => u.BeginTransactionAsync(), Times.Once);
-        _unitOfWorkMock.Verify(u => u.CommitAsync(), Times.Once);
-    }
-
-    [Fact]
-    public async Task Login_UserNotFound_ShouldThrowNotFound()
-    {
-        // Arrange
-        _userRepoMock
-            .Setup(r => r.GetUserByEmail(It.IsAny<string>()))
-            .ReturnsAsync((User?)null);
-
-        var command = new LoginCommand
+        [Fact]
+        public async Task Handle_Success_ShouldReturnTokenAndSaveRefreshToken()
         {
-            Email = "notfound@gmail.com",
-            Password = "12345678"
-        };
+            // Arrange
+            var email = "test@gmail.com";
+            var password = "password123";
 
-        // Act & Assert
-        await Assert.ThrowsAsync<NotFound>(() =>
-            _handler.Handle(command, CancellationToken.None));
-    }
+            var user = new User(
+                Guid.NewGuid(),
+                email,
+                password,
+                "0123456789",
+                "Test User",
+                null,
+                Role.Student,
+                DateTime.UtcNow,
+                isVerified: true
+            );
 
-    [Fact]
-    public async Task Login_InvalidPassword_ShouldThrowAuthenticateException()
-    {
-        // Arrange
-        var user = new User(
-            Guid.NewGuid(),
-            "test@gmail.com",
-            "correct-password",
-            "0123456789",
-            "Test User",
-            null,
-            Role.Student,
-            null,
-            false // ❗ chưa verify
-        );
+            _mockUserRepository
+                .Setup(r => r.GetUserByEmail(email))
+                .ReturnsAsync(user);
 
-        _userRepoMock
-            .Setup(r => r.GetUserByEmail(It.IsAny<string>()))
-            .ReturnsAsync(user);
+            var command = new LoginCommand
+            {
+                Email = email,
+                Password = password
+            };
 
-        var command = new LoginCommand
+            // Act
+            var result = await _handler.Handle(command, CancellationToken.None);
+
+            // Assert
+            result.Should().NotBeNull();
+            result.Token.Should().NotBeNullOrEmpty();
+            result.RefreshToken.Should().NotBeNullOrEmpty();
+
+            _mockUnitOfWork.Verify(u => u.BeginTransactionAsync(), Times.Once);
+            _mockUserRepository.Verify(r => r.Update(user.UserID, user), Times.Once);
+            _mockUnitOfWork.Verify(u => u.CommitAsync(), Times.Once);
+        }
+
+        [Fact]
+        public async Task Handle_UserNotFound_ShouldThrowNotFoundException()
         {
-            Email = "test@gmail.com",
-            Password = "wrong-password"
-        };
+            // Arrange
+            var email = "notfound@gmail.com";
+            _mockUserRepository
+                .Setup(r => r.GetUserByEmail(email))
+                .ReturnsAsync((User?)null);
 
-        // Act & Assert
-        await Assert.ThrowsAsync<AuthenticateException>(() =>
-            _handler.Handle(command, CancellationToken.None));
+            var command = new LoginCommand
+            {
+                Email = email,
+                Password = "password123"
+            };
+
+            // Act
+            Func<Task> act = async () => await _handler.Handle(command, CancellationToken.None);
+
+            // Assert
+            await act.Should().ThrowAsync<NotFound>()
+                .WithMessage($"User with email: {email} not found.");
+        }
+
+        [Fact]
+        public async Task Handle_InvalidPassword_ShouldThrowAuthenticateException()
+        {
+            // Arrange
+            var email = "test@gmail.com";
+            var user = new User(
+                Guid.NewGuid(),
+                email,
+                "correctpassword",
+                "0123456789",
+                "Test User",
+                null,
+                Role.Student,
+                DateTime.UtcNow,
+                isVerified: true
+            );
+
+            _mockUserRepository
+                .Setup(r => r.GetUserByEmail(email))
+                .ReturnsAsync(user);
+
+            var command = new LoginCommand
+            {
+                Email = email,
+                Password = "wrongpassword"
+            };
+
+            // Act
+            Func<Task> act = async () => await _handler.Handle(command, CancellationToken.None);
+
+            // Assert
+            await act.Should().ThrowAsync<AuthenticateException>()
+                .WithMessage("Invalid password or email has not been verified.");
+        }
+
+        [Fact]
+        public async Task Handle_EmailNotVerified_ShouldThrowAuthenticateException()
+        {
+            // Arrange
+            var email = "test@gmail.com";
+            var password = "password123";
+            var user = new User(
+                Guid.NewGuid(),
+                email,
+                password,
+                "0123456789",
+                "Test User",
+                null,
+                Role.Student,
+                DateTime.UtcNow,
+                isVerified: false // email is not verified
+            );
+
+            _mockUserRepository
+                .Setup(r => r.GetUserByEmail(email))
+                .ReturnsAsync(user);
+
+            var command = new LoginCommand
+            {
+                Email = email,
+                Password = password
+            };
+
+            // Act
+            Func<Task> act = async () => await _handler.Handle(command, CancellationToken.None);
+
+            // Assert
+            await act.Should().ThrowAsync<AuthenticateException>()
+                .WithMessage("Invalid password or email has not been verified.");
+        }
     }
 }
