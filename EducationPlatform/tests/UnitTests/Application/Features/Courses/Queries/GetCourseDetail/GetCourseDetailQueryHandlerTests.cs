@@ -1,0 +1,281 @@
+using Application.BusinessException;
+using Application.Features.Courses.Queries.GetCourseDetail;
+using Application.Interface;
+using Application.Results;
+using AutoMapper;
+using Domain.Common.Interfaces;
+using Domain.CourseManagement.Aggregate;
+using Domain.CourseManagement.Enum;
+using Domain.IdentityManagement.ValueObject;
+using FluentAssertions;
+using Moq;
+using System;
+using System.Collections.Generic;
+using System.Reflection;
+using System.Threading;
+using System.Threading.Tasks;
+using Xunit;
+
+namespace UnitTests.Application.Features.Courses.Queries.GetCourseDetail
+{
+    public class GetCourseDetailQueryHandlerTests
+    {
+        private readonly Mock<IUnitOfWork> _mockUnitOfWork;
+        private readonly Mock<ICourseRepository> _mockCourseRepository;
+        private readonly Mock<IMapper> _mockMapper;
+        private readonly Mock<ICurrentUser> _mockCurrentUser;
+        private readonly GetCourseDetailQueryHandler _handler;
+
+        public GetCourseDetailQueryHandlerTests()
+        {
+            _mockUnitOfWork = new Mock<IUnitOfWork>();
+            _mockCourseRepository = new Mock<ICourseRepository>();
+            _mockMapper = new Mock<IMapper>();
+            _mockCurrentUser = new Mock<ICurrentUser>();
+
+            _mockUnitOfWork
+                .Setup(u => u.GetRepository<ICourseRepository>())
+                .Returns(_mockCourseRepository.Object);
+
+            _handler = new GetCourseDetailQueryHandler(
+                _mockUnitOfWork.Object,
+                _mockMapper.Object,
+                _mockCurrentUser.Object);
+        }
+
+        [Fact]
+        public async Task Handle_InvalidRole_ShouldThrowAuthenticateException()
+        {
+            // Arrange
+            var query = new GetCourseDetailQuery { CourseID = Guid.NewGuid() };
+            _mockCurrentUser.Setup(u => u.IsAuthenticated).Returns(true);
+            _mockCurrentUser.Setup(u => u.Role).Returns("InvalidRoleName");
+
+            // Act
+            Func<Task> act = async () => await _handler.Handle(query, CancellationToken.None);
+
+            // Assert
+            await act.Should().ThrowAsync<AuthenticateException>().WithMessage("Invalid role");
+        }
+
+        [Fact]
+        public async Task Handle_CourseDoesNotExist_ShouldThrowNotFoundException()
+        {
+            // Arrange
+            var courseId = Guid.NewGuid();
+            var query = new GetCourseDetailQuery { CourseID = courseId };
+            _mockCurrentUser.Setup(u => u.IsAuthenticated).Returns(false);
+
+            _mockCourseRepository
+                .Setup(r => r.GetCourseMetadataByID(courseId))
+                .ReturnsAsync((Course?)null);
+
+            // Act
+            Func<Task> act = async () => await _handler.Handle(query, CancellationToken.None);
+
+            // Assert
+            await act.Should().ThrowAsync<NotFound>().WithMessage($"Course with ID: {courseId} is not found");
+        }
+
+        [Fact]
+        public async Task Handle_AnonymousOrStudentOnDraftCourse_ShouldThrowNotFoundException()
+        {
+            // Arrange
+            var courseId = Guid.NewGuid();
+            var query = new GetCourseDetailQuery { CourseID = courseId };
+            _mockCurrentUser.Setup(u => u.IsAuthenticated).Returns(true);
+            _mockCurrentUser.Setup(u => u.Role).Returns(Role.Student.ToString());
+
+            // Course is in review (not published)
+            var course = CreateCourseInstance(courseId, Guid.NewGuid(), CourseStatus.InReview);
+            _mockCourseRepository
+                .Setup(r => r.GetCourseMetadataByID(courseId))
+                .ReturnsAsync(course);
+
+            // Act
+            Func<Task> act = async () => await _handler.Handle(query, CancellationToken.None);
+
+            // Assert
+            await act.Should().ThrowAsync<NotFound>().WithMessage($"Course with ID: {courseId} is not found");
+        }
+
+        [Fact]
+        public async Task Handle_AnonymousUserOnPublishedCourse_ShouldReturnMetadataOnly()
+        {
+            // Arrange
+            var courseId = Guid.NewGuid();
+            var teacherId = Guid.NewGuid();
+            var query = new GetCourseDetailQuery { CourseID = courseId };
+            _mockCurrentUser.Setup(u => u.IsAuthenticated).Returns(false);
+
+            // Course is published
+            var course = CreateCourseInstance(courseId, teacherId, CourseStatus.Published);
+            _mockCourseRepository
+                .Setup(r => r.GetCourseMetadataByID(courseId))
+                .ReturnsAsync(course);
+
+            var expectedDto = new CourseDetailDTO
+            {
+                CourseID = courseId,
+                Title = "Published Course",
+                Chapters = new List<ChapterDTO> { new ChapterDTO { ChapterID = Guid.NewGuid(), Title = "Chapter 1" } }
+            };
+
+            _mockMapper.Setup(m => m.Map<CourseDetailDTO>(course)).Returns(expectedDto);
+
+            // Act
+            var result = await _handler.Handle(query, CancellationToken.None);
+
+            // Assert
+            result.Should().NotBeNull();
+            result.Title.Should().Be("Published Course");
+            // Chapters list should be cleared out for anonymous users
+            result.Chapters.Should().BeEmpty();
+
+            _mockCourseRepository.Verify(r => r.GetCourseDetailByID(It.IsAny<Guid>()), Times.Never);
+        }
+
+        [Fact]
+        public async Task Handle_TeacherOwner_ShouldReturnFullCourseDetailsWithChapters()
+        {
+            // Arrange
+            var courseId = Guid.NewGuid();
+            var teacherId = Guid.NewGuid();
+            var query = new GetCourseDetailQuery { CourseID = courseId };
+
+            _mockCurrentUser.Setup(u => u.IsAuthenticated).Returns(true);
+            _mockCurrentUser.Setup(u => u.Role).Returns(Role.Teacher.ToString());
+            _mockCurrentUser.Setup(u => u.Id).Returns(teacherId);
+
+            var metadataCourse = CreateCourseInstance(courseId, teacherId, CourseStatus.InReview);
+            _mockCourseRepository
+                .Setup(r => r.GetCourseMetadataByID(courseId))
+                .ReturnsAsync(metadataCourse);
+
+            var detailedCourse = CreateCourseInstance(courseId, teacherId, CourseStatus.InReview);
+            _mockCourseRepository
+                .Setup(r => r.GetCourseDetailByID(courseId))
+                .ReturnsAsync(detailedCourse);
+
+            var expectedDto = new CourseDetailDTO
+            {
+                CourseID = courseId,
+                Title = "Teacher Course",
+                Chapters = new List<ChapterDTO> { new ChapterDTO { ChapterID = Guid.NewGuid(), Title = "Chapter 1" } }
+            };
+
+            _mockMapper.Setup(m => m.Map<CourseDetailDTO>(detailedCourse)).Returns(expectedDto);
+
+            // Act
+            var result = await _handler.Handle(query, CancellationToken.None);
+
+            // Assert
+            result.Should().NotBeNull();
+            result.Chapters.Should().NotBeEmpty();
+            result.Chapters.First().Title.Should().Be("Chapter 1");
+
+            _mockCourseRepository.Verify(r => r.GetCourseDetailByID(courseId), Times.Once);
+        }
+
+        [Fact]
+        public async Task Handle_TeacherNonOwner_ShouldReturnMetadataOnly()
+        {
+            // Arrange
+            var courseId = Guid.NewGuid();
+            var ownerTeacherId = Guid.NewGuid();
+            var accessingTeacherId = Guid.NewGuid();
+            var query = new GetCourseDetailQuery { CourseID = courseId };
+
+            _mockCurrentUser.Setup(u => u.IsAuthenticated).Returns(true);
+            _mockCurrentUser.Setup(u => u.Role).Returns(Role.Teacher.ToString());
+            _mockCurrentUser.Setup(u => u.Id).Returns(accessingTeacherId);
+
+            var course = CreateCourseInstance(courseId, ownerTeacherId, CourseStatus.Published);
+            _mockCourseRepository
+                .Setup(r => r.GetCourseMetadataByID(courseId))
+                .ReturnsAsync(course);
+
+            var expectedDto = new CourseDetailDTO
+            {
+                CourseID = courseId,
+                Title = "Published Course",
+                Chapters = new List<ChapterDTO> { new ChapterDTO { ChapterID = Guid.NewGuid(), Title = "Chapter 1" } }
+            };
+
+            _mockMapper.Setup(m => m.Map<CourseDetailDTO>(course)).Returns(expectedDto);
+
+            // Act
+            var result = await _handler.Handle(query, CancellationToken.None);
+
+            // Assert
+            result.Should().NotBeNull();
+            result.Chapters.Should().BeEmpty();
+
+            _mockCourseRepository.Verify(r => r.GetCourseDetailByID(It.IsAny<Guid>()), Times.Never);
+        }
+
+        [Fact]
+        public async Task Handle_AdminUser_ShouldReturnFullCourseDetailsEvenIfDraft()
+        {
+            // Arrange
+            var courseId = Guid.NewGuid();
+            var teacherId = Guid.NewGuid();
+            var query = new GetCourseDetailQuery { CourseID = courseId };
+
+            _mockCurrentUser.Setup(u => u.IsAuthenticated).Returns(true);
+            _mockCurrentUser.Setup(u => u.Role).Returns(Role.Admin.ToString());
+
+            var metadataCourse = CreateCourseInstance(courseId, teacherId, CourseStatus.InReview);
+            _mockCourseRepository
+                .Setup(r => r.GetCourseMetadataByID(courseId))
+                .ReturnsAsync(metadataCourse);
+
+            var detailedCourse = CreateCourseInstance(courseId, teacherId, CourseStatus.InReview);
+            _mockCourseRepository
+                .Setup(r => r.GetCourseDetailByID(courseId))
+                .ReturnsAsync(detailedCourse);
+
+            var expectedDto = new CourseDetailDTO
+            {
+                CourseID = courseId,
+                Title = "Draft Course for Admin",
+                Chapters = new List<ChapterDTO> { new ChapterDTO { ChapterID = Guid.NewGuid(), Title = "Chapter 1" } }
+            };
+
+            _mockMapper.Setup(m => m.Map<CourseDetailDTO>(detailedCourse)).Returns(expectedDto);
+
+            // Act
+            var result = await _handler.Handle(query, CancellationToken.None);
+
+            // Assert
+            result.Should().NotBeNull();
+            result.Chapters.Should().NotBeEmpty();
+
+            _mockCourseRepository.Verify(r => r.GetCourseDetailByID(courseId), Times.Once);
+        }
+
+        private Course CreateCourseInstance(Guid courseId, Guid teacherId, CourseStatus status)
+        {
+            var course = new Course(
+                courseId,
+                "Test Course",
+                "Description",
+                100,
+                "thumbnail.png",
+                "test-course",
+                "Prerequisites",
+                "Outcomes",
+                teacherId,
+                Guid.NewGuid(),
+                Guid.NewGuid(),
+                DateTime.UtcNow
+            );
+
+            // Set the Status property using reflection since it has a private setter
+            var statusProp = typeof(Course).GetProperty(nameof(Course.Status));
+            statusProp?.SetValue(course, status);
+
+            return course;
+        }
+    }
+}

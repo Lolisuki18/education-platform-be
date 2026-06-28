@@ -2,16 +2,19 @@ using Application.Features.Courses.CreateCourse;
 using Domain.CourseManagement.Aggregate;
 using Domain.CourseManagement.Entity;
 using Domain.Common.Interfaces;
+using Domain.CourseManagement.Events;
+using Application.Interface;
+using Application.BusinessException;
 using FluentAssertions;
+using Microsoft.AspNetCore.Http;
 using Moq;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Xunit;
-using Domain.CourseManagement.Events;
-using Application.Interface;
 
 namespace UnitTests.Application.Features.Courses.CreateCourse
 {
@@ -73,6 +76,110 @@ namespace UnitTests.Application.Features.Courses.CreateCourse
                 c.DomainEvents.Any(e => e is CourseCreatedEvent))), Times.Once);
 
             _mockUnitOfWork.Verify(u => u.CommitAsync(teacherId.ToString()), Times.Once);
+        }
+
+        [Fact]
+        public async Task Handle_UserNotAuthenticated_ShouldThrowAuthenticateException()
+        {
+            // Arrange
+            _mockCurrentUser.Setup(u => u.Id).Returns((Guid?)null);
+            var command = new CreateCourseCommand { Title = "Unauthorized Course" };
+
+            // Act
+            Func<Task> act = async () => await _handler.Handle(command, CancellationToken.None);
+
+            // Assert
+            await act.Should().ThrowAsync<AuthenticateException>()
+                .WithMessage("User must be authenticated.");
+        }
+
+        [Fact]
+        public async Task Handle_ValidRequestWithThumbnailFile_ShouldSaveFileAndCreateCourse()
+        {
+            // Arrange
+            var teacherId = Guid.NewGuid();
+            using var dummyStream = new MemoryStream();
+            var mockFormFile = new Mock<IFormFile>();
+            mockFormFile.Setup(f => f.FileName).Returns("cover.jpg");
+            mockFormFile.Setup(f => f.OpenReadStream()).Returns(dummyStream);
+
+            _mockCurrentUser.Setup(u => u.Id).Returns(teacherId);
+
+            var command = new CreateCourseCommand
+            {
+                Title = "Test Course with File",
+                Description = "A course for testing file upload",
+                Price = 50,
+                ThumbnailName = "old_name.png",
+                ThumbnailFile = mockFormFile.Object,
+                Slug = "file-course",
+                Prerequisites = "None",
+                LearningOutcomes = "Learn file upload",
+                GradeID = Guid.NewGuid(),
+                SubjectID = Guid.NewGuid(),
+                Chapters = new List<CreateChapterCommandDto>()
+            };
+
+            _mockStorageService
+                .Setup(s => s.SaveAsync(dummyStream, "jpg", It.IsAny<CancellationToken>()))
+                .ReturnsAsync("storage/cover_12345.jpg");
+
+            // Act
+            var result = await _handler.Handle(command, CancellationToken.None);
+
+            // Assert
+            result.Should().NotBeEmpty();
+
+            _mockStorageService.Verify(s => s.SaveAsync(dummyStream, "jpg", It.IsAny<CancellationToken>()), Times.Once);
+            _mockCourseRepository.Verify(r => r.Add(It.Is<Course>(c =>
+                c.Title == command.Title &&
+                c.ThumbnailName == "storage/cover_12345.jpg")), Times.Once);
+            _mockUnitOfWork.Verify(u => u.CommitAsync(teacherId.ToString()), Times.Once);
+        }
+
+        [Fact]
+        public async Task Handle_ExceptionDuringCommitWithThumbnailFile_ShouldDeleteSavedFileAndRethrow()
+        {
+            // Arrange
+            var teacherId = Guid.NewGuid();
+            using var dummyStream = new MemoryStream();
+            var mockFormFile = new Mock<IFormFile>();
+            mockFormFile.Setup(f => f.FileName).Returns("cover.png");
+            mockFormFile.Setup(f => f.OpenReadStream()).Returns(dummyStream);
+
+            _mockCurrentUser.Setup(u => u.Id).Returns(teacherId);
+
+            var command = new CreateCourseCommand
+            {
+                Title = "Failing Course with File",
+                Description = "A course designed to fail on commit",
+                Price = 50,
+                ThumbnailName = "old_name.png",
+                ThumbnailFile = mockFormFile.Object,
+                Slug = "failing-course",
+                Prerequisites = "None",
+                LearningOutcomes = "Test rollback",
+                GradeID = Guid.NewGuid(),
+                SubjectID = Guid.NewGuid(),
+                Chapters = new List<CreateChapterCommandDto>()
+            };
+
+            _mockStorageService
+                .Setup(s => s.SaveAsync(dummyStream, "png", It.IsAny<CancellationToken>()))
+                .ReturnsAsync("storage/failed_cover.png");
+
+            _mockUnitOfWork
+                .Setup(u => u.CommitAsync(teacherId.ToString()))
+                .ThrowsAsync(new Exception("Database connection lost"));
+
+            // Act
+            Func<Task> act = async () => await _handler.Handle(command, CancellationToken.None);
+
+            // Assert
+            await act.Should().ThrowAsync<Exception>().WithMessage("Database connection lost");
+
+            // Verify that the uploaded file was cleaned up (deleted)
+            _mockStorageService.Verify(s => s.DeleteAsync("storage/failed_cover.png"), Times.Once);
         }
     }
 }
