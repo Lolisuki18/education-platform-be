@@ -1,0 +1,44 @@
+name: .NET Continuous Integration
+
+on:
+  push:
+    branches: [ "main", "develop", "master" ]
+  pull_request:
+    branches: [ "main", "develop", "master" ]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup .NET SDK
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '10.0.x'
+        cache: true
+        cache-dependency-path: 'EducationPlatform/EducationPlatform.sln'
+
+    - name: Restore dependencies
+      run: dotnet restore EducationPlatform/EducationPlatform.sln
+
+    - name: Check code formatting
+      # continue-on-error: true # Mở comment dòng này nếu không muốn CI bị chặn vì lỗi format nhỏ
+      run: dotnet format EducationPlatform/EducationPlatform.sln --verify-no-changes --no-restore
+
+    - name: Build project
+      run: dotnet build EducationPlatform/EducationPlatform.sln --configuration Release --no-restore
+
+    - name: Security scan for NuGet packages
+      run: |
+        OUTPUT=$(dotnet list EducationPlatform/EducationPlatform.sln package --vulnerable --include-transitive)
+        echo "$OUTPUT"
+        if echo "$OUTPUT" | grep -q "has the following vulnerable packages"; then
+          echo "Vulnerable packages found!"
+          exit 1
+        fi
+
+    - name: Run unit tests
+      run: dotnet test EducationPlatform/EducationPlatform.sln --configuration Release --no-build --verbosity normal --logger trx
