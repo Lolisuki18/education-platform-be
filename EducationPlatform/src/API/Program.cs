@@ -60,6 +60,15 @@ builder.Services.AddAutoMapper(cfg => cfg.AddMaps(typeof(API.Helper.MappingProfi
 // ====================
 var jwtSettings = builder.Configuration.GetSection("JwtSettings");
 var secretKey = jwtSettings["SecretKey"];
+var issuer = jwtSettings["Issuer"];
+var audience = jwtSettings["Audience"];
+
+if (string.IsNullOrWhiteSpace(secretKey))
+    throw new InvalidOperationException("Missing configuration: JwtSettings:SecretKey");
+if (string.IsNullOrWhiteSpace(issuer))
+    throw new InvalidOperationException("Missing configuration: JwtSettings:Issuer");
+if (string.IsNullOrWhiteSpace(audience))
+    throw new InvalidOperationException("Missing configuration: JwtSettings:Audience");
 
 builder.Services.AddAuthentication(options =>
 {

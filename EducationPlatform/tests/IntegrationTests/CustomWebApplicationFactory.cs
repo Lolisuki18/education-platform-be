@@ -30,7 +30,10 @@ namespace IntegrationTests
                     { "ConnectionStrings:Server", "Host=localhost;Database=EducationPlatformDB_Test;Username=postgres;Password=12345" },
                     { "Storage:RootPath", Path.Combine(Directory.GetCurrentDirectory(), "test_storage") },
                     { "EmailSettings:SmtpHost", "localhost" },
-                    { "EmailSettings:SmtpPort", "25" }
+                    { "EmailSettings:SmtpPort", "25" },
+                    { "JwtSettings:SecretKey", "THIS_IS_A_TEST_SECRET_KEY_AT_LEAST_32_CHARS" },
+                    { "JwtSettings:Issuer", "EducationPlatform" },
+                    { "JwtSettings:Audience", "EducationPlatform" }
                 });
             });
 
