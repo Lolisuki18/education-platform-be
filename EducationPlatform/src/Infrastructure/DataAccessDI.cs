@@ -15,14 +15,8 @@ namespace Infrastructure
 {
     public static class InfrastructureDI
     {
-        public static IServiceCollection AddInfrastructure(this IServiceCollection services)
+        public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
         {
-            // Build configuration
-            var configuration = new ConfigurationBuilder()
-                .SetBasePath(Directory.GetCurrentDirectory())
-                .AddJsonFile("appsettings.json", optional: false)
-                .Build();
-
             // Get connection string
             var connectionString = configuration.GetConnectionString("Server");
 

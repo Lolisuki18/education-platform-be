@@ -51,7 +51,7 @@ builder.Services.AddCors(options =>
 // ====================
 // 4. Dependency Injection (Layered)
 // ====================
-builder.Services.AddInfrastructure();
+builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddApplication();
 builder.Services.AddAutoMapper(cfg => cfg.AddMaps(typeof(API.Helper.MappingProfile).Assembly));
 
@@ -198,25 +198,28 @@ app.UseStaticFiles(new StaticFileOptions
 // ====================
 // 9. DB Migration & Seeding
 // ====================
-using (var scope = app.Services.CreateScope())
+if (app.Environment.EnvironmentName != "Testing")
 {
-    var db = scope.ServiceProvider.GetRequiredService<EducationPlatformDBContext>();
-
-    var retries = 5;
-    for (int i = 0; i < retries; i++)
+    using (var scope = app.Services.CreateAsyncScope())
     {
-        try
+        var db = scope.ServiceProvider.GetRequiredService<EducationPlatformDBContext>();
+
+        var retries = 5;
+        for (int i = 0; i < retries; i++)
         {
-            await db.Database.MigrateAsync();
-            await Seeder.SeedAsync(db);
-            Console.WriteLine("[Database] Migrated and seeded successfully.");
-            break;
-        }
-        catch (DbException ex) // Handle both PostgreSQL and SQL Server issues safely
-        {
-            Console.WriteLine($"[Database] Not ready, retrying in 5s... ({i + 1}/{retries}). Error: {ex.Message}");
-            await Task.Delay(5000);
-            if (i == retries - 1) throw;
+            try
+            {
+                await db.Database.MigrateAsync();
+                await Seeder.SeedAsync(db);
+                Console.WriteLine("[Database] Migrated and seeded successfully.");
+                break;
+            }
+            catch (DbException ex) // Handle both PostgreSQL and SQL Server issues safely
+            {
+                Console.WriteLine($"[Database] Not ready, retrying in 5s... ({i + 1}/{retries}). Error: {ex.Message}");
+                await Task.Delay(5000);
+                if (i == retries - 1) throw;
+            }
         }
     }
 }
@@ -237,3 +240,5 @@ app.MapHub<AuthHub>("/authHub");
 app.MapHub<CourseHub>("/courseHub");
 
 app.Run();
+
+public partial class Program { }

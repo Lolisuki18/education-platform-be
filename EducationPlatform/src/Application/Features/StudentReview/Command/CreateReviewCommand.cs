@@ -53,6 +53,15 @@ namespace Application.Features.StudentReview.Command
                 throw new ForbiddenException("You must be enrolled in this course to leave a review.");
             }
 
+            // Check if the student has already reviewed this course
+            var hasReviewed = await _unitOfWork
+                .GetRepository<ICourseReviewRepository>()
+                .HasStudentReviewedCourseAsync(request.CourseId, currentStudentId);
+            if (hasReviewed)
+            {
+                throw new Conflict("You have already reviewed this course.");
+            }
+
             //3. Find the course by courseId
             var course = await _unitOfWork.GetRepository<ICourseRepository>().GetByIdAsync(request.CourseId);
             if (course == null) throw new NotFound("Course not found.");

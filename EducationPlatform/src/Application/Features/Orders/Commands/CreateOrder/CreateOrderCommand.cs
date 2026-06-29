@@ -7,12 +7,14 @@ using Domain.CourseManagement.Aggregate;
 using Domain.OrderManagement.Aggregate;
 using Domain.OrderManagement.ValueObject;
 using Application.Interface;
+using Domain.EnrollmentManagement.Aggregate;
 
 namespace Application.Features.Orders.Commands.CreateOrder
 {
     public class CreateOrderCommand : IRequest<OrderDTO>
     {
         public Guid CourseID { get; set; }
+
         public List<Guid>? CouponIds { get; set; }
     }
 
@@ -50,6 +52,15 @@ namespace Application.Features.Orders.Commands.CreateOrder
             if (course == null)
                 throw new NotFound($"Course with ID: {request.CourseID} not found.");
 
+            // Check if student is already enrolled in this course
+            var studentEnrollments = await _unitOfWork
+                .GetRepository<IEnrollmentRepository>()
+                .GetStudentEnrollments(studentId);
+            if (studentEnrollments.Any(e => e.CourseID == request.CourseID))
+            {
+                throw new Conflict("Student is already enrolled in this course.");
+            }
+
             // Calculate discount from coupons
             decimal totalDiscount = 0;
             List<Coupon> validCoupons = new();
@@ -63,11 +74,14 @@ namespace Application.Features.Orders.Commands.CreateOrder
                         .GetCouponDetailById(couponId);
 
                     if (coupon == null)
-                        continue;
+                        throw new NotFound($"Coupon with ID: {couponId} not found.");
 
                     // Validate coupon
-                    if (coupon.StudentID != studentId || coupon.IsUsed)
-                        continue;
+                    if (coupon.StudentID != studentId)
+                        throw new BadRequest($"Coupon with ID: {couponId} does not belong to the student.");
+
+                    if (coupon.IsUsed)
+                        throw new Conflict($"Coupon with ID: {couponId} is already used.");
 
                     totalDiscount += coupon.DiscountAmount;
                     validCoupons.Add(coupon);

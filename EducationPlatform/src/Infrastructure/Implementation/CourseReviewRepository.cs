@@ -30,6 +30,12 @@ namespace Infrastructure.Implementation
                 .AsNoTracking()
                 .ToListAsync();
         }
+
+        public async Task<bool> HasStudentReviewedCourseAsync(Guid courseId, Guid studentId)
+        {
+            return await context.CourseReviews
+                .AnyAsync(r => r.CourseID == courseId && r.StudentID == studentId && r.DeleteAt == null);
+        }
     }
 }
 
