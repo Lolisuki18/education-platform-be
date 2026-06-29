@@ -5,6 +5,8 @@ using Application.BusinessException;
 using Domain.IdentityManagement.Aggregate;
 using Application.Helper;
 
+using Microsoft.Extensions.Configuration;
+
 namespace Application.Features.Identity.Commands.Login
 {
     public class LoginCommand : IRequest<TokenDTO>
@@ -16,10 +18,12 @@ namespace Application.Features.Identity.Commands.Login
     public class LoginCommandHandler : IRequestHandler<LoginCommand, TokenDTO>
     {
         private readonly IUnitOfWork _unitOfWork;
+        private readonly IConfiguration _configuration;
 
-        public LoginCommandHandler(IUnitOfWork unitOfWork)
+        public LoginCommandHandler(IUnitOfWork unitOfWork, IConfiguration configuration)
         {
             _unitOfWork = unitOfWork;
+            _configuration = configuration;
         }
 
         public async Task<TokenDTO> Handle(LoginCommand request, CancellationToken cancellationToken)
@@ -37,7 +41,7 @@ namespace Application.Features.Identity.Commands.Login
                 throw new AuthenticateException("Invalid password or email has not been verified.");
 
             // Generate token
-            var token = TokenGenerator.GenerateToken(user);
+            var token = TokenGenerator.GenerateToken(user, _configuration);
 
             // Generate refresh token
             var refreshToken = TokenGenerator.GenerateRefreshToken();

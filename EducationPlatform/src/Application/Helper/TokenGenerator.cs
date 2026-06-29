@@ -10,14 +10,8 @@ namespace Application.Helper
 {
     public static class TokenGenerator
     {
-        public static string GenerateToken(User user)
+        public static string GenerateToken(User user, IConfiguration configuration)
         {
-            // Note from Long: Not clean, should using dependency injection 
-            var configuration = new ConfigurationBuilder()
-                .SetBasePath(Directory.GetCurrentDirectory())
-                .AddJsonFile("appsettings.json", optional: false)
-                .Build();
-
             var jwtSettings = configuration.GetSection("JwtSettings");
 
             var secretKey = jwtSettings["SecretKey"];
