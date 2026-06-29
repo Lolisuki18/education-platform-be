@@ -14,10 +14,11 @@ namespace Application.Helper
         {
             var jwtSettings = configuration.GetSection("JwtSettings");
 
-            var secretKey = jwtSettings["SecretKey"];
+            var secretKey = jwtSettings["SecretKey"] ?? throw new InvalidOperationException("Missing JwtSettings:SecretKey");
             var issuer = jwtSettings["Issuer"];
             var audience = jwtSettings["Audience"];
-            var expiryMinutes = int.Parse(jwtSettings["ExpiryMinutes"]);
+            var expiryMinutesStr = jwtSettings["ExpiryMinutes"] ?? "60";
+            var expiryMinutes = int.Parse(expiryMinutesStr);
 
             var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey));
             var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
