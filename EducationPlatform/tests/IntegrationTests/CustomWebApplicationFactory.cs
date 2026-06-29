@@ -73,6 +73,26 @@ namespace IntegrationTests
                     .ReturnsAsync("https://mock-payment-url.com");
 
                 services.AddScoped(_ => mockPaymentService.Object);
+
+                // 3. Remove existing storage service registration, and add mock
+                var storageDescriptor = services.FirstOrDefault(d => d.ServiceType == typeof(Application.Interface.IStorageService));
+                if (storageDescriptor != null)
+                {
+                    services.Remove(storageDescriptor);
+                }
+
+                var mockStorageService = new Mock<Application.Interface.IStorageService>();
+                mockStorageService
+                    .Setup(s => s.SaveAsync(It.IsAny<Stream>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+                    .ReturnsAsync((Stream stream, string ext, CancellationToken ct) => $"2026/06/mock-file.{ext.TrimStart('.')}");
+                mockStorageService
+                    .Setup(s => s.CompleteUploadAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+                    .ReturnsAsync((string uploadId, string ext, CancellationToken ct) => $"videos/{uploadId}.{ext}");
+                mockStorageService
+                    .Setup(s => s.GetFullPath(It.IsAny<string>()))
+                    .Returns((string path) => path);
+
+                services.AddScoped(_ => mockStorageService.Object);
             });
         }
 

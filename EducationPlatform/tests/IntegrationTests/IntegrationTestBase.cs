@@ -127,5 +127,32 @@ namespace IntegrationTests
             var db = scope.ServiceProvider.GetRequiredService<EducationPlatformDBContext>();
             return await action(db);
         }
+
+        protected MultipartFormDataContent CreateMultipartFormContent(
+            Dictionary<string, string> fields,
+            byte[]? fileBytes = null,
+            string? paramName = null,
+            string? fileName = null,
+            string? contentType = null)
+        {
+            var content = new MultipartFormDataContent();
+
+            foreach (var kvp in fields)
+            {
+                content.Add(new StringContent(kvp.Value), kvp.Key);
+            }
+
+            if (fileBytes != null && !string.IsNullOrEmpty(paramName))
+            {
+                var fileContent = new ByteArrayContent(fileBytes);
+                if (!string.IsNullOrEmpty(contentType))
+                {
+                    fileContent.Headers.ContentType = MediaTypeHeaderValue.Parse(contentType);
+                }
+                content.Add(fileContent, paramName, fileName ?? "file");
+            }
+
+            return content;
+        }
     }
 }
