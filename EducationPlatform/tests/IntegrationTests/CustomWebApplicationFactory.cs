@@ -33,7 +33,10 @@ namespace IntegrationTests
                     { "EmailSettings:SmtpPort", "25" },
                     { "JwtSettings:SecretKey", "THIS_IS_A_TEST_SECRET_KEY_AT_LEAST_32_CHARS" },
                     { "JwtSettings:Issuer", "EducationPlatform" },
-                    { "JwtSettings:Audience", "EducationPlatform" }
+                    { "JwtSettings:Audience", "EducationPlatform" },
+                    { "Logging:LogLevel:Default", "Warning" },
+                    { "Logging:LogLevel:Microsoft.AspNetCore", "Warning" },
+                    { "Logging:LogLevel:Microsoft.EntityFrameworkCore.Database.Command", "Warning" }
                 });
             });
 

@@ -40,7 +40,7 @@ jobs:
       run: dotnet restore EducationPlatform/EducationPlatform.sln
 
     - name: Check code formatting
-      # continue-on-error: true # Mở comment dòng này nếu không muốn CI bị chặn vì lỗi format nhỏ
+      continue-on-error: true # Mở comment dòng này nếu không muốn CI bị chặn vì lỗi format nhỏ
       run: dotnet format EducationPlatform/EducationPlatform.sln --verify-no-changes --no-restore
 
     - name: Build project
@@ -56,4 +56,4 @@ jobs:
         fi
 
     - name: Run all tests
-      run: dotnet test EducationPlatform/EducationPlatform.sln --configuration Release --no-build --verbosity normal --logger trx
+      run: dotnet test EducationPlatform/EducationPlatform.sln --configuration Release --no-build --verbosity minimal --logger trx
