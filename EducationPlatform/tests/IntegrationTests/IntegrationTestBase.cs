@@ -93,5 +93,39 @@ namespace IntegrationTests
 
             return (token, userId);
         }
+
+        protected async Task<string> LoginExistingUserAsync(string email, string password)
+        {
+            var loginResponse = await Client.PostAsJsonAsync("/api/auth/login", new LoginRequestDto
+            {
+                Email = email,
+                Password = password
+            });
+            loginResponse.EnsureSuccessStatusCode();
+
+            var loginResult = await loginResponse.Content.ReadFromJsonAsync<ApiResponse<LoginResponseDto>>();
+            if (loginResult == null || loginResult.Data == null)
+            {
+                throw new Exception("Login failed to return valid token.");
+            }
+
+            var token = loginResult.Data.AccessToken;
+            Client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+            return token;
+        }
+
+        protected async Task ExecuteDbContextAsync(Func<EducationPlatformDBContext, Task> action)
+        {
+            using var scope = Factory.Services.CreateScope();
+            var db = scope.ServiceProvider.GetRequiredService<EducationPlatformDBContext>();
+            await action(db);
+        }
+
+        protected async Task<T> ExecuteDbContextAsync<T>(Func<EducationPlatformDBContext, Task<T>> action)
+        {
+            using var scope = Factory.Services.CreateScope();
+            var db = scope.ServiceProvider.GetRequiredService<EducationPlatformDBContext>();
+            return await action(db);
+        }
     }
 }

@@ -3,8 +3,10 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using Domain.AcademicManagement.Aggregate;
 using Domain.CourseManagement.Aggregate;
+using Domain.CourseManagement.Entity;
 using Domain.IdentityManagement.Aggregate;
 using Domain.IdentityManagement.ValueObject;
+using Domain.OrderManagement.Aggregate;
 using Infrastructure.Persistence;
 
 namespace IntegrationTests
@@ -36,6 +38,36 @@ namespace IntegrationTests
             teacher.VerifyEmail(teacher.EmailOtp!);
             context.Set<User>().Add(teacher);
 
+            // Seed a second Teacher User for role authorization checks
+            var teacher2 = new User(
+                Guid.NewGuid(),
+                "teacher2@example.com",
+                "Password123!",
+                "0944444444",
+                "Teacher User 2",
+                "Bio of Teacher 2",
+                Role.Teacher,
+                DateTime.Now
+            );
+            teacher2.GenerateEmailOtp(TimeSpan.FromMinutes(5));
+            teacher2.VerifyEmail(teacher2.EmailOtp!);
+            context.Set<User>().Add(teacher2);
+
+            // Seed an Admin User
+            var admin = new User(
+                Guid.NewGuid(),
+                "admin@example.com",
+                "Password123!",
+                "0933333333",
+                "Admin User",
+                "Bio of Admin",
+                Role.Admin,
+                DateTime.Now
+            );
+            admin.GenerateEmailOtp(TimeSpan.FromMinutes(5));
+            admin.VerifyEmail(admin.EmailOtp!);
+            context.Set<User>().Add(admin);
+
             // Seed a Student User
             var student = new User(
                 Guid.NewGuid(),
@@ -50,6 +82,16 @@ namespace IntegrationTests
             student.GenerateEmailOtp(TimeSpan.FromMinutes(5));
             student.VerifyEmail(student.EmailOtp!);
             context.Set<User>().Add(student);
+
+            // Seed a Coupon for Student
+            var coupon = new Coupon(
+                Guid.NewGuid(),
+                student.UserID,
+                "DISCOUNT10",
+                10000,
+                "Welcome discount"
+            );
+            context.Set<Coupon>().Add(coupon);
 
             await context.SaveChangesAsync();
 
@@ -87,6 +129,28 @@ namespace IntegrationTests
             );
             // This course remains pending review/draft (not marked published)
             context.Set<Course>().Add(course2);
+
+            // Seed a Chapter for course1
+            var chapter = new Chapter(
+                Guid.Parse("11111111-1111-1111-1111-111111111111"),
+                "Introduction to Algebra",
+                "Chapter 1: Basics",
+                1,
+                course1.CourseID
+            );
+            // Add a Lesson to the Chapter
+            var lesson = chapter.AddLesson(
+                "Lesson 1: Variables",
+                "Understand variables",
+                "Learn about variables",
+                "https://example.com/video1"
+            );
+            // Re-assign Guid for testing reproducibility
+            var lessonField = typeof(Lesson).GetProperty("LessonID");
+            lessonField?.SetValue(lesson, Guid.Parse("22222222-2222-2222-2222-222222222222"));
+
+            context.Set<Chapter>().Add(chapter);
+            context.Set<Lesson>().Add(lesson);
 
             await context.SaveChangesAsync();
         }

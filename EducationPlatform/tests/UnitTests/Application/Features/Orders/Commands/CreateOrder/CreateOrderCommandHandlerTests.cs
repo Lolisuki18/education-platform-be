@@ -6,6 +6,7 @@ using AutoMapper;
 using Domain.Common.Interfaces;
 using Domain.CourseManagement.Aggregate;
 using Domain.OrderManagement.Aggregate;
+using Domain.EnrollmentManagement.Aggregate;
 using FluentAssertions;
 using Moq;
 using System;
@@ -22,6 +23,7 @@ namespace UnitTests.Application.Features.Orders.Commands.CreateOrder
         private readonly Mock<IUnitOfWork> _mockUnitOfWork;
         private readonly Mock<ICourseRepository> _mockCourseRepository;
         private readonly Mock<IOrderRepository> _mockOrderRepository;
+        private readonly Mock<IEnrollmentRepository> _mockEnrollmentRepository;
         private readonly Mock<IMapper> _mockMapper;
         private readonly Mock<ICurrentUser> _mockCurrentUser;
         private readonly Mock<IPaymentService> _mockPaymentService;
@@ -32,6 +34,7 @@ namespace UnitTests.Application.Features.Orders.Commands.CreateOrder
             _mockUnitOfWork = new Mock<IUnitOfWork>();
             _mockCourseRepository = new Mock<ICourseRepository>();
             _mockOrderRepository = new Mock<IOrderRepository>();
+            _mockEnrollmentRepository = new Mock<IEnrollmentRepository>();
             _mockMapper = new Mock<IMapper>();
             _mockCurrentUser = new Mock<ICurrentUser>();
             _mockPaymentService = new Mock<IPaymentService>();
@@ -43,6 +46,14 @@ namespace UnitTests.Application.Features.Orders.Commands.CreateOrder
             _mockUnitOfWork
                 .Setup(u => u.GetRepository<IOrderRepository>())
                 .Returns(_mockOrderRepository.Object);
+
+            _mockUnitOfWork
+                .Setup(u => u.GetRepository<IEnrollmentRepository>())
+                .Returns(_mockEnrollmentRepository.Object);
+
+            _mockEnrollmentRepository
+                .Setup(r => r.GetStudentEnrollments(It.IsAny<Guid>()))
+                .ReturnsAsync(new List<Enrollment>());
 
             _handler = new CreateOrderCommandHandler(
                 _mockUnitOfWork.Object,

@@ -74,14 +74,11 @@ namespace Application.Features.Orders.Commands.CreateOrder
                         .GetCouponDetailById(couponId);
 
                     if (coupon == null)
-                        throw new NotFound($"Coupon with ID: {couponId} not found.");
+                        continue;
 
                     // Validate coupon
-                    if (coupon.StudentID != studentId)
-                        throw new BadRequest($"Coupon with ID: {couponId} does not belong to the student.");
-
-                    if (coupon.IsUsed)
-                        throw new Conflict($"Coupon with ID: {couponId} is already used.");
+                    if (coupon.StudentID != studentId || coupon.IsUsed)
+                        continue;
 
                     totalDiscount += coupon.DiscountAmount;
                     validCoupons.Add(coupon);
