@@ -19,7 +19,6 @@ namespace IntegrationTests
     public class CustomWebApplicationFactory : WebApplicationFactory<Program>, IAsyncLifetime
     {
         private Respawner? _respawner;
-        private string? _originalAppsettingsContent;
 
         protected override void ConfigureWebHost(IWebHostBuilder builder)
         {
@@ -102,39 +101,6 @@ namespace IntegrationTests
 
         public async Task InitializeAsync()
         {
-            var appsettingsPath = Path.Combine(Directory.GetCurrentDirectory(), "appsettings.json");
-            if (File.Exists(appsettingsPath))
-            {
-                _originalAppsettingsContent = await File.ReadAllTextAsync(appsettingsPath);
-                var node = System.Text.Json.Nodes.JsonNode.Parse(_originalAppsettingsContent);
-                if (node != null)
-                {
-                    var jwtNode = node["JwtSettings"];
-                    if (jwtNode == null)
-                    {
-                        jwtNode = new System.Text.Json.Nodes.JsonObject();
-                        node["JwtSettings"] = jwtNode;
-                    }
-                    jwtNode["SecretKey"] = "THIS_IS_A_TEST_SECRET_KEY_AT_LEAST_32_CHARS";
-                    jwtNode["Issuer"] = "EducationPlatform";
-                    jwtNode["Audience"] = "EducationPlatform";
-                    jwtNode["ExpiryMinutes"] = "60";
-
-                    await File.WriteAllTextAsync(appsettingsPath, node.ToString());
-                }
-            }
-            else
-            {
-                var json = @"{
-  ""JwtSettings"": {
-    ""SecretKey"": ""THIS_IS_A_TEST_SECRET_KEY_AT_LEAST_32_CHARS"",
-    ""Issuer"": ""EducationPlatform"",
-    ""Audience"": ""EducationPlatform"",
-    ""ExpiryMinutes"": ""60""
-  }
-}";
-                await File.WriteAllTextAsync(appsettingsPath, json);
-            }
 
             using var scope = Services.CreateScope();
             var db = scope.ServiceProvider.GetRequiredService<EducationPlatformDBContext>();
@@ -170,18 +136,8 @@ namespace IntegrationTests
             }
         }
 
-        public new async Task DisposeAsync()
+        public new Task DisposeAsync()
         {
-            var appsettingsPath = Path.Combine(Directory.GetCurrentDirectory(), "appsettings.json");
-            if (_originalAppsettingsContent != null)
-            {
-                try { await File.WriteAllTextAsync(appsettingsPath, _originalAppsettingsContent); } catch { }
-            }
-            else if (File.Exists(appsettingsPath))
-            {
-                try { File.Delete(appsettingsPath); } catch { }
-            }
-
             var testStorage = Path.Combine(Directory.GetCurrentDirectory(), "test_storage");
             if (Directory.Exists(testStorage))
             {
@@ -194,6 +150,7 @@ namespace IntegrationTests
                     // Ignore deletion exceptions in cleanup
                 }
             }
+            return Task.CompletedTask;
         }
     }
 }

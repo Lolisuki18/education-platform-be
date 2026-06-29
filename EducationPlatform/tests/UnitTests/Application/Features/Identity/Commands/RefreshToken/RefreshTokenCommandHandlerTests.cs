@@ -12,6 +12,9 @@ using System.Threading;
 using System.Threading.Tasks;
 using Xunit;
 
+using Microsoft.Extensions.Configuration;
+using System.Collections.Generic;
+
 namespace UnitTests.Application.Features.Identity.Commands.RefreshToken
 {
     public class RefreshTokenCommandHandlerTests
@@ -29,7 +32,18 @@ namespace UnitTests.Application.Features.Identity.Commands.RefreshToken
                 .Setup(u => u.GetRepository<IUserRepository>())
                 .Returns(_mockUserRepository.Object);
 
-            _handler = new RefreshTokenCommandHandler(_mockUnitOfWork.Object);
+            var inMemorySettings = new Dictionary<string, string?> {
+                {"JwtSettings:SecretKey", "THIS_IS_A_TEST_SECRET_KEY_AT_LEAST_32_CHARS"},
+                {"JwtSettings:Issuer", "EducationPlatform"},
+                {"JwtSettings:Audience", "EducationPlatform"},
+                {"JwtSettings:ExpiryMinutes", "60"}
+            };
+
+            IConfiguration configuration = new ConfigurationBuilder()
+                .AddInMemoryCollection(inMemorySettings)
+                .Build();
+
+            _handler = new RefreshTokenCommandHandler(_mockUnitOfWork.Object, configuration);
         }
 
         [Fact]

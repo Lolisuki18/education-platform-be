@@ -58,18 +58,6 @@ builder.Services.AddAutoMapper(cfg => cfg.AddMaps(typeof(API.Helper.MappingProfi
 // ====================
 // 5. JWT Authentication & SignalR Setup
 // ====================
-var jwtSettings = builder.Configuration.GetSection("JwtSettings");
-var secretKey = jwtSettings["SecretKey"];
-var issuer = jwtSettings["Issuer"];
-var audience = jwtSettings["Audience"];
-
-if (string.IsNullOrWhiteSpace(secretKey))
-    throw new InvalidOperationException("Missing configuration: JwtSettings:SecretKey");
-if (string.IsNullOrWhiteSpace(issuer))
-    throw new InvalidOperationException("Missing configuration: JwtSettings:Issuer");
-if (string.IsNullOrWhiteSpace(audience))
-    throw new InvalidOperationException("Missing configuration: JwtSettings:Audience");
-
 builder.Services.AddAuthentication(options =>
 {
     options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
@@ -77,15 +65,27 @@ builder.Services.AddAuthentication(options =>
 })
 .AddJwtBearer(options =>
 {
+    var jwtSettings = builder.Configuration.GetSection("JwtSettings");
+    var secretKey = jwtSettings["SecretKey"];
+    var issuer = jwtSettings["Issuer"];
+    var audience = jwtSettings["Audience"];
+
+    if (string.IsNullOrWhiteSpace(secretKey))
+        throw new InvalidOperationException("Missing configuration: JwtSettings:SecretKey");
+    if (string.IsNullOrWhiteSpace(issuer))
+        throw new InvalidOperationException("Missing configuration: JwtSettings:Issuer");
+    if (string.IsNullOrWhiteSpace(audience))
+        throw new InvalidOperationException("Missing configuration: JwtSettings:Audience");
+
     options.TokenValidationParameters = new TokenValidationParameters
     {
         ValidateIssuer = true,
         ValidateAudience = true,
         ValidateLifetime = true,
         ValidateIssuerSigningKey = true,
-        ValidIssuer = jwtSettings["Issuer"],
-        ValidAudience = jwtSettings["Audience"],
-        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey!)),
+        ValidIssuer = issuer,
+        ValidAudience = audience,
+        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey)),
         ClockSkew = TimeSpan.Zero
     };
 
