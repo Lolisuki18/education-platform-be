@@ -178,7 +178,6 @@ else
 {
     // Only use HTTPS redirection in Production to avoid Android Emulator issues
     app.UseHsts();
-    app.UseHttpsRedirection();
 }
 
 // ====================
@@ -247,6 +246,7 @@ app.UseAuthorization();
 app.MapControllers();
 app.MapHub<AuthHub>("/authHub");
 app.MapHub<CourseHub>("/courseHub");
+app.MapGet("/", () => "API is running successfully!");
 
 app.Run();
 
