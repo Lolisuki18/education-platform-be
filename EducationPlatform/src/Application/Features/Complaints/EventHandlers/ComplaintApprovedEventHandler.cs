@@ -19,9 +19,10 @@ namespace Application.Features.Complaints.EventHandlers
         public async Task Handle(ComplaintApprovedEvent notification, CancellationToken cancellationToken)
         {
             var courseRepo = _unitOfWork.GetRepository<ICourseRepository>();
+            var complaintRepo = _unitOfWork.GetRepository<IComplaintRepository>();
 
             // 1. Get already-approved complaints for this course
-            var approvedComplaints = await courseRepo.GetApprovedByCoursesAsync(notification.CourseId);
+            var approvedComplaints = await complaintRepo.GetApprovedByCoursesAsync(notification.CourseId);
             var totalApproved = approvedComplaints.Count();
 
             var complaintCount = totalApproved + 1; // current + previous
@@ -70,11 +71,11 @@ namespace Application.Features.Complaints.EventHandlers
                     }
 
                     // Cleanup: Remove the complaints history as they are resolved by course removal
-                    var currentComplaint = await courseRepo.GetComplaintDetailByID(notification.ComplaintId);
+                    var currentComplaint = await complaintRepo.GetComplaintDetailByID(notification.ComplaintId);
                     var allToRemove = approvedComplaints.ToList();
                     if (currentComplaint != null) allToRemove.Add(currentComplaint);
 
-                    courseRepo.RemoveComplaints(allToRemove);
+                    complaintRepo.RemoveComplaints(allToRemove);
                 }
             }
             else

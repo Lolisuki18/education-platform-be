@@ -24,7 +24,7 @@ namespace Application.Features.Complaints.Queries.GetComplaintDetail
         public async Task<ComplaintDetailDTO> Handle(GetComplaintDetailQuery request, CancellationToken cancellationToken)
         {
             var complaint = await _unitOfWork
-                .GetRepository<ICourseRepository>()
+                .GetRepository<IComplaintRepository>()
                 .GetComplaintDetailByID(request.ComplaintID);
 
             if (complaint == null)
@@ -33,7 +33,7 @@ namespace Application.Features.Complaints.Queries.GetComplaintDetail
             }
 
             // Authorization check: Teacher can only view complaints of their own courses
-            if (_currentUser.Role == Domain.IdentityManagement.ValueObject.Role.Teacher.ToString() &&
+            if (_currentUser.Role == Domain.IdentityManagement.Enum.Role.Teacher.ToString() &&
                 complaint.Course.TeacherID != _currentUser.Id)
             {
                 throw new ForbiddenException("You do not have permission to view this complaint.");

@@ -39,6 +39,7 @@ namespace Application.Features.Courses.CreateCourse
             string thumbnailName = request.ThumbnailName;
             if (request.ThumbnailFile != null)
             {
+                Application.Helper.FileValidator.Validate(request.ThumbnailFile);
                 thumbnailName = await _storageService.SaveAsync(
                     request.ThumbnailFile.OpenReadStream(),
                     Path.GetExtension(request.ThumbnailFile.FileName).TrimStart('.'),

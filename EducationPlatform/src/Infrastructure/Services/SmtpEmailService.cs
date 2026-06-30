@@ -1,32 +1,27 @@
 using System.Net;
 using System.Net.Mail;
+using Application.Interface;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 
-namespace Application.Helper
+namespace Infrastructure.Services
 {
-    public static class EmailHelper
+    public class SmtpEmailService : IEmailService
     {
-        private static IConfiguration? _configuration;
-        private static IConfiguration Configuration
+        private readonly IConfiguration _configuration;
+        private readonly ILogger<SmtpEmailService> _logger;
+
+        public SmtpEmailService(IConfiguration configuration, ILogger<SmtpEmailService> logger)
         {
-            get
-            {
-                if (_configuration == null)
-                {
-                    _configuration = new ConfigurationBuilder()
-                        .SetBasePath(Directory.GetCurrentDirectory())
-                        .AddJsonFile("appsettings.json", optional: true)
-                        .Build();
-                }
-                return _configuration;
-            }
+            _configuration = configuration;
+            _logger = logger;
         }
 
-        public static async Task SendVerificationEmailAsync(string toEmail, string otp)
+        public async Task SendVerificationEmailAsync(string toEmail, string otp)
         {
             try
             {
-                var config = Configuration;
+                var config = _configuration;
                 var fromEmail = config["EmailSettings:From"] ?? "noreply@educationplatform.com";
                 var displayName = config["EmailSettings:DisplayName"] ?? "Education Platform";
                 var smtpHost = config["EmailSettings:SmtpHost"] ?? "localhost";
@@ -65,7 +60,7 @@ namespace Application.Helper
             {
                 // Prevent SMTP downtime or local test environment issues from crashing user registration/actions.
                 // In production, failed emails should be queued or retried asynchronously.
-                Console.WriteLine($"[EmailHelper] Failed to send email to {toEmail}: {ex.Message}");
+                _logger.LogError(ex, "[SmtpEmailService] Failed to send email to {ToEmail}", toEmail);
             }
         }
 

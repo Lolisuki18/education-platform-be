@@ -2,6 +2,7 @@ using Domain.CourseManagement.Aggregate;
 using Domain.CourseManagement.Entity;
 using Domain.CourseManagement.Enum;
 using Domain.IdentityManagement.ValueObject;
+using Domain.IdentityManagement.Enum;
 using Domain.Common.Interfaces;
 
 namespace Domain.CourseManagement.Aggregate
@@ -25,15 +26,6 @@ namespace Domain.CourseManagement.Aggregate
         Task<Course?> GetCourseDetailByID(
             Guid courseId);
 
-        Task<Complaint?> GetComplaintDetailByID(
-            Guid complaintId);
-
-        Task<IEnumerable<Complaint>> GetComplaintsAsync(
-            ComplaintStatus? complaintStatus,
-            Guid? teacherId);
-
-        Task<IEnumerable<Complaint>> GetApprovedByCoursesAsync(
-            Guid courseId);
 
         void ReplaceViolatedPolicies(
             Guid courseId,
@@ -54,14 +46,6 @@ namespace Domain.CourseManagement.Aggregate
         void AddMaterials(
             IEnumerable<Material> materials);
 
-        void CreateComplaint(
-            Complaint complaint);
-
-        void UpdateComplaint(
-            Complaint complaint);
-
-        void RemoveComplaints(
-            IEnumerable<Complaint> complaints);
 
         Task<(
             int InReview,

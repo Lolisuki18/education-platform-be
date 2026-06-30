@@ -1,4 +1,4 @@
-namespace Domain.IdentityManagement.ValueObject
+namespace Domain.IdentityManagement.Enum
 {
     public enum Role
     {

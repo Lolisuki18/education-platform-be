@@ -3,7 +3,7 @@ using Domain.Common.Interfaces;
 using Application.BusinessException;
 using Application.Helper;
 using Domain.IdentityManagement.Aggregate;
-using Domain.IdentityManagement.ValueObject;
+using Domain.IdentityManagement.Enum;
 
 namespace Application.Features.Identity.Commands.Register
 {
@@ -20,10 +20,12 @@ namespace Application.Features.Identity.Commands.Register
     public class RegisterCommandHandler : IRequestHandler<RegisterCommand, Unit>
     {
         private readonly IUnitOfWork _unitOfWork;
+        private readonly Application.Interface.IEmailService _emailService;
 
-        public RegisterCommandHandler(IUnitOfWork unitOfWork)
+        public RegisterCommandHandler(IUnitOfWork unitOfWork, Application.Interface.IEmailService emailService)
         {
             _unitOfWork = unitOfWork;
+            _emailService = emailService;
         }
 
         public async Task<Unit> Handle(RegisterCommand request, CancellationToken cancellationToken)
@@ -77,7 +79,7 @@ namespace Application.Features.Identity.Commands.Register
             await _unitOfWork.CommitAsync();
 
             // Send email (outside transaction)
-            await EmailHelper.SendVerificationEmailAsync(user.Email, user.EmailOtp!);
+            await _emailService.SendVerificationEmailAsync(user.Email, user.EmailOtp!);
 
             return Unit.Value;
         }

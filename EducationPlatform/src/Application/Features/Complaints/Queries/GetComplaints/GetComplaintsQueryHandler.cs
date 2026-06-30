@@ -2,7 +2,7 @@ using Application.Results;
 using AutoMapper;
 using Domain.Common.Interfaces;
 using Domain.CourseManagement.Aggregate;
-using Domain.IdentityManagement.ValueObject;
+using Domain.IdentityManagement.Enum;
 using MediatR;
 using Application.Interface;
 
@@ -30,7 +30,7 @@ namespace Application.Features.Complaints.Queries.GetComplaints
             }
 
             var complaints = await _unitOfWork
-                .GetRepository<ICourseRepository>()
+                .GetRepository<IComplaintRepository>()
                 .GetComplaintsAsync(request.Status, teacherId);
 
             return _mapper.Map<IEnumerable<ComplaintDTO>>(complaints);

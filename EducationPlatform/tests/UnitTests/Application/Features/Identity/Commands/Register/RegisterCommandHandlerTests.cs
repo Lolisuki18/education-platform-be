@@ -2,6 +2,7 @@ using Application.BusinessException;
 using Application.Features.Identity.Commands.Register;
 using Domain.Common.Interfaces;
 using Domain.IdentityManagement.Aggregate;
+using Domain.IdentityManagement.Enum;
 using Domain.IdentityManagement.ValueObject;
 using FluentAssertions;
 using MediatR;

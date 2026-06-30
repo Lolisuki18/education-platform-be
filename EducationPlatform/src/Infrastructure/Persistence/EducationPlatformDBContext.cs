@@ -295,6 +295,9 @@ namespace Infrastructure.Persistence
                       .HasForeignKey(l => l.CourseID)
                       .OnDelete(DeleteBehavior.Cascade);
 
+                entity.HasIndex(c => c.Status);
+                entity.HasIndex(c => c.TeacherID);
+
                 // ----- Chapter (Internal Entities)
                 entity.HasMany(c => c.Chapters)
                       .WithOne()
@@ -344,6 +347,9 @@ namespace Infrastructure.Persistence
                       .WithMany()
                       .HasForeignKey(c => c.StudentID)
                       .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasIndex(c => c.Status);
+                entity.HasIndex(c => c.CourseID);
             });
 
             // ====================
@@ -634,6 +640,9 @@ namespace Infrastructure.Persistence
                       .WithMany()
                       .HasForeignKey(p => p.CourseID)
                       .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasIndex(p => p.Status);
+                entity.HasIndex(p => p.StudentID);
             });
 
             // ====================
@@ -697,6 +706,9 @@ namespace Infrastructure.Persistence
                       .WithMany()
                       .HasForeignKey(lp => lp.CourseID)
                       .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasIndex(e => e.StudentID);
+                entity.HasIndex(e => e.Status);
             });
 
             // ====================

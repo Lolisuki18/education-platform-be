@@ -23,8 +23,8 @@ namespace Application.Features.Complaints.Commands.ReviewComplaint
             if (!_currentUser.Id.HasValue)
                 throw new AuthenticateException("User must be authenticated.");
 
-            var courseRepo = _unitOfWork.GetRepository<ICourseRepository>();
-            var complaint = await courseRepo.GetComplaintDetailByID(request.ComplaintID);
+            var complaintRepo = _unitOfWork.GetRepository<IComplaintRepository>();
+            var complaint = await complaintRepo.GetComplaintDetailByID(request.ComplaintID);
 
             if (complaint == null)
             {
@@ -43,7 +43,7 @@ namespace Application.Features.Complaints.Commands.ReviewComplaint
 
             // 2. Persist
             await _unitOfWork.BeginTransactionAsync();
-            courseRepo.UpdateComplaint(complaint);
+            complaintRepo.UpdateComplaint(complaint);
 
             // Side effects (like rejecting the course) will be handled by ComplaintApprovedEventHandler
             // which is dispatched during CommitAsync via DomainEventDispatcherInterceptor.

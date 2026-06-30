@@ -72,6 +72,8 @@ namespace API.Controllers
             if (request.Chunk == null || request.Chunk.Length == 0)
                 return BadRequest(ApiResponse.Success("Empty chunk", 400));
 
+            Application.Helper.FileValidator.Validate(request.Chunk);
+
             await using var stream = request.Chunk.OpenReadStream();
             await storageService.SaveChunkAsync(stream, request.UploadId, request.Index, ct);
 

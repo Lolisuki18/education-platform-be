@@ -17,13 +17,13 @@ namespace Application.Features.Identity.Commands.Login
 
     public class LoginCommandHandler : IRequestHandler<LoginCommand, TokenDTO>
     {
+        private readonly Application.Interface.ITokenService _tokenService;
         private readonly IUnitOfWork _unitOfWork;
-        private readonly IConfiguration _configuration;
 
-        public LoginCommandHandler(IUnitOfWork unitOfWork, IConfiguration configuration)
+        public LoginCommandHandler(IUnitOfWork unitOfWork, Application.Interface.ITokenService tokenService)
         {
             _unitOfWork = unitOfWork;
-            _configuration = configuration;
+            _tokenService = tokenService;
         }
 
         public async Task<TokenDTO> Handle(LoginCommand request, CancellationToken cancellationToken)
@@ -34,17 +34,17 @@ namespace Application.Features.Identity.Commands.Login
                 .GetUserByEmail(request.Email);
 
             if (user == null)
-                throw new NotFound($"User with email: {request.Email} not found.");
+                throw new AuthenticateException("Invalid credentials.");
 
             // Validate password and email verification
             if (!user.VerifyLogin(request.Password))
-                throw new AuthenticateException("Invalid password or email has not been verified.");
+                throw new AuthenticateException("Invalid credentials.");
 
             // Generate token
-            var token = TokenGenerator.GenerateToken(user, _configuration);
+            var token = _tokenService.GenerateToken(user);
 
             // Generate refresh token
-            var refreshToken = TokenGenerator.GenerateRefreshToken();
+            var refreshToken = _tokenService.GenerateRefreshToken();
 
             // Apply domain
             user.IssueRefreshToken(refreshToken, TimeSpan.FromDays(7));

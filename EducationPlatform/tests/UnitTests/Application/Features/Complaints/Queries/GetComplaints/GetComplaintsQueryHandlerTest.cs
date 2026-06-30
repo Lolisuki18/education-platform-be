@@ -5,7 +5,7 @@ using AutoMapper;
 using Domain.Common.Interfaces;
 using Domain.CourseManagement.Aggregate;
 using Domain.CourseManagement.Enum;
-using Domain.IdentityManagement.ValueObject;
+using Domain.IdentityManagement.Enum;
 using FluentAssertions;
 using Moq;
 using System;

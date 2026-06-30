@@ -4,6 +4,7 @@ using Application.Interface;
 using Application.Results;
 using AutoMapper;
 using Domain.Common.Interfaces;
+using Domain.IdentityManagement.Enum;
 using Domain.IdentityManagement.ValueObject;
 using Domain.OrderManagement.Aggregate;
 using FluentAssertions;

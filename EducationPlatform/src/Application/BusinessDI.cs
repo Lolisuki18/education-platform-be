@@ -1,5 +1,5 @@
 using AutoMapper;
-using Application.Implementation;
+
 using Application.Interface;
 using Microsoft.Extensions.DependencyInjection;
 using FluentValidation;
@@ -23,7 +23,6 @@ namespace Application
             services.AddValidatorsFromAssembly(typeof(ApplicationDI).Assembly);
 
             // Đăng ký các service
-            services.AddScoped<IStorageService, StorageService>();
 
 
             return services;

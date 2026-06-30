@@ -1,5 +1,6 @@
 using Domain.DomainExceptions;
 using Domain.IdentityManagement.ValueObject;
+using Domain.IdentityManagement.Enum;
 
 namespace Domain.IdentityManagement.Aggregate
 {
@@ -57,7 +58,7 @@ namespace Domain.IdentityManagement.Aggregate
                 throw new DomainException(
                     "Name is required");
 
-            if (!Enum.IsDefined(typeof(Role), role))
+            if (!System.Enum.IsDefined(typeof(Role), role))
                 throw new DomainException(
                     "Invalid role");
 
@@ -70,7 +71,7 @@ namespace Domain.IdentityManagement.Aggregate
             Role = role;
             IsVerified = isVerified;
             IsActive = true;
-            CreatedAt = createdAt ?? DateTime.Now;
+            CreatedAt = createdAt ?? DateTime.UtcNow;
         }
 
 
@@ -78,7 +79,7 @@ namespace Domain.IdentityManagement.Aggregate
         #region Methods
         public void GenerateEmailOtp(TimeSpan lifetime)
         {
-            EmailOtp = new Random().Next(100000, 999999).ToString();
+            EmailOtp = System.Security.Cryptography.RandomNumberGenerator.GetInt32(100000, 999999).ToString();
             EmailOtpExpiresAt = DateTime.UtcNow.Add(lifetime);
         }
 

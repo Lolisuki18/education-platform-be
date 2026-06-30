@@ -16,13 +16,13 @@ namespace Application.Features.Identity.Commands.RefreshToken
 
     public class RefreshTokenCommandHandler : IRequestHandler<RefreshTokenCommand, TokenDTO>
     {
+        private readonly Application.Interface.ITokenService _tokenService;
         private readonly IUnitOfWork _unitOfWork;
-        private readonly IConfiguration _configuration;
 
-        public RefreshTokenCommandHandler(IUnitOfWork unitOfWork, IConfiguration configuration)
+        public RefreshTokenCommandHandler(IUnitOfWork unitOfWork, Application.Interface.ITokenService tokenService)
         {
             _unitOfWork = unitOfWork;
-            _configuration = configuration;
+            _tokenService = tokenService;
         }
 
         public async Task<TokenDTO> Handle(RefreshTokenCommand request, CancellationToken cancellationToken)
@@ -40,10 +40,10 @@ namespace Application.Features.Identity.Commands.RefreshToken
                 throw new AuthenticateException("Refresh token has expired.");
 
             // Generate new token
-            var token = TokenGenerator.GenerateToken(user, _configuration);
+            var token = _tokenService.GenerateToken(user);
 
             // Generate new refresh token
-            var newRefreshToken = TokenGenerator.GenerateRefreshToken();
+            var newRefreshToken = _tokenService.GenerateRefreshToken();
 
             // Apply domain
             user.IssueRefreshToken(newRefreshToken, TimeSpan.FromDays(7));

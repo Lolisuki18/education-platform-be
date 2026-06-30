@@ -8,7 +8,7 @@ using Domain.CourseManagement.Aggregate;
 using Domain.CourseManagement.Entity;
 using Domain.EnrollmentManagement.Aggregate;
 using Domain.IdentityManagement.Aggregate;
-using Domain.IdentityManagement.ValueObject;
+using Domain.IdentityManagement.Enum;
 using MediatR;
 
 namespace Application.Features.StudentReview.Command

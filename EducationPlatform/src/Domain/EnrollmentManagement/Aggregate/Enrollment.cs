@@ -45,7 +45,7 @@ namespace Domain.EnrollmentManagement.Aggregate
 
             EnrollmentID = enrollmentId;
             Status = EnrollmentStatus.Active;
-            EnrolledAt = enrolledAt ?? DateTime.Now;
+            EnrolledAt = enrolledAt ?? DateTime.UtcNow;
             StudentID = studentId;
             CourseID = courseId;
 
@@ -55,7 +55,7 @@ namespace Domain.EnrollmentManagement.Aggregate
         #region Methods
         public void CompleteEnrollment(DateTime? completedAt)
         {
-            CompletedAt = completedAt ?? DateTime.Now;
+            CompletedAt = completedAt ?? DateTime.UtcNow;
         }
         #endregion
     }

@@ -3,6 +3,7 @@ using Application.Features.Identity.Commands.RefreshToken;
 using Application.Results;
 using Domain.Common.Interfaces;
 using Domain.IdentityManagement.Aggregate;
+using Domain.IdentityManagement.Enum;
 using Domain.IdentityManagement.ValueObject;
 using FluentAssertions;
 using Moq;

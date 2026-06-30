@@ -7,21 +7,24 @@ using System.Threading;
 using System.Threading.Tasks;
 using CloudinaryDotNet;
 using CloudinaryDotNet.Actions;
+using Microsoft.Extensions.Logging;
 
-namespace Application.Implementation
+namespace Infrastructure.Services
 {
     public class StorageService : IStorageService
     {
         #region Attributes
         private readonly string root;
         private readonly Cloudinary? _cloudinary;
+        private readonly ILogger<StorageService> _logger;
         #endregion
 
         #region Properties
         #endregion
 
-        public StorageService(IConfiguration configuration)
+        public StorageService(IConfiguration configuration, ILogger<StorageService> logger)
         {
+            _logger = logger;
             root = configuration["Storage:RootPath"]
                    ?? throw new InvalidOperationException("Storage:RootPath is not configured");
 
@@ -257,7 +260,7 @@ namespace Application.Implementation
                     }
                     catch (Exception ex)
                     {
-                        Console.WriteLine($"[Storage] Failed to delete Cloudinary resource {relativePath}: {ex.Message}");
+                        _logger.LogError(ex, "[Storage] Failed to delete Cloudinary resource {RelativePath}", relativePath);
                     }
                 }
                 return;

@@ -17,7 +17,7 @@ namespace Domain.CourseManagement.Aggregate
 
         #region Properties
         public Guid CourseID { get; private set; }
-        public string Title { get; set; }
+        public string Title { get; private set; }
         public string Description { get; private set; }
         public CourseStatus Status { get; private set; }
         public CoursePrice Price { get; private set; }
@@ -95,9 +95,16 @@ namespace Domain.CourseManagement.Aggregate
             TeacherID = teacherId;
             GradeID = gradeId;
             SubjectID = subjectId;
-            CreatedAt = createdAt ?? DateTime.Now;
+            CreatedAt = createdAt ?? DateTime.UtcNow;
 
             AddDomainEvent(new Events.CourseCreatedEvent(CourseID, Title));
+        }
+
+        public void UpdateTitle(string title)
+        {
+            if (string.IsNullOrWhiteSpace(title))
+                throw new DomainException("Title is required");
+            Title = title.Trim();
         }
 
         #region Methods
@@ -172,12 +179,12 @@ namespace Domain.CourseManagement.Aggregate
                     violatedPolicies.Add(new ViolatedPolicy(Guid.NewGuid(), policyId, CourseID));
                 }
 
-                RejectedAt = DateTime.Now;
+                RejectedAt = DateTime.UtcNow;
                 Status = CourseStatus.Rejected;
             }
             else
             {
-                PublishedAt = DateTime.Now;
+                PublishedAt = DateTime.UtcNow;
                 Status = CourseStatus.Published;
             }
 
@@ -203,7 +210,7 @@ namespace Domain.CourseManagement.Aggregate
             violatedPolicies.Clear();
 
             Status = CourseStatus.Rejected;
-            RejectedAt = DateTime.Now;
+            RejectedAt = DateTime.UtcNow;
         }
 
         public void MarkAsPublished(DateTime publishedAt)

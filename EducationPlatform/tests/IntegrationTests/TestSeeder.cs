@@ -5,7 +5,7 @@ using Domain.AcademicManagement.Aggregate;
 using Domain.CourseManagement.Aggregate;
 using Domain.CourseManagement.Entity;
 using Domain.IdentityManagement.Aggregate;
-using Domain.IdentityManagement.ValueObject;
+using Domain.IdentityManagement.Enum;
 using Domain.OrderManagement.Aggregate;
 using Infrastructure.Persistence;
 

@@ -98,7 +98,7 @@ namespace Infrastructure.Implementation
 
             if (cp == null)
             {
-                var enrollment = await context.Enrollments.FindAsync(enrollmentId);
+                var enrollment = await context.Enrollments.FirstOrDefaultAsync(e => e.EnrollmentID == enrollmentId);
                 if (enrollment == null) throw new InvalidOperationException("Enrollment not found");
 
                 cp = new CourseProgress(Guid.NewGuid(), enrollmentId);
@@ -132,7 +132,7 @@ namespace Infrastructure.Implementation
             // Update Enrollment CompletedAt if course finished
             if (cp.IsCompleted)
             {
-                var enrollment = await context.Enrollments.FindAsync(enrollmentId);
+                var enrollment = await context.Enrollments.FirstOrDefaultAsync(e => e.EnrollmentID == enrollmentId);
                 if (enrollment != null && enrollment.CompletedAt == null)
                     enrollment.GetType().GetProperty("CompletedAt")?.SetValue(enrollment, DateTime.UtcNow);
             }
@@ -154,7 +154,7 @@ namespace Infrastructure.Implementation
 
             if (cp == null)
             {
-                var enrollment = await context.Enrollments.FindAsync(enrollmentId);
+                var enrollment = await context.Enrollments.FirstOrDefaultAsync(e => e.EnrollmentID == enrollmentId);
                 if (enrollment == null)
                     throw new InvalidOperationException("Enrollment not found");
 
@@ -231,7 +231,7 @@ namespace Infrastructure.Implementation
             // Mark enrollment completed
             if (cp.IsCompleted)
             {
-                var enrollment = await context.Enrollments.FindAsync(enrollmentId);
+                var enrollment = await context.Enrollments.FirstOrDefaultAsync(e => e.EnrollmentID == enrollmentId);
                 if (enrollment != null && enrollment.CompletedAt == null)
                 {
                     enrollment.GetType()

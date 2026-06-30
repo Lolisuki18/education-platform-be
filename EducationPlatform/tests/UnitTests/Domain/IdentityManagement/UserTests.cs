@@ -1,5 +1,6 @@
 using Domain.DomainExceptions;
 using Domain.IdentityManagement.Aggregate;
+using Domain.IdentityManagement.Enum;
 using Domain.IdentityManagement.ValueObject;
 using FluentAssertions;
 using System;

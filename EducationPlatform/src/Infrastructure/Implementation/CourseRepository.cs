@@ -4,6 +4,7 @@ using Domain.CourseManagement.Aggregate;
 using Domain.CourseManagement.Entity;
 using Domain.CourseManagement.Enum;
 using Domain.IdentityManagement.ValueObject;
+using Domain.IdentityManagement.Enum;
 using Microsoft.EntityFrameworkCore;
 
 namespace Infrastructure.Implementation
@@ -92,6 +93,7 @@ namespace Infrastructure.Implementation
         public async Task<Course?> GetCourseMetadataByID(Guid courseId)
         {
             return await context.Courses
+                .AsNoTracking()
                 .Include(c => c.Teacher)
                 .Include(c => c.Grade)
                 .Include(c => c.Subject)
@@ -104,6 +106,7 @@ namespace Infrastructure.Implementation
         public async Task<Course?> GetCourseDetailByID(Guid courseId)
         {
             return await context.Courses
+                .AsNoTracking()
                 .AsSplitQuery()
                 .Include(c => c.Teacher)
                 .Include(c => c.Grade)
@@ -123,50 +126,6 @@ namespace Infrastructure.Implementation
                 .FirstOrDefaultAsync(c => c.CourseID == courseId);
         }
 
-        public async Task<Complaint?> GetComplaintDetailByID(Guid complaintId)
-        {
-            return await context.Complaints
-                .Include(c => c.User) // Student
-                .Include(c => c.Course)
-                    .ThenInclude(c => c.Teacher) // Teacher
-                .FirstOrDefaultAsync(c => c.ComplaintID == complaintId);
-        }
-
-        public async Task<IEnumerable<Complaint>> GetComplaintsAsync(
-            ComplaintStatus? complaintStatus,
-            Guid? teacherId)
-        {
-            var query = context.Complaints
-                .AsNoTracking()
-                .Include(c => c.User) // Student
-                .Include(c => c.Course)
-                    .ThenInclude(c => c.Teacher)
-                .AsQueryable();
-
-            // Filter by status (if provided)
-            if (complaintStatus.HasValue)
-            {
-                query = query.Where(c => c.Status == complaintStatus.Value);
-            }
-
-            // Filter by teacher (if provided)
-            if (teacherId.HasValue)
-            {
-                query = query.Where(c => c.Course.TeacherID == teacherId.Value);
-            }
-
-            return await query
-                .OrderByDescending(c => c.CreatedAt)
-                .ToListAsync();
-        }
-
-        public async Task<IEnumerable<Complaint>> GetApprovedByCoursesAsync(Guid courseId)
-        {
-            return await context.Complaints
-                .Where(c => c.CourseID == courseId &&
-                            c.Status == ComplaintStatus.Approved)
-                .ToListAsync();
-        }
 
         public void ReplaceViolatedPolicies(
             Guid courseId,
@@ -231,31 +190,6 @@ namespace Infrastructure.Implementation
             context.Materials.AddRange(materials);
         }
 
-        public void CreateComplaint(
-            Complaint complaint)
-        {
-            if (complaint == null)
-                return;
-
-            context.Complaints.Add(complaint);
-        }
-
-        public void UpdateComplaint(
-            Complaint complaint)
-        {
-            context.Complaints.Update(complaint);
-        }
-
-        public void RemoveComplaints(
-            IEnumerable<Complaint> complaints)
-        {
-            foreach (var c in complaints)
-            {
-                context.Complaints.Attach(c);
-            }
-
-            context.Complaints.RemoveRange(complaints);
-        }
 
         public async Task<(
             int InReview,
@@ -265,7 +199,7 @@ namespace Infrastructure.Implementation
             Dictionary<string, int> SubjectCounts
         )> Summary(DateTime? from, DateTime? to)
         {
-            var query = context.Courses.AsQueryable();
+            var query = context.Courses.AsNoTracking().AsQueryable();
 
             if (from.HasValue)
                 query = query.Where(c => c.CreatedAt >= from.Value);
@@ -320,7 +254,7 @@ namespace Infrastructure.Implementation
             Guid? gradeId,
             Guid? subjectId)
         {
-            var query = context.Courses.AsQueryable();
+            var query = context.Courses.AsNoTracking().AsQueryable();
 
             // ===== Filters =====
             if (from.HasValue)

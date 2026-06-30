@@ -1,6 +1,6 @@
 using Domain.Common.Interfaces;
 using Domain.IdentityManagement.Aggregate;
-using Domain.IdentityManagement.ValueObject;
+using Domain.IdentityManagement.Enum;
 using Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using System.Numerics;

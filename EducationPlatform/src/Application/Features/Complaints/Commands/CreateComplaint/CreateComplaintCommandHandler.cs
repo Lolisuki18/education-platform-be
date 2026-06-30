@@ -45,6 +45,10 @@ namespace Application.Features.Complaints.Commands.CreateComplaint
             string? imagePath = request.EvidenceImagePath;
             if (request.EvidenceFileStream != null && !string.IsNullOrWhiteSpace(request.EvidenceFileExtension))
             {
+                var allowedImageExtensions = new[] { ".jpg", ".jpeg", ".png" };
+                var ext = "." + request.EvidenceFileExtension.TrimStart('.').ToLowerInvariant();
+                if (!allowedImageExtensions.Contains(ext))
+                    throw new BadRequest("Evidence file must be an image (.jpg, .jpeg, .png).");
                 imagePath = await _storageService.SaveAsync(
                     request.EvidenceFileStream,
                     request.EvidenceFileExtension.TrimStart('.'),
@@ -64,8 +68,8 @@ namespace Application.Features.Complaints.Commands.CreateComplaint
             {
                 await _unitOfWork.BeginTransactionAsync();
 
-                var courseRepo = _unitOfWork.GetRepository<ICourseRepository>();
-                courseRepo.CreateComplaint(complaint);
+                var complaintRepo = _unitOfWork.GetRepository<IComplaintRepository>();
+                complaintRepo.CreateComplaint(complaint);
 
                 await _unitOfWork.CommitAsync(studentId.ToString());
             }

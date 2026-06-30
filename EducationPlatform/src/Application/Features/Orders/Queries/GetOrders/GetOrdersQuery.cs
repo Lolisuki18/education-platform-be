@@ -3,7 +3,7 @@ using MediatR;
 using Domain.Common.Interfaces;
 using AutoMapper;
 using Domain.OrderManagement.Enum;
-using Domain.IdentityManagement.ValueObject;
+using Domain.IdentityManagement.Enum;
 using Application.BusinessException;
 using Application.Interface;
 using Domain.OrderManagement.Aggregate;

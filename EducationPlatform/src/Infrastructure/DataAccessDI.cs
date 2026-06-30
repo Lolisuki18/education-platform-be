@@ -34,6 +34,7 @@ namespace Infrastructure
 
             services.AddScoped<IAuditRepository, AuditLogRepository>();
             services.AddScoped<ICourseRepository, CourseRepository>();
+            services.AddScoped<IComplaintRepository, ComplaintRepository>();
             services.AddScoped<ICourseReviewRepository, CourseReviewRepository>();
             services.AddScoped<IEnrollmentRepository, EnrollmentRepository>();
             services.AddScoped<IGradeRepository, GradeRepository>();
@@ -46,10 +47,14 @@ namespace Infrastructure
             // ----- Application Services -----
             services.AddHttpContextAccessor();
             services.AddScoped<Application.Interface.ICurrentUser, Infrastructure.Services.CurrentUser>();
+            services.AddScoped<Application.Interface.ITokenService, Infrastructure.Services.JwtTokenService>();
 
             services.AddScoped<Application.Interface.IPaymentService, Infrastructure.Services.PayOSPaymentService>();
+            services.AddScoped<Application.Interface.IEmailService, Infrastructure.Services.SmtpEmailService>();
             services.AddScoped<Domain.Common.Interfaces.INotificationService,
                                Infrastructure.Services.LogNotificationService>();
+
+            services.AddScoped<Application.Interface.IStorageService, Infrastructure.Services.StorageService>();
 
             // Register background storage cleanup service
             services.AddHostedService<Infrastructure.Services.StorageCleanupService>();

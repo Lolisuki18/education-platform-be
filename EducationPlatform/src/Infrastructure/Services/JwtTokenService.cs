@@ -1,3 +1,4 @@
+using Application.Interface;
 using Domain.IdentityManagement.Aggregate;
 using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
@@ -6,13 +7,20 @@ using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
 
-namespace Application.Helper
+namespace Infrastructure.Services
 {
-    public static class TokenGenerator
+    public class JwtTokenService : ITokenService
     {
-        public static string GenerateToken(User user, IConfiguration configuration)
+        private readonly IConfiguration _configuration;
+
+        public JwtTokenService(IConfiguration configuration)
         {
-            var jwtSettings = configuration.GetSection("JwtSettings");
+            _configuration = configuration;
+        }
+
+        public string GenerateToken(User user)
+        {
+            var jwtSettings = _configuration.GetSection("JwtSettings");
 
             var secretKey = jwtSettings["SecretKey"] ?? throw new InvalidOperationException("Missing JwtSettings:SecretKey");
             var issuer = jwtSettings["Issuer"];
@@ -39,7 +47,6 @@ namespace Application.Helper
                 new Claim(ClaimTypes.Role, user.Role.ToString())
             };
 
-
             var token = new JwtSecurityToken(
                 issuer: issuer,
                 audience: audience,
@@ -51,7 +58,7 @@ namespace Application.Helper
             return new JwtSecurityTokenHandler().WriteToken(token);
         }
 
-        public static string GenerateRefreshToken()
+        public string GenerateRefreshToken()
         {
             var randomBytes = new byte[64];
 
@@ -62,5 +69,3 @@ namespace Application.Helper
         }
     }
 }
-
-

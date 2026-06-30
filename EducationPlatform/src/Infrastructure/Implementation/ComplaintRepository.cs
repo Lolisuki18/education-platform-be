@@ -1,0 +1,81 @@
+using Domain.CourseManagement.Aggregate;
+using Domain.CourseManagement.Entity;
+using Domain.CourseManagement.Enum;
+using Infrastructure.Persistence;
+using Microsoft.EntityFrameworkCore;
+
+namespace Infrastructure.Implementation
+{
+    public class ComplaintRepository : GenericRepository<Complaint>, IComplaintRepository
+    {
+        public ComplaintRepository(EducationPlatformDBContext context) : base(context) { }
+
+        public async Task<Complaint?> GetComplaintDetailByID(Guid complaintId)
+        {
+            return await context.Complaints
+                .Include(c => c.User) // Student
+                .Include(c => c.Course)
+                    .ThenInclude(c => c.Teacher) // Teacher
+                .FirstOrDefaultAsync(c => c.ComplaintID == complaintId);
+        }
+
+        public async Task<IEnumerable<Complaint>> GetComplaintsAsync(
+            ComplaintStatus? complaintStatus,
+            Guid? teacherId)
+        {
+            var query = context.Complaints
+                .AsNoTracking()
+                .Include(c => c.User) // Student
+                .Include(c => c.Course)
+                    .ThenInclude(c => c.Teacher)
+                .AsQueryable();
+
+            // Filter by status (if provided)
+            if (complaintStatus.HasValue)
+            {
+                query = query.Where(c => c.Status == complaintStatus.Value);
+            }
+
+            // Filter by teacher (if provided)
+            if (teacherId.HasValue)
+            {
+                query = query.Where(c => c.Course.TeacherID == teacherId.Value);
+            }
+
+            return await query
+                .OrderByDescending(c => c.CreatedAt)
+                .ToListAsync();
+        }
+
+        public async Task<IEnumerable<Complaint>> GetApprovedByCoursesAsync(Guid courseId)
+        {
+            return await context.Complaints
+                .Where(c => c.CourseID == courseId &&
+                            c.Status == ComplaintStatus.Approved)
+                .ToListAsync();
+        }
+
+        public void CreateComplaint(Complaint complaint)
+        {
+            if (complaint == null)
+                return;
+
+            context.Complaints.Add(complaint);
+        }
+
+        public void UpdateComplaint(Complaint complaint)
+        {
+            context.Complaints.Update(complaint);
+        }
+
+        public void RemoveComplaints(IEnumerable<Complaint> complaints)
+        {
+            foreach (var c in complaints)
+            {
+                context.Complaints.Attach(c);
+            }
+
+            context.Complaints.RemoveRange(complaints);
+        }
+    }
+}

@@ -9,7 +9,7 @@ namespace Domain.CourseManagement.ValueObject
         public IReadOnlyCollection<string> CorrectAnswers { get; }
         public IReadOnlyCollection<string>? Options { get; }
 
-        protected QuizAnswer() { }
+        private QuizAnswer() { }
 
         private QuizAnswer(QuizType type, IEnumerable<string> correctAnswers, IEnumerable<string>? options = null)
         {

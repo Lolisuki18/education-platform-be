@@ -58,7 +58,7 @@ namespace Domain.OrderManagement.Aggregate
             TeacherAmount = commission.TeacherAmount;
             Method = OrderMethod.PayOS;
             Status = OrderStatus.Created;
-            CreatedAt = createdAt ?? DateTime.Now;
+            CreatedAt = createdAt ?? DateTime.UtcNow;
             StudentID = studentId;
             CourseID = courseId;
         }
@@ -67,7 +67,7 @@ namespace Domain.OrderManagement.Aggregate
         public void StudentPaid(DateTime? paidAt)
         {
             Status = OrderStatus.Pending;
-            PaidAt = paidAt ?? DateTime.Now;
+            PaidAt = paidAt ?? DateTime.UtcNow;
 
             AddDomainEvent(new OrderPaidEvent(OrderID, StudentID, CourseID, PaidAt.Value));
         }

@@ -8,7 +8,7 @@ using Domain.CourseManagement.Enum;
 using Domain.EnrollmentManagement.Aggregate;
 using Domain.EnrollmentManagement.Enum;
 using Domain.IdentityManagement.Aggregate;
-using Domain.IdentityManagement.ValueObject;
+using Domain.IdentityManagement.Enum;
 using Domain.OrderManagement.Aggregate;
 using Domain.OrderManagement.Enum;
 using Domain.OrderManagement.ValueObject;

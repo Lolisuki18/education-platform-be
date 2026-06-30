@@ -1,5 +1,5 @@
 using Domain.IdentityManagement.Aggregate;
-using Domain.IdentityManagement.ValueObject;
+using Domain.IdentityManagement.Enum;
 using Microsoft.EntityFrameworkCore;
 
 namespace Infrastructure.Persistence.Seeds

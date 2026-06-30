@@ -6,7 +6,7 @@ namespace Domain.CourseManagement.Aggregate
     public class Policy
     {
         #region Attributes
-        private readonly List<PolicyRule> rolicyRules = new();
+        private readonly List<PolicyRule> policyRules = new();
         #endregion
 
         #region Properties
@@ -16,7 +16,7 @@ namespace Domain.CourseManagement.Aggregate
 
         public IReadOnlyCollection<PolicyRule> PolicyRules
         {
-            get { return rolicyRules.AsReadOnly(); }
+            get { return policyRules.AsReadOnly(); }
         }
         #endregion
 

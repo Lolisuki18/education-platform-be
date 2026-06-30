@@ -48,11 +48,6 @@ namespace Domain.IdentityManagement.ValueObject
                    && ExpiresAt > DateTime.UtcNow;
         }
 
-        public bool IsValid(string plainToken)
-        {
-            return DateTime.UtcNow <= ExpiresAt
-                && BCrypt.Net.BCrypt.Verify(plainToken, Hash);
-        }
 
         private static string HashToken(string value)
         {

@@ -5,6 +5,7 @@ using Application.Results;
 using AutoMapper;
 using Domain.Common.Interfaces;
 using Domain.CourseManagement.Aggregate;
+using Domain.IdentityManagement.Enum;
 using Domain.IdentityManagement.ValueObject;
 using FluentAssertions;
 using Moq;

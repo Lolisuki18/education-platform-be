@@ -93,8 +93,8 @@ namespace Application.Features.Statistics.Queries.GetSummaryStatistic
                 User = new SummaryUserDTO
                 {
                     Total = users.Sum(x => x.Count),
-                    TeacherCount = users.FirstOrDefault(x => x.Role == Domain.IdentityManagement.ValueObject.Role.Teacher)?.Count ?? 0,
-                    StudentCount = users.FirstOrDefault(x => x.Role == Domain.IdentityManagement.ValueObject.Role.Student)?.Count ?? 0
+                    TeacherCount = users.FirstOrDefault(x => x.Role == Domain.IdentityManagement.Enum.Role.Teacher)?.Count ?? 0,
+                    StudentCount = users.FirstOrDefault(x => x.Role == Domain.IdentityManagement.Enum.Role.Student)?.Count ?? 0
                 },
                 Course = new SummaryCourseDTO
                 {
