@@ -5,5 +5,6 @@ namespace Domain.AcademicManagement.Aggregate
 {
     public interface IGradeRepository : IGenericRepository<Grade>
     {
+        Task<bool> IsInUse(Guid gradeId);
     }
 }

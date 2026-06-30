@@ -128,6 +128,25 @@ namespace Domain.IdentityManagement.Aggregate
             Phone = string.IsNullOrWhiteSpace(phone) ? Phone : phone;
             Bio = string.IsNullOrWhiteSpace(bio) ? Bio : bio;
         }
+
+        public void Activate()
+        {
+            IsActive = true;
+        }
+
+        public void Deactivate()
+        {
+            IsActive = false;
+        }
+
+        public void ChangeRole(Role role)
+        {
+            if (!System.Enum.IsDefined(typeof(Role), role))
+                throw new DomainException("Invalid role");
+            if (Role == role)
+                throw new DomainException("User already has this role");
+            Role = role;
+        }
         #endregion
     }
 }

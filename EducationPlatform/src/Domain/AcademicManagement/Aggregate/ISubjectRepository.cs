@@ -8,5 +8,6 @@ namespace Domain.AcademicManagement.Aggregate
     {
         Task<IEnumerable<Subject>> GetSubjectsByGrade(Guid gradeId);
         Task<IEnumerable<DefaultLesson>> GetDefaultLessons(Guid subjectId, Guid gradeId);
+        Task<bool> IsInUse(Guid subjectId);
     }
 }

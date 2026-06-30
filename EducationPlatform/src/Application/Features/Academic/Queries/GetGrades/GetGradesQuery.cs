@@ -9,6 +9,7 @@ namespace Application.Features.Academic.Queries.GetGrades
 {
     public class GetGradesQuery : IRequest<IEnumerable<GradeDTO>>
     {
+        public bool IncludeInactive { get; set; } = false;
     }
 
     public class GetGradesQueryHandler : IRequestHandler<GetGradesQuery, IEnumerable<GradeDTO>>
@@ -27,6 +28,11 @@ namespace Application.Features.Academic.Queries.GetGrades
             var list = await _unitOfWork
                 .GetRepository<IGradeRepository>()
                 .GetAllAsync();
+
+            if (!request.IncludeInactive)
+            {
+                list = list.Where(g => g.IsActive).ToList();
+            }
 
             if (list == null || !list.Any())
                 throw new NotFound("Grade list is empty or was not found");

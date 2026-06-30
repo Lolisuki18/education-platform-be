@@ -28,6 +28,11 @@ builder.Services.AddControllers();
 builder.Services.AddProblemDetails();
 builder.Services.AddExceptionHandler<ValidationExceptionHandler>();
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
+builder.Services.AddMemoryCache();
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy(API.Helper.Policies.AdminOnly, policy => policy.RequireRole("Admin"));
+});
 
 builder.Services.AddHttpClient("PayOSClient")
     .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
@@ -238,6 +243,7 @@ if (app.Environment.EnvironmentName != "Testing")
 app.UseRouting();
 
 app.UseAuthentication();
+app.UseMiddleware<API.Helper.UserActiveMiddleware>();
 app.UseAuthorization();
 
 // ====================
