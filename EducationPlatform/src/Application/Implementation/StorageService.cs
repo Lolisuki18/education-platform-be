@@ -1,5 +1,12 @@
 using Application.Interface;
 using Microsoft.Extensions.Configuration;
+using System;
+using System.IO;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
+using CloudinaryDotNet;
+using CloudinaryDotNet.Actions;
 
 namespace Application.Implementation
 {
@@ -7,21 +14,27 @@ namespace Application.Implementation
     {
         #region Attributes
         private readonly string root;
+        private readonly Cloudinary? _cloudinary;
         #endregion
 
         #region Properties
         #endregion
 
-        public StorageService()
+        public StorageService(IConfiguration configuration)
         {
-            // Long note: Not clean architecture
-            var configuration = new ConfigurationBuilder()
-                .SetBasePath(Directory.GetCurrentDirectory())
-                .AddJsonFile("appsettings.json", optional: false)
-                .Build();
-
             root = configuration["Storage:RootPath"]
                    ?? throw new InvalidOperationException("Storage:RootPath is not configured");
+
+            var cloudName = configuration["Cloudinary:CloudName"];
+            var apiKey = configuration["Cloudinary:ApiKey"];
+            var apiSecret = configuration["Cloudinary:ApiSecret"];
+
+            if (!string.IsNullOrEmpty(cloudName) && !string.IsNullOrEmpty(apiKey) && !string.IsNullOrEmpty(apiSecret) &&
+                cloudName != "YOUR_CLOUD_NAME" && apiKey != "YOUR_API_KEY" && apiSecret != "YOUR_API_SECRET")
+            {
+                var account = new Account(cloudName, apiKey, apiSecret);
+                _cloudinary = new Cloudinary(account);
+            }
         }
 
         #region Methods
@@ -30,6 +43,40 @@ namespace Application.Implementation
             string fileExtension,
             CancellationToken ct)
         {
+            if (_cloudinary != null)
+            {
+                var ext = fileExtension.StartsWith(".") ? fileExtension : $".{fileExtension}";
+                var isImage = new[] { ".jpg", ".jpeg", ".png", ".gif", ".webp", ".svg", ".bmp" }
+                    .Contains(ext.ToLower());
+
+                if (isImage)
+                {
+                    var uploadParams = new ImageUploadParams
+                    {
+                        File = new FileDescription(Guid.NewGuid().ToString() + ext, file),
+                        Folder = "education-platform/images"
+                    };
+                    var uploadResult = await _cloudinary.UploadAsync(uploadParams, ct);
+                    if (uploadResult.Error != null)
+                        throw new Exception($"Cloudinary upload failed: {uploadResult.Error.Message}");
+
+                    return uploadResult.SecureUrl.ToString();
+                }
+                else
+                {
+                    var uploadParams = new RawUploadParams
+                    {
+                        File = new FileDescription(Guid.NewGuid().ToString() + ext, file),
+                        Folder = "education-platform/raw"
+                    };
+                    var uploadResult = await _cloudinary.UploadAsync(uploadParams);
+                    if (uploadResult.Error != null)
+                        throw new Exception($"Cloudinary upload failed: {uploadResult.Error.Message}");
+
+                    return uploadResult.SecureUrl.ToString();
+                }
+            }
+
             var now = DateTime.UtcNow;
 
             var relativePath = Path.Combine(
@@ -110,6 +157,30 @@ namespace Application.Implementation
 
             Directory.Delete(tempDir, true);
 
+            if (_cloudinary != null)
+            {
+                // Upload the completed file to Cloudinary
+                var uploadParams = new VideoUploadParams
+                {
+                    File = new FileDescription(finalFullPath),
+                    Folder = "education-platform/videos",
+                    Transformation = new Transformation().Quality("auto").FetchFormat("auto")
+                };
+
+                var uploadResult = await _cloudinary.UploadAsync(uploadParams, ct);
+
+                // Clean up the local assembled file
+                if (File.Exists(finalFullPath))
+                {
+                    File.Delete(finalFullPath);
+                }
+
+                if (uploadResult.Error != null)
+                    throw new Exception($"Cloudinary video upload failed: {uploadResult.Error.Message}");
+
+                return uploadResult.SecureUrl.ToString();
+            }
+
             return finalRelativePath.Replace("\\", "/");
         }
 
@@ -131,17 +202,72 @@ namespace Application.Implementation
 
         public string GetFullPath(string relativePath)
         {
+            if (relativePath.StartsWith("http://", StringComparison.OrdinalIgnoreCase) ||
+                relativePath.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
+            {
+                return relativePath;
+            }
             return Path.Combine(root, relativePath.Replace("/", Path.DirectorySeparatorChar.ToString()));
         }
 
-        public Task DeleteAsync(string relativePath)
+        public async Task DeleteAsync(string relativePath)
         {
+            if (relativePath.StartsWith("http://", StringComparison.OrdinalIgnoreCase) ||
+                relativePath.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
+            {
+                if (_cloudinary != null)
+                {
+                    try
+                    {
+                        var uri = new Uri(relativePath);
+                        var segments = uri.Segments;
+
+                        int uploadIndex = -1;
+                        for (int i = 0; i < segments.Length; i++)
+                        {
+                            if (segments[i].Trim('/').Equals("upload", StringComparison.OrdinalIgnoreCase))
+                            {
+                                uploadIndex = i;
+                                break;
+                            }
+                        }
+
+                        if (uploadIndex != -1 && uploadIndex + 1 < segments.Length)
+                        {
+                            int startIndex = uploadIndex + 1;
+                            if (segments[startIndex].StartsWith("v") && segments[startIndex].Length > 1 && char.IsDigit(segments[startIndex][1]))
+                            {
+                                startIndex++;
+                            }
+
+                            var publicIdWithExtension = string.Join("", segments.Skip(startIndex)).Trim('/');
+                            var lastDot = publicIdWithExtension.LastIndexOf('.');
+                            var publicId = lastDot != -1 ? publicIdWithExtension.Substring(0, lastDot) : publicIdWithExtension;
+
+                            var isVideo = relativePath.Contains("/video/upload/");
+                            var isRaw = relativePath.Contains("/raw/upload/");
+                            var resourceType = isVideo ? ResourceType.Video : (isRaw ? ResourceType.Raw : ResourceType.Image);
+
+                            var deletionParams = new DeletionParams(publicId)
+                            {
+                                ResourceType = resourceType
+                            };
+                            await _cloudinary.DestroyAsync(deletionParams);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"[Storage] Failed to delete Cloudinary resource {relativePath}: {ex.Message}");
+                    }
+                }
+                return;
+            }
+
             var fullPath = GetFullPath(relativePath);
             if (System.IO.File.Exists(fullPath))
             {
                 System.IO.File.Delete(fullPath);
             }
-            return Task.CompletedTask;
         }
         #endregion
     }

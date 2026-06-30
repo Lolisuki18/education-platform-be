@@ -51,6 +51,9 @@ namespace Infrastructure
             services.AddScoped<Domain.Common.Interfaces.INotificationService,
                                Infrastructure.Services.LogNotificationService>();
 
+            // Register background storage cleanup service
+            services.AddHostedService<Infrastructure.Services.StorageCleanupService>();
+
             return services;
         }
     }

@@ -12,9 +12,8 @@ Dự án bao gồm các module quản lý cốt lõi:
 
 - **Quản Lý Khóa Học (Course Management):** Quản lý Chương (Chapter), Bài học (Lesson), Tài liệu (Material), Bài tập (Assignment) và Quản lý Chính sách.
 - **Quản Lý Học Thuật (Academic Management):** Quản lý Môn học (Subject) và Hệ thống chấm điểm (Grading).
-- **Tích Hợp AI (AI & Media Processing):**
-  - Tự động chuyển đổi âm thanh/video sang văn bản (Speech-to-Text) sử dụng **OpenAI Whisper**.
-  - Xử lý file đa phương tiện với **FFmpeg**.
+- **Tích Hợp AI & Xử Lý Media:**
+  - Xử lý file đa phương tiện với **FFmpeg** (nén và chuẩn hóa video bài giảng).
   - Tích hợp mô hình ngôn ngữ lớn (LLM) nội bộ (Ollama) để hỗ trợ học tập.
 - **Thanh Toán (Payment):** Tích hợp cổng thanh toán **PayOS** cho việc mua khóa học và quản lý đơn hàng.
 - **Bảo Mật:** Hệ thống xác thực và phân quyền dựa trên **JWT (JSON Web Token)**.
@@ -27,7 +26,7 @@ Dự án tuân thủ nghiêm ngặt mô hình **Clean Architecture** nhằm đ�
 
 1.  **Domain:** Chứa các Entity, Value Object, Aggregate Root và Domain Logic lõi.
 2.  **Application:** Chứa các Use Cases, Interfaces, DTOs và MediatR Commands/Queries.
-3.  **Infrastructure:** Triển khai các interface từ Application (Database Persistence, External Services như Whisper, PayOS).
+3.  **Infrastructure:** Triển khai các interface từ Application (Database Persistence, External Services như PayOS).
 4.  **API:** Lớp Presentation cung cấp các RESTful API endpoints.
 
 ## 🛠️ Công Nghệ Sử Dụng
@@ -41,7 +40,6 @@ Dự án tuân thủ nghiêm ngặt mô hình **Clean Architecture** nhằm đ�
 | **AutoMapper**            | Ánh xạ giữa Entity và DTO      |
 | **SignalR**               | Truyền thông thời gian thực    |
 | **PayOS**                 | Cổng thanh toán                |
-| **Whisper.cpp**           | Xử lý nhận dạng giọng nói (AI) |
 | **FFmpeg**                | Xử lý video/audio              |
 
 ## 🚀 Hướng Dẫn Cài Đặt
@@ -51,7 +49,6 @@ Dự án tuân thủ nghiêm ngặt mô hình **Clean Architecture** nhằm đ�
 - [.NET SDK 9.0](https://dotnet.microsoft.com/download/dotnet/9.0)
 - [PostgreSQL](https://www.postgresql.org/downloads/)
 - [FFmpeg](https://ffmpeg.org/download.html) (Thêm vào PATH hệ thống)
-- [Whisper.cpp CLI](https://github.com/ggerganov/whisper.cpp) (Để sử dụng tính năng Speech-to-Text)
 
 ### ⚙️ Cấu Hình
 
@@ -64,7 +61,7 @@ Dự án tuân thủ nghiêm ngặt mô hình **Clean Architecture** nhằm đ�
 2.  **Cấu hình file `appsettings.json`:**
     Tạo file `src/API/appsettings.json` từ file `src/API/appsettings.Example.json` và cập nhật các thông tin sau:
     - `ConnectionStrings`: Thông tin kết nối PostgreSQL.
-    - `FFmpeg` & `Whisper`: Đường dẫn đến file thực thi trên máy của bạn.
+    - `FFmpeg`: Đường dẫn đến file thực thi FFmpeg trên máy của bạn.
     - `PayOS`: Thông tin API Key từ trang quản trị PayOS.
     - `EmailSettings`: Cấu hình tài khoản gửi mail.
 
