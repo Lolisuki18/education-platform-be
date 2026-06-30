@@ -40,14 +40,18 @@ namespace IntegrationTests.Controllers
                 db.Set<Coupon>().Add(inactiveMarketing);
 
                 // 3. Expired Marketing Coupon (Should NOT be returned)
-                var expiredMarketing = new Coupon(Guid.NewGuid(), "EXPIRED", "Expired", 10m, DateTime.UtcNow.AddDays(-5), DateTime.UtcNow.AddDays(-1), 100);
+                var expiredMarketing = new Coupon(Guid.NewGuid(), "EXPIRED", "Expired", 10m, DateTime.UtcNow.AddDays(-5), DateTime.UtcNow.AddDays(5), 100);
                 db.Set<Coupon>().Add(expiredMarketing);
 
                 // 4. Compensation Coupon (Should NOT be returned)
-                var compCoupon = new Coupon(Guid.NewGuid(), Guid.NewGuid(), "COMPENSATION10", 10m, "Compensation");
+                var student = await db.Set<Domain.IdentityManagement.Aggregate.User>().FirstAsync(u => u.Email == "student@example.com");
+                var compCoupon = new Coupon(Guid.NewGuid(), student.UserID, "COMPENSATION10", 10m, "Compensation");
                 db.Set<Coupon>().Add(compCoupon);
 
                 await db.SaveChangesAsync();
+
+                // Force ExpiredDate in database to be in the past to bypass constructor validation
+                await db.Database.ExecuteSqlRawAsync("UPDATE \"Coupons\" SET \"ExpiredDate\" = {0} WHERE \"Code\" = 'EXPIRED'", DateTime.UtcNow.AddDays(-1));
             });
 
             // Act
