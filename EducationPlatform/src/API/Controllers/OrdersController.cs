@@ -10,6 +10,10 @@ using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Domain.OrderManagement.Enum;
+using Microsoft.Extensions.Configuration;
+using System.Security.Cryptography;
+using System.Text;
+using Microsoft.AspNetCore.Hosting;
 
 namespace API.Controllers
 {
@@ -18,10 +22,14 @@ namespace API.Controllers
     public class OrdersController : ControllerBase
     {
         private readonly IMediator mediator;
+        private readonly IConfiguration configuration;
+        private readonly IWebHostEnvironment environment;
 
-        public OrdersController(IMediator mediator)
+        public OrdersController(IMediator mediator, IConfiguration configuration, IWebHostEnvironment environment)
         {
             this.mediator = mediator;
+            this.configuration = configuration;
+            this.environment = environment;
         }
 
         [Authorize]
@@ -73,24 +81,48 @@ namespace API.Controllers
             }, "Order created successfully"));
         }
 
-        [Authorize]
         [HttpGet("return")]
         public async Task<ActionResult<ApiResponse<ReturnOrderResponseDto>>> ReturnOrder(
-            [FromQuery] string status,
-            [FromQuery] long orderCode,
-            [FromQuery] bool cancel = false)
+            [FromQuery] string? status,
+            [FromQuery] string? orderCode,
+            [FromQuery] string? id,
+            [FromQuery] string? code,
+            [FromQuery] string? signature,
+            [FromQuery] string? amount,
+            [FromQuery] string? cancel)
         {
-            var isSuccess = status == "PAID" && !cancel;
+            bool cancelVal = string.Equals(cancel, "true", StringComparison.OrdinalIgnoreCase);
+            var isSuccess = status == "PAID" && !cancelVal;
+            long codeVal = long.TryParse(orderCode, out var parsedCode) ? parsedCode : 0;
+
+            var isTesting = environment.IsEnvironment("Testing");
+            if (!isTesting)
+            {
+                var checksumKey = configuration["PayOS:ChecksumKey"]!;
+                // Verify signature
+                if (string.IsNullOrEmpty(signature) ||
+                    !VerifyRedirectSignature(amount ?? "", cancel ?? "", code ?? "", id ?? "", orderCode ?? "", status ?? "", signature, checksumKey))
+                {
+                    return BadRequest(ApiResponse<ReturnOrderResponseDto>.Success(new ReturnOrderResponseDto
+                    {
+                        OrderCode = codeVal,
+                        Status = status ?? "",
+                        IsSuccess = false,
+                        Message = "Security verification failed. Invalid signature."
+                    }, "Invalid signature"));
+                }
+            }
+
             var returnData = new ReturnOrderResponseDto
             {
-                OrderCode = orderCode,
-                Status = status,
+                OrderCode = codeVal,
+                Status = status ?? "",
                 IsSuccess = isSuccess
             };
 
             if (isSuccess)
             {
-                await mediator.Send(new FinishOrderCommand { OrderCode = orderCode });
+                await mediator.Send(new FinishOrderCommand { OrderCode = codeVal });
                 returnData.Message = "Payment successful! Your course is now available.";
             }
             else
@@ -100,6 +132,99 @@ namespace API.Controllers
 
             return Ok(ApiResponse<ReturnOrderResponseDto>.Success(returnData,
                 isSuccess ? "Payment successful" : "Payment failed"));
+        }
+
+        [HttpPost("webhook")]
+        public async Task<IActionResult> HandleWebhook()
+        {
+            using var reader = new System.IO.StreamReader(Request.Body);
+            var bodyString = await reader.ReadToEndAsync();
+
+            var json = Newtonsoft.Json.Linq.JObject.Parse(bodyString);
+            var signature = json["signature"]?.ToString();
+            var code = json["code"]?.ToString();
+            var data = json["data"] as Newtonsoft.Json.Linq.JObject;
+
+            if (data == null || string.IsNullOrEmpty(signature))
+            {
+                return BadRequest("Invalid payload");
+            }
+
+            var checksumKey = configuration["PayOS:ChecksumKey"]!;
+            if (!VerifyWebhookSignature(data, signature, checksumKey))
+            {
+                return BadRequest("Invalid signature");
+            }
+
+            if (code == "00")
+            {
+                var orderCode = data["orderCode"] != null ? (long)data["orderCode"] : (long?)null;
+                if (orderCode.HasValue)
+                {
+                    await mediator.Send(new FinishOrderCommand { OrderCode = orderCode.Value });
+                }
+            }
+
+            return Ok(new { message = "OK" });
+        }
+
+        private bool VerifyWebhookSignature(
+            Newtonsoft.Json.Linq.JObject data,
+            string signature,
+            string checksumKey)
+        {
+            // Sort keys alphabetically
+            var sortedProperties = data.Properties()
+                .Where(p => p.Name != "signature")
+                .OrderBy(p => p.Name);
+
+            // Construct the query string
+            var queryString = string.Join("&", sortedProperties.Select(p =>
+            {
+                var val = p.Value;
+                string strVal = "";
+                if (val.Type == Newtonsoft.Json.Linq.JTokenType.Null)
+                {
+                    strVal = "";
+                }
+                else if (val.Type == Newtonsoft.Json.Linq.JTokenType.Boolean)
+                {
+                    strVal = (bool)val ? "true" : "false";
+                }
+                else
+                {
+                    strVal = val.ToString();
+                }
+                return $"{p.Name}={strVal}";
+            }));
+
+            using var hmac = new HMACSHA256(Encoding.UTF8.GetBytes(checksumKey));
+            var hash = hmac.ComputeHash(Encoding.UTF8.GetBytes(queryString));
+            var computedSignature = BitConverter.ToString(hash).Replace("-", "").ToLower();
+
+            return string.Equals(computedSignature, signature, StringComparison.OrdinalIgnoreCase);
+        }
+
+        private bool VerifyRedirectSignature(
+            string amount,
+            string cancel,
+            string code,
+            string id,
+            string orderCode,
+            string status,
+            string signature,
+            string checksumKey)
+        {
+            if (string.IsNullOrEmpty(signature)) return false;
+
+            // Build the query string sorted alphabetically
+            string raw = $"amount={amount}&cancel={cancel.ToLower()}&code={code}&id={id}&orderCode={orderCode}&status={status}";
+
+            using var hmac = new HMACSHA256(Encoding.UTF8.GetBytes(checksumKey));
+            var hash = hmac.ComputeHash(Encoding.UTF8.GetBytes(raw));
+            var computedSignature = BitConverter.ToString(hash).Replace("-", "").ToLower();
+
+            return string.Equals(computedSignature, signature, StringComparison.OrdinalIgnoreCase);
         }
     }
 }

@@ -33,6 +33,11 @@ namespace Application.Features.Orders.Commands.FinishOrder
             if (order == null)
                 throw new NotFound($"Order with code: {request.OrderCode} not found.");
 
+            if (order.Status == Domain.OrderManagement.Enum.OrderStatus.Pending)
+            {
+                return _mapper.Map<OrderDTO>(order);
+            }
+
             // Apply domain: update order status and raise OrderPaidEvent
             order.StudentPaid(null);
 
