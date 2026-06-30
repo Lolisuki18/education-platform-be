@@ -6,42 +6,59 @@ namespace Application.Helper
 {
     public static class EmailHelper
     {
-        private static readonly IConfiguration Configuration =
-            new ConfigurationBuilder()
-                .SetBasePath(Directory.GetCurrentDirectory())
-                .AddJsonFile("appsettings.json", false)
-                .Build();
-
-        private static readonly string FromEmail = Configuration["EmailSettings:From"]!;
-        private static readonly string DisplayName = Configuration["EmailSettings:DisplayName"]!;
-        private static readonly string SmtpHost = Configuration["EmailSettings:SmtpHost"]!;
-        private static readonly int SmtpPort = int.Parse(Configuration["EmailSettings:SmtpPort"]!);
-        private static readonly string Username = Configuration["EmailSettings:Username"]!;
-        private static readonly string Password = Configuration["EmailSettings:Password"]!;
-        private static readonly bool EnableSSL = bool.Parse(Configuration["EmailSettings:EnableSSL"]!);
+        private static IConfiguration? _configuration;
+        private static IConfiguration Configuration
+        {
+            get
+            {
+                if (_configuration == null)
+                {
+                    _configuration = new ConfigurationBuilder()
+                        .SetBasePath(Directory.GetCurrentDirectory())
+                        .AddJsonFile("appsettings.json", optional: true)
+                        .Build();
+                }
+                return _configuration;
+            }
+        }
 
         public static async Task SendVerificationEmailAsync(string toEmail, string otp)
         {
-            var from = new MailAddress(FromEmail, DisplayName);
-            var to = new MailAddress(toEmail);
-
-            using var smtp = new SmtpClient
-            {
-                Host = SmtpHost,
-                Port = SmtpPort,
-                EnableSsl = EnableSSL,
-                Credentials = new NetworkCredential(Username, Password)
-            };
-
-            using var message = new MailMessage(from, to)
-            {
-                Subject = "Email Verification",
-                Body = BuildOtpTemplate(otp),
-                IsBodyHtml = true
-            };
-
             try
             {
+                var config = Configuration;
+                var fromEmail = config["EmailSettings:From"] ?? "noreply@educationplatform.com";
+                var displayName = config["EmailSettings:DisplayName"] ?? "Education Platform";
+                var smtpHost = config["EmailSettings:SmtpHost"] ?? "localhost";
+                var smtpPortStr = config["EmailSettings:SmtpPort"];
+                var smtpPort = int.TryParse(smtpPortStr, out var port) ? port : 25;
+                var username = config["EmailSettings:Username"] ?? string.Empty;
+                var password = config["EmailSettings:Password"] ?? string.Empty;
+                var enableSSLStr = config["EmailSettings:EnableSSL"];
+                var enableSSL = bool.TryParse(enableSSLStr, out var ssl) && ssl;
+
+                var from = new MailAddress(fromEmail, displayName);
+                var to = new MailAddress(toEmail);
+
+                using var smtp = new SmtpClient
+                {
+                    Host = smtpHost,
+                    Port = smtpPort,
+                    EnableSsl = enableSSL
+                };
+
+                if (!string.IsNullOrEmpty(username) && !string.IsNullOrEmpty(password))
+                {
+                    smtp.Credentials = new NetworkCredential(username, password);
+                }
+
+                using var message = new MailMessage(from, to)
+                {
+                    Subject = "Email Verification",
+                    Body = BuildOtpTemplate(otp),
+                    IsBodyHtml = true
+                };
+
                 await smtp.SendMailAsync(message);
             }
             catch (Exception ex)
