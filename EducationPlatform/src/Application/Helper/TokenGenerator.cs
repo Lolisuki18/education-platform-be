@@ -17,8 +17,16 @@ namespace Application.Helper
             var secretKey = jwtSettings["SecretKey"] ?? throw new InvalidOperationException("Missing JwtSettings:SecretKey");
             var issuer = jwtSettings["Issuer"];
             var audience = jwtSettings["Audience"];
+
             var expiryMinutesStr = jwtSettings["ExpiryMinutes"] ?? "60";
-            var expiryMinutes = int.Parse(expiryMinutesStr);
+            var expiryMinutes = double.Parse(expiryMinutesStr);
+            var expires = DateTime.UtcNow.AddMinutes(expiryMinutes);
+
+            var expirySecondsStr = jwtSettings["ExpirySeconds"];
+            if (!string.IsNullOrEmpty(expirySecondsStr) && double.TryParse(expirySecondsStr, out var expirySeconds))
+            {
+                expires = DateTime.UtcNow.AddSeconds(expirySeconds);
+            }
 
             var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey));
             var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
@@ -36,7 +44,7 @@ namespace Application.Helper
                 issuer: issuer,
                 audience: audience,
                 claims: claims,
-                expires: DateTime.UtcNow.AddMinutes(expiryMinutes),
+                expires: expires,
                 signingCredentials: creds
             );
 

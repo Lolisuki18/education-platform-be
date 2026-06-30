@@ -109,7 +109,14 @@ namespace IntegrationTests
             var db = scope.ServiceProvider.GetRequiredService<EducationPlatformDBContext>();
 
             // Delete and migrate test database on suite startup
-            await db.Database.EnsureDeletedAsync();
+            try
+            {
+                await db.Database.EnsureDeletedAsync();
+            }
+            catch (System.Exception)
+            {
+                // Ignore if database does not exist
+            }
             await db.Database.MigrateAsync();
 
             var connection = db.Database.GetDbConnection();

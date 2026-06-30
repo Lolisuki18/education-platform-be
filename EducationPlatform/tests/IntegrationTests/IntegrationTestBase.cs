@@ -15,7 +15,8 @@ using Xunit;
 
 namespace IntegrationTests
 {
-    public class IntegrationTestBase : IClassFixture<CustomWebApplicationFactory>, IAsyncLifetime
+    [Collection("Shared database collection")]
+    public class IntegrationTestBase : IAsyncLifetime
     {
         protected readonly CustomWebApplicationFactory Factory;
         protected readonly HttpClient Client;
@@ -112,6 +113,27 @@ namespace IntegrationTests
             var token = loginResult.Data.AccessToken;
             Client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
             return token;
+        }
+
+        protected async Task<HttpClient> CreateAuthenticatedClientAsync(string email, string password)
+        {
+            var client = Factory.CreateClient();
+            var loginResponse = await client.PostAsJsonAsync("/api/auth/login", new LoginRequestDto
+            {
+                Email = email,
+                Password = password
+            });
+            loginResponse.EnsureSuccessStatusCode();
+
+            var loginResult = await loginResponse.Content.ReadFromJsonAsync<ApiResponse<LoginResponseDto>>();
+            if (loginResult == null || loginResult.Data == null)
+            {
+                throw new Exception("Login failed to return valid token.");
+            }
+
+            var token = loginResult.Data.AccessToken;
+            client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+            return client;
         }
 
         protected async Task ExecuteDbContextAsync(Func<EducationPlatformDBContext, Task> action)

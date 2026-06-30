@@ -87,6 +87,10 @@ namespace API.Controllers
 
             if (!string.IsNullOrEmpty(userId))
             {
+                if (Guid.TryParse(userId, out var userGuid))
+                {
+                    await mediator.Send(new Application.Features.Identity.Commands.Logout.LogoutCommand { UserId = userGuid });
+                }
                 await AuthHub.ForceLogout(hubContext, userId);
             }
 
