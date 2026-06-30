@@ -1,0 +1,14 @@
+**/.git
+**/.github
+**/.vs
+**/.vscode
+**/bin
+**/obj
+**/test_storage
+**/test_integration.log
+**/*.user
+**/*.db
+**/*.local
+**/node_modules
+Dockerfile
+.dockerignore
