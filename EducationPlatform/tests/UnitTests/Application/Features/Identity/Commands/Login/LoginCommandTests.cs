@@ -1,5 +1,6 @@
 using Application.BusinessException;
 using Application.Features.Identity.Commands.Login;
+using Application.Interface;
 using Domain.Common.Interfaces;
 using Domain.IdentityManagement.Aggregate;
 using Domain.IdentityManagement.Enum;
@@ -20,6 +21,7 @@ namespace UnitTests.Application.Features.Identity.Commands.Login
     {
         private readonly Mock<IUnitOfWork> _mockUnitOfWork;
         private readonly Mock<IUserRepository> _mockUserRepository;
+        private readonly Mock<ITokenService> _mockTokenService;
         private readonly LoginCommandHandler _handler;
 
         public LoginCommandTests()
@@ -31,18 +33,17 @@ namespace UnitTests.Application.Features.Identity.Commands.Login
                 .Setup(u => u.GetRepository<IUserRepository>())
                 .Returns(_mockUserRepository.Object);
 
-            var inMemorySettings = new Dictionary<string, string?> {
-                {"JwtSettings:SecretKey", "THIS_IS_A_TEST_SECRET_KEY_AT_LEAST_32_CHARS"},
-                {"JwtSettings:Issuer", "EducationPlatform"},
-                {"JwtSettings:Audience", "EducationPlatform"},
-                {"JwtSettings:ExpiryMinutes", "60"}
-            };
+            _mockTokenService = new Mock<ITokenService>();
 
-            IConfiguration configuration = new ConfigurationBuilder()
-                .AddInMemoryCollection(inMemorySettings)
-                .Build();
+            _mockTokenService
+                .Setup(t => t.GenerateToken(It.IsAny<User>()))
+                .Returns("mocked-jwt-token");
 
-            _handler = new LoginCommandHandler(_mockUnitOfWork.Object, configuration);
+            _mockTokenService
+                .Setup(t => t.GenerateRefreshToken())
+                .Returns("mocked-refresh-token");
+
+            _handler = new LoginCommandHandler(_mockUnitOfWork.Object, _mockTokenService.Object);
         }
 
         [Fact]
@@ -88,7 +89,7 @@ namespace UnitTests.Application.Features.Identity.Commands.Login
         }
 
         [Fact]
-        public async Task Handle_UserNotFound_ShouldThrowNotFoundException()
+        public async Task Handle_UserNotFound_ShouldThrowAuthenticateException()
         {
             // Arrange
             var email = "notfound@gmail.com";
@@ -106,8 +107,8 @@ namespace UnitTests.Application.Features.Identity.Commands.Login
             Func<Task> act = async () => await _handler.Handle(command, CancellationToken.None);
 
             // Assert
-            await act.Should().ThrowAsync<NotFound>()
-                .WithMessage($"User with email: {email} not found.");
+            await act.Should().ThrowAsync<AuthenticateException>()
+                .WithMessage("Invalid credentials.");
         }
 
         [Fact]
@@ -142,7 +143,7 @@ namespace UnitTests.Application.Features.Identity.Commands.Login
 
             // Assert
             await act.Should().ThrowAsync<AuthenticateException>()
-                .WithMessage("Invalid password or email has not been verified.");
+                .WithMessage("Invalid credentials.");
         }
 
         [Fact]
@@ -178,7 +179,7 @@ namespace UnitTests.Application.Features.Identity.Commands.Login
 
             // Assert
             await act.Should().ThrowAsync<AuthenticateException>()
-                .WithMessage("Invalid password or email has not been verified.");
+                .WithMessage("Invalid credentials.");
         }
     }
 }

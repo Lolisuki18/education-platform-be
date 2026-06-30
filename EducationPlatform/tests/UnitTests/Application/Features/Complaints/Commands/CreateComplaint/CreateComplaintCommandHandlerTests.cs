@@ -19,7 +19,7 @@ namespace UnitTests.Application.Features.Complaints.Commands.CreateComplaint
     {
         private readonly Mock<IUnitOfWork> _mockUnitOfWork;
         private readonly Mock<IEnrollmentRepository> _mockEnrollmentRepository;
-        private readonly Mock<ICourseRepository> _mockCourseRepository;
+        private readonly Mock<IComplaintRepository> _mockComplaintRepository;
         private readonly Mock<ICurrentUser> _mockCurrentUser;
         private readonly Mock<IStorageService> _mockStorageService;
         private readonly CreateComplaintCommandHandler _handler;
@@ -28,7 +28,7 @@ namespace UnitTests.Application.Features.Complaints.Commands.CreateComplaint
         {
             _mockUnitOfWork = new Mock<IUnitOfWork>();
             _mockEnrollmentRepository = new Mock<IEnrollmentRepository>();
-            _mockCourseRepository = new Mock<ICourseRepository>();
+            _mockComplaintRepository = new Mock<IComplaintRepository>();
             _mockCurrentUser = new Mock<ICurrentUser>();
             _mockStorageService = new Mock<IStorageService>();
 
@@ -38,8 +38,8 @@ namespace UnitTests.Application.Features.Complaints.Commands.CreateComplaint
                 .Returns(_mockEnrollmentRepository.Object);
 
             _mockUnitOfWork
-                .Setup(u => u.GetRepository<ICourseRepository>())
-                .Returns(_mockCourseRepository.Object);
+                .Setup(u => u.GetRepository<IComplaintRepository>())
+                .Returns(_mockComplaintRepository.Object);
 
             _handler = new CreateComplaintCommandHandler(
                 _mockUnitOfWork.Object,
@@ -112,7 +112,7 @@ namespace UnitTests.Application.Features.Complaints.Commands.CreateComplaint
             result.Should().NotBeEmpty();
 
             _mockUnitOfWork.Verify(u => u.BeginTransactionAsync(), Times.Once);
-            _mockCourseRepository.Verify(r => r.CreateComplaint(It.Is<Complaint>(c =>
+            _mockComplaintRepository.Verify(r => r.CreateComplaint(It.Is<Complaint>(c =>
                 c.CourseID == courseId &&
                 c.StudentID == studentId &&
                 c.Reason == "Valid Reason" &&
@@ -156,7 +156,7 @@ namespace UnitTests.Application.Features.Complaints.Commands.CreateComplaint
             result.Should().NotBeEmpty();
 
             _mockStorageService.Verify(s => s.SaveAsync(dummyStream, "png", It.IsAny<CancellationToken>()), Times.Once);
-            _mockCourseRepository.Verify(r => r.CreateComplaint(It.Is<Complaint>(c =>
+            _mockComplaintRepository.Verify(r => r.CreateComplaint(It.Is<Complaint>(c =>
                 c.CourseID == courseId &&
                 c.StudentID == studentId &&
                 c.Reason == "Valid Reason with file" &&

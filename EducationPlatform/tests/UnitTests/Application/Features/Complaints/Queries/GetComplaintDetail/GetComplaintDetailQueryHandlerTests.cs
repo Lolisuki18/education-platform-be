@@ -18,7 +18,7 @@ namespace UnitTests.Application.Features.Complaints.Queries.GetComplaintDetail
     public class GetComplaintDetailQueryHandlerTests
     {
         private readonly Mock<IUnitOfWork> _mockUnitOfWork;
-        private readonly Mock<ICourseRepository> _mockCourseRepository;
+        private readonly Mock<IComplaintRepository> _mockComplaintRepository;
         private readonly Mock<IMapper> _mockMapper;
         private readonly Mock<ICurrentUser> _mockCurrentUser;
         private readonly GetComplaintDetailQueryHandler _handler;
@@ -26,14 +26,14 @@ namespace UnitTests.Application.Features.Complaints.Queries.GetComplaintDetail
         public GetComplaintDetailQueryHandlerTests()
         {
             _mockUnitOfWork = new Mock<IUnitOfWork>();
-            _mockCourseRepository = new Mock<ICourseRepository>();
+            _mockComplaintRepository = new Mock<IComplaintRepository>();
             _mockMapper = new Mock<IMapper>();
             _mockCurrentUser = new Mock<ICurrentUser>();
 
-            // Mock UnitOfWork để trả về Mock CourseRepository khi GetRepository<ICourseRepository>() được gọi
+            // Mock UnitOfWork để trả về Mock ComplaintRepository khi GetRepository<IComplaintRepository>() được gọi
             _mockUnitOfWork
-                .Setup(u => u.GetRepository<ICourseRepository>())
-                .Returns(_mockCourseRepository.Object);
+                .Setup(u => u.GetRepository<IComplaintRepository>())
+                .Returns(_mockComplaintRepository.Object);
 
             _handler = new GetComplaintDetailQueryHandler(
                 _mockUnitOfWork.Object,
@@ -48,7 +48,7 @@ namespace UnitTests.Application.Features.Complaints.Queries.GetComplaintDetail
             var query = new GetComplaintDetailQuery { ComplaintID = Guid.NewGuid() };
 
             // Mock repository trả về null để giả lập không tìm thấy Complaint
-            _mockCourseRepository
+            _mockComplaintRepository
                 .Setup(r => r.GetComplaintDetailByID(query.ComplaintID))
                 .ReturnsAsync((Complaint?)null);
 
@@ -78,7 +78,7 @@ namespace UnitTests.Application.Features.Complaints.Queries.GetComplaintDetail
             SetPrivateProperty(complaint, nameof(Complaint.Course), course);
 
             // Mock repository trả về Complaint đã chuẩn bị
-            _mockCourseRepository
+            _mockComplaintRepository
                 .Setup(r => r.GetComplaintDetailByID(complaintId))
                 .ReturnsAsync(complaint);
 
@@ -112,7 +112,7 @@ namespace UnitTests.Application.Features.Complaints.Queries.GetComplaintDetail
             var expectedDto = new ComplaintDetailDTO { ComplaintID = complaintId };
 
             // Mock repository trả về Complaint hợp lệ
-            _mockCourseRepository
+            _mockComplaintRepository
                 .Setup(r => r.GetComplaintDetailByID(complaintId))
                 .ReturnsAsync(complaint);
 

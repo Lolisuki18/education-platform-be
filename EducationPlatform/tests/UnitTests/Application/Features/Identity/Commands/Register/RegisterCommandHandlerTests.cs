@@ -1,5 +1,6 @@
 using Application.BusinessException;
 using Application.Features.Identity.Commands.Register;
+using Application.Interface;
 using Domain.Common.Interfaces;
 using Domain.IdentityManagement.Aggregate;
 using Domain.IdentityManagement.Enum;
@@ -18,6 +19,7 @@ namespace UnitTests.Application.Features.Identity.Commands.Register
     {
         private readonly Mock<IUnitOfWork> _mockUnitOfWork;
         private readonly Mock<IUserRepository> _mockUserRepository;
+        private readonly Mock<IEmailService> _mockEmailService;
         private readonly RegisterCommandHandler _handler;
 
         public RegisterCommandHandlerTests()
@@ -25,11 +27,13 @@ namespace UnitTests.Application.Features.Identity.Commands.Register
             _mockUnitOfWork = new Mock<IUnitOfWork>();
             _mockUserRepository = new Mock<IUserRepository>();
 
+            _mockEmailService = new Mock<IEmailService>();
+
             _mockUnitOfWork
                 .Setup(u => u.GetRepository<IUserRepository>())
                 .Returns(_mockUserRepository.Object);
 
-            _handler = new RegisterCommandHandler(_mockUnitOfWork.Object);
+            _handler = new RegisterCommandHandler(_mockUnitOfWork.Object, _mockEmailService.Object);
         }
 
         [Fact]

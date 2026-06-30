@@ -19,7 +19,7 @@ namespace UnitTests.Application.Features.Complaints.Queries.GetComplaints
     public class GetComplaintsQueryHandlerTest
     {
         private readonly Mock<IUnitOfWork> _mockUnitOfWork;
-        private readonly Mock<ICourseRepository> _mockCourseRepository;
+        private readonly Mock<IComplaintRepository> _mockComplaintRepository;
         private readonly Mock<IMapper> _mockMapper;
         private readonly Mock<ICurrentUser> _mockCurrentUser;
         private readonly GetComplaintsQueryHandler _handler;
@@ -27,13 +27,13 @@ namespace UnitTests.Application.Features.Complaints.Queries.GetComplaints
         public GetComplaintsQueryHandlerTest()
         {
             _mockUnitOfWork = new Mock<IUnitOfWork>();
-            _mockCourseRepository = new Mock<ICourseRepository>();
+            _mockComplaintRepository = new Mock<IComplaintRepository>();
             _mockMapper = new Mock<IMapper>();
             _mockCurrentUser = new Mock<ICurrentUser>();
 
             _mockUnitOfWork
-                .Setup(u => u.GetRepository<ICourseRepository>())
-                .Returns(_mockCourseRepository.Object);
+                .Setup(u => u.GetRepository<IComplaintRepository>())
+                .Returns(_mockComplaintRepository.Object);
 
             _handler = new GetComplaintsQueryHandler(
                 _mockUnitOfWork.Object,
@@ -61,7 +61,7 @@ namespace UnitTests.Application.Features.Complaints.Queries.GetComplaints
             _mockCurrentUser.Setup(u => u.Role).Returns(Role.Teacher.ToString());
             _mockCurrentUser.Setup(u => u.Id).Returns(teacherId);
 
-            _mockCourseRepository
+            _mockComplaintRepository
                 .Setup(r => r.GetComplaintsAsync(query.Status, teacherId))
                 .ReturnsAsync(complaints);
 
@@ -76,7 +76,7 @@ namespace UnitTests.Application.Features.Complaints.Queries.GetComplaints
             result.Should().NotBeNull();
             result.Should().BeEquivalentTo(expectedDtos);
 
-            _mockCourseRepository.Verify(r => r.GetComplaintsAsync(query.Status, teacherId), Times.Once);
+            _mockComplaintRepository.Verify(r => r.GetComplaintsAsync(query.Status, teacherId), Times.Once);
         }
 
         [Fact]
@@ -98,7 +98,7 @@ namespace UnitTests.Application.Features.Complaints.Queries.GetComplaints
             // Giả lập user hiện tại có Role là Admin (không phải Teacher)
             _mockCurrentUser.Setup(u => u.Role).Returns(Role.Admin.ToString());
 
-            _mockCourseRepository
+            _mockComplaintRepository
                 .Setup(r => r.GetComplaintsAsync(query.Status, null))
                 .ReturnsAsync(complaints);
 
@@ -113,7 +113,7 @@ namespace UnitTests.Application.Features.Complaints.Queries.GetComplaints
             result.Should().NotBeNull();
             result.Should().BeEquivalentTo(expectedDtos);
 
-            _mockCourseRepository.Verify(r => r.GetComplaintsAsync(query.Status, null), Times.Once);
+            _mockComplaintRepository.Verify(r => r.GetComplaintsAsync(query.Status, null), Times.Once);
         }
     }
 }

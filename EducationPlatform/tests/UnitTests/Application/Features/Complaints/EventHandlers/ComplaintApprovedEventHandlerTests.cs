@@ -20,6 +20,7 @@ namespace UnitTests.Application.Features.Complaints.EventHandlers
     {
         private readonly Mock<IUnitOfWork> _mockUnitOfWork;
         private readonly Mock<ICourseRepository> _mockCourseRepository;
+        private readonly Mock<IComplaintRepository> _mockComplaintRepository;
         private readonly Mock<IEnrollmentRepository> _mockEnrollmentRepository;
         private readonly Mock<IOrderRepository> _mockOrderRepository;
         private readonly ComplaintApprovedEventHandler _handler;
@@ -28,12 +29,17 @@ namespace UnitTests.Application.Features.Complaints.EventHandlers
         {
             _mockUnitOfWork = new Mock<IUnitOfWork>();
             _mockCourseRepository = new Mock<ICourseRepository>();
+            _mockComplaintRepository = new Mock<IComplaintRepository>();
             _mockEnrollmentRepository = new Mock<IEnrollmentRepository>();
             _mockOrderRepository = new Mock<IOrderRepository>();
 
             _mockUnitOfWork
                 .Setup(u => u.GetRepository<ICourseRepository>())
                 .Returns(_mockCourseRepository.Object);
+
+            _mockUnitOfWork
+                .Setup(u => u.GetRepository<IComplaintRepository>())
+                .Returns(_mockComplaintRepository.Object);
 
             _mockUnitOfWork
                 .Setup(u => u.GetRepository<IEnrollmentRepository>())
@@ -56,7 +62,7 @@ namespace UnitTests.Application.Features.Complaints.EventHandlers
             var notification = new ComplaintApprovedEvent(complaintId, courseId);
 
             // Giả lập chưa có khiếu nại được duyệt trước đó (tổng số khiếu nại = 0 + 1 = 1 < 2)
-            _mockCourseRepository
+            _mockComplaintRepository
                 .Setup(r => r.GetApprovedByCoursesAsync(courseId))
                 .ReturnsAsync(new List<Complaint>());
 
@@ -76,7 +82,7 @@ namespace UnitTests.Application.Features.Complaints.EventHandlers
             _mockCourseRepository.Verify(r => r.Update(courseId, course), Times.Once);
             _mockOrderRepository.Verify(r => r.CreateCoupons(It.IsAny<IEnumerable<Coupon>>()), Times.Never);
             _mockOrderRepository.Verify(r => r.CreatePenalty(It.IsAny<Penalty>()), Times.Never);
-            _mockCourseRepository.Verify(r => r.RemoveComplaints(It.IsAny<IEnumerable<Complaint>>()), Times.Never);
+            _mockComplaintRepository.Verify(r => r.RemoveComplaints(It.IsAny<IEnumerable<Complaint>>()), Times.Never);
         }
 
         [Fact]
@@ -93,7 +99,7 @@ namespace UnitTests.Application.Features.Complaints.EventHandlers
             var previousComplaint = new Complaint(Guid.NewGuid(), courseId, studentId1, "Previous reason", null);
             var approvedComplaints = new List<Complaint> { previousComplaint };
 
-            _mockCourseRepository
+            _mockComplaintRepository
                 .Setup(r => r.GetApprovedByCoursesAsync(courseId))
                 .ReturnsAsync(approvedComplaints);
 
@@ -112,7 +118,7 @@ namespace UnitTests.Application.Features.Complaints.EventHandlers
 
             // Giả lập khiếu nại hiện tại
             var currentComplaint = new Complaint(complaintId, courseId, studentId2, "Current reason", null);
-            _mockCourseRepository
+            _mockComplaintRepository
                 .Setup(r => r.GetComplaintDetailByID(complaintId))
                 .ReturnsAsync(currentComplaint);
 
@@ -141,7 +147,7 @@ namespace UnitTests.Application.Features.Complaints.EventHandlers
             )), Times.Once);
 
             // Kiểm tra xóa lịch sử khiếu nại để giải quyết
-            _mockCourseRepository.Verify(r => r.RemoveComplaints(It.Is<IEnumerable<Complaint>>(list =>
+            _mockComplaintRepository.Verify(r => r.RemoveComplaints(It.Is<IEnumerable<Complaint>>(list =>
                 list.Count() == 2 &&
                 list.Contains(previousComplaint) &&
                 list.Contains(currentComplaint)

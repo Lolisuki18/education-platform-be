@@ -1,5 +1,6 @@
 using Application.BusinessException;
 using Application.Features.Identity.Commands.RefreshToken;
+using Application.Interface;
 using Application.Results;
 using Domain.Common.Interfaces;
 using Domain.IdentityManagement.Aggregate;
@@ -22,6 +23,7 @@ namespace UnitTests.Application.Features.Identity.Commands.RefreshToken
     {
         private readonly Mock<IUnitOfWork> _mockUnitOfWork;
         private readonly Mock<IUserRepository> _mockUserRepository;
+        private readonly Mock<ITokenService> _mockTokenService;
         private readonly RefreshTokenCommandHandler _handler;
 
         public RefreshTokenCommandHandlerTests()
@@ -33,18 +35,17 @@ namespace UnitTests.Application.Features.Identity.Commands.RefreshToken
                 .Setup(u => u.GetRepository<IUserRepository>())
                 .Returns(_mockUserRepository.Object);
 
-            var inMemorySettings = new Dictionary<string, string?> {
-                {"JwtSettings:SecretKey", "THIS_IS_A_TEST_SECRET_KEY_AT_LEAST_32_CHARS"},
-                {"JwtSettings:Issuer", "EducationPlatform"},
-                {"JwtSettings:Audience", "EducationPlatform"},
-                {"JwtSettings:ExpiryMinutes", "60"}
-            };
+            _mockTokenService = new Mock<ITokenService>();
 
-            IConfiguration configuration = new ConfigurationBuilder()
-                .AddInMemoryCollection(inMemorySettings)
-                .Build();
+            _mockTokenService
+                .Setup(t => t.GenerateToken(It.IsAny<User>()))
+                .Returns("mocked-jwt-token");
 
-            _handler = new RefreshTokenCommandHandler(_mockUnitOfWork.Object, configuration);
+            _mockTokenService
+                .Setup(t => t.GenerateRefreshToken())
+                .Returns("mocked-refresh-token");
+
+            _handler = new RefreshTokenCommandHandler(_mockUnitOfWork.Object, _mockTokenService.Object);
         }
 
         [Fact]

@@ -17,19 +17,19 @@ namespace UnitTests.Application.Features.Complaints.Commands.ReviewComplaint
     public class ReviewComplaintCommandHandlerTests
     {
         private readonly Mock<IUnitOfWork> _mockUnitOfWork;
-        private readonly Mock<ICourseRepository> _mockCourseRepository;
+        private readonly Mock<IComplaintRepository> _mockComplaintRepository;
         private readonly Mock<ICurrentUser> _mockCurrentUser;
         private readonly ReviewComplaintCommandHandler _handler;
 
         public ReviewComplaintCommandHandlerTests()
         {
             _mockUnitOfWork = new Mock<IUnitOfWork>();
-            _mockCourseRepository = new Mock<ICourseRepository>();
+            _mockComplaintRepository = new Mock<IComplaintRepository>();
             _mockCurrentUser = new Mock<ICurrentUser>();
 
             _mockUnitOfWork
-                .Setup(u => u.GetRepository<ICourseRepository>())
-                .Returns(_mockCourseRepository.Object);
+                .Setup(u => u.GetRepository<IComplaintRepository>())
+                .Returns(_mockComplaintRepository.Object);
 
             _handler = new ReviewComplaintCommandHandler(
                 _mockUnitOfWork.Object,
@@ -71,7 +71,7 @@ namespace UnitTests.Application.Features.Complaints.Commands.ReviewComplaint
 
             _mockCurrentUser.Setup(u => u.Id).Returns(adminId);
 
-            _mockCourseRepository
+            _mockComplaintRepository
                 .Setup(r => r.GetComplaintDetailByID(complaintId))
                 .ReturnsAsync((Complaint?)null);
 
@@ -102,7 +102,7 @@ namespace UnitTests.Application.Features.Complaints.Commands.ReviewComplaint
 
             var complaint = new Complaint(complaintId, courseId, studentId, "reason", null);
 
-            _mockCourseRepository
+            _mockComplaintRepository
                 .Setup(r => r.GetComplaintDetailByID(complaintId))
                 .ReturnsAsync(complaint);
 
@@ -116,7 +116,7 @@ namespace UnitTests.Application.Features.Complaints.Commands.ReviewComplaint
             complaint.AdminNote.Should().Be("Violated policies found, approving complaint.");
 
             _mockUnitOfWork.Verify(u => u.BeginTransactionAsync(), Times.Once);
-            _mockCourseRepository.Verify(r => r.UpdateComplaint(complaint), Times.Once);
+            _mockComplaintRepository.Verify(r => r.UpdateComplaint(complaint), Times.Once);
             _mockUnitOfWork.Verify(u => u.CommitAsync(adminId.ToString()), Times.Once);
         }
 
@@ -139,7 +139,7 @@ namespace UnitTests.Application.Features.Complaints.Commands.ReviewComplaint
 
             var complaint = new Complaint(complaintId, courseId, studentId, "reason", null);
 
-            _mockCourseRepository
+            _mockComplaintRepository
                 .Setup(r => r.GetComplaintDetailByID(complaintId))
                 .ReturnsAsync(complaint);
 
@@ -153,7 +153,7 @@ namespace UnitTests.Application.Features.Complaints.Commands.ReviewComplaint
             complaint.AdminNote.Should().Be("No issues found, rejecting complaint.");
 
             _mockUnitOfWork.Verify(u => u.BeginTransactionAsync(), Times.Once);
-            _mockCourseRepository.Verify(r => r.UpdateComplaint(complaint), Times.Once);
+            _mockComplaintRepository.Verify(r => r.UpdateComplaint(complaint), Times.Once);
             _mockUnitOfWork.Verify(u => u.CommitAsync(adminId.ToString()), Times.Once);
         }
     }
