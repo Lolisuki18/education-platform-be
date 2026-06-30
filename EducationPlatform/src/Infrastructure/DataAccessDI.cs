@@ -39,6 +39,7 @@ namespace Infrastructure
             services.AddScoped<IEnrollmentRepository, EnrollmentRepository>();
             services.AddScoped<IGradeRepository, GradeRepository>();
             services.AddScoped<IOrderRepository, OrderRepository>();
+            services.AddScoped<ICouponRepository, CouponRepository>();
             services.AddScoped<IPolicyRepository, PolicyRepository>();
             services.AddScoped<ISubjectRepository, SubjectRepository>();
             services.AddScoped<IUserRepository, UserRepository>();
