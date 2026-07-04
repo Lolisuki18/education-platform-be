@@ -170,16 +170,14 @@ app.UseCors("AllowAll");
 // ====================
 // 7. Environment Specific Setup
 // ====================
-if (app.Environment.IsDevelopment())
+app.UseSwagger();
+app.UseSwaggerUI(c =>
 {
-    app.UseSwagger();
-    app.UseSwaggerUI(c =>
-    {
-        c.SwaggerEndpoint("/swagger/v1/swagger.json", "Education Platform API v1");
-        c.RoutePrefix = string.Empty; // Set Swagger as the root page
-    });
-}
-else
+    c.SwaggerEndpoint("/swagger/v1/swagger.json", "Education Platform API v1");
+    c.RoutePrefix = string.Empty; // Set Swagger as the root page
+});
+
+if (!app.Environment.IsDevelopment())
 {
     // Only use HTTPS redirection in Production to avoid Android Emulator issues
     app.UseHsts();
