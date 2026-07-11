@@ -164,8 +164,6 @@ var app = builder.Build();
 
 app.UseExceptionHandler();
 
-// Apply CORS middleware before Authentication/Authorization
-app.UseCors("AllowAll");
 
 // ====================
 // 7. Environment Specific Setup
@@ -239,6 +237,8 @@ if (app.Environment.EnvironmentName != "Testing")
 // 10. Middleware Pipeline
 // ====================
 app.UseRouting();
+
+app.UseCors("AllowAll");
 
 app.UseAuthentication();
 app.UseMiddleware<API.Helper.UserActiveMiddleware>();
