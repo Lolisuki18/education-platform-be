@@ -580,13 +580,41 @@ namespace Infrastructure.Persistence
                       .IsRequired();
 
                 entity.Property(c => c.StudentID)
-                      .IsRequired();
+                      .IsRequired(false);
 
                 entity.Property(c => c.Reason)
                       .HasMaxLength(500);
 
+                entity.Property(c => c.Description)
+                      .HasMaxLength(1000);
+
                 entity.Property(c => c.CreatedAt)
                       .IsRequired();
+
+                entity.Property(c => c.UpdatedAt)
+                      .IsRequired(false);
+
+                entity.Property(c => c.StartDate)
+                      .IsRequired();
+
+                entity.Property(c => c.ExpiredDate)
+                      .IsRequired();
+
+                entity.Property(c => c.MaxUsage)
+                      .IsRequired();
+
+                entity.Property(c => c.CurrentUsage)
+                      .IsRequired();
+
+                entity.Property(c => c.IsActive)
+                      .IsRequired();
+
+                entity.Property(c => c.Type)
+                      .IsRequired();
+
+                entity.Property(c => c.Version)
+                      .IsRequired()
+                      .IsConcurrencyToken();
 
                 entity.HasOne<User>()
                       .WithMany()

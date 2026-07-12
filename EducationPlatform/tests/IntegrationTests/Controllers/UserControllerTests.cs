@@ -144,5 +144,66 @@ namespace IntegrationTests.Controllers
             user.Phone.Should().Be(originalPhone);
             user.Bio.Should().Be(originalBio);
         }
+
+        [Fact]
+        public async Task GetUsers_AsAdmin_ReturnsPagedUsers()
+        {
+            // Arrange
+            await LoginExistingUserAsync("admin@example.com", "Password123!");
+
+            // Act
+            var response = await Client.GetAsync("/api/user?pageIndex=1&pageSize=10");
+
+            // Assert
+            response.StatusCode.Should().Be(HttpStatusCode.OK);
+            var result = await response.Content.ReadFromJsonAsync<ApiResponse<PagedResult<UserDTO>>>();
+            result.Should().NotBeNull();
+            result!.IsSuccess.Should().BeTrue();
+            result.Data.Should().NotBeNull();
+            result.Data!.Items.Should().NotBeEmpty();
+        }
+
+        [Fact]
+        public async Task GetUsers_AsStudent_ReturnsForbidden()
+        {
+            // Arrange
+            await LoginExistingUserAsync("student@example.com", "Password123!");
+
+            // Act
+            var response = await Client.GetAsync("/api/user?pageIndex=1&pageSize=10");
+
+            // Assert
+            response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        }
+
+        [Fact]
+        public async Task UpdateUserStatus_DeactivateUser_PreventsDeactivatedUserAccess()
+        {
+            // Arrange
+            // 1. Authenticate a student (valid token)
+            var studentEmail = "tempstudent@example.com";
+            var authResult = await AuthenticateAsync(studentEmail, "Password123!", "Temp Student", "0900000099", 1);
+            var studentToken = authResult.Token;
+            var studentUserId = authResult.UserId;
+
+            // Verify they can access /me before deactivation
+            var meResponseBefore = await Client.GetAsync("/api/user/me");
+            meResponseBefore.StatusCode.Should().Be(HttpStatusCode.OK);
+
+            // 2. Login as admin and deactivate the student
+            await LoginExistingUserAsync("admin@example.com", "Password123!");
+            var deactivateResponse = await Client.PutAsJsonAsync($"/api/user/{studentUserId}/status", new
+            {
+                IsActive = false
+            });
+            deactivateResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+
+            // 3. Re-apply the student's JWT token
+            Client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", studentToken);
+
+            // 4. Try to access /me again -> should be intercepted by UserActiveMiddleware and return 403 Forbidden
+            var meResponseAfter = await Client.GetAsync("/api/user/me");
+            meResponseAfter.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        }
     }
 }

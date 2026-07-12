@@ -48,6 +48,26 @@ namespace Domain.AcademicManagement.Aggregate
         }
 
         #region Methods
+        public void Update(string code, string name)
+        {
+            if (string.IsNullOrWhiteSpace(code))
+                throw new DomainException("Subject code is required");
+            if (string.IsNullOrWhiteSpace(name))
+                throw new DomainException("Subject name is required");
+
+            Code = code.Trim();
+            Name = name.Trim();
+        }
+
+        public void Activate()
+        {
+            IsActive = true;
+        }
+
+        public void Deactivate()
+        {
+            IsActive = false;
+        }
         #endregion
     }
 }

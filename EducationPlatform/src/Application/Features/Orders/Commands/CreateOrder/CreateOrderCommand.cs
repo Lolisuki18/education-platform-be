@@ -77,7 +77,10 @@ namespace Application.Features.Orders.Commands.CreateOrder
                         continue;
 
                     // Validate coupon
-                    if (coupon.StudentID != studentId || coupon.IsUsed)
+                    if (!coupon.CanBeApplied())
+                        continue;
+
+                    if (coupon.StudentID.HasValue && coupon.StudentID.Value != studentId)
                         continue;
 
                     totalDiscount += coupon.DiscountAmount;

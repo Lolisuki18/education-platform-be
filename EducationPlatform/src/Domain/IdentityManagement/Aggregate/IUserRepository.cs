@@ -1,4 +1,5 @@
 using Domain.Common.Interfaces;
+using Domain.IdentityManagement.Enum;
 
 namespace Domain.IdentityManagement.Aggregate
 {
@@ -23,5 +24,7 @@ namespace Domain.IdentityManagement.Aggregate
             DateTime? to,
             string groupBy,
             string? role = null);
+
+        Task<(IEnumerable<User> Users, int TotalCount)> GetUsersPaged(int pageIndex, int pageSize, Role? role);
     }
 }

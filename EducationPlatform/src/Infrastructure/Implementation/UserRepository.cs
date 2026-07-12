@@ -153,6 +153,25 @@ namespace Infrastructure.Implementation
                 }
             };
         }
+
+        public async Task<(IEnumerable<User> Users, int TotalCount)> GetUsersPaged(int pageIndex, int pageSize, Role? role)
+        {
+            var query = context.Users.AsQueryable();
+
+            if (role.HasValue)
+            {
+                query = query.Where(u => u.Role == role.Value);
+            }
+
+            var totalCount = await query.CountAsync();
+            var list = await query
+                .OrderByDescending(u => u.CreatedAt)
+                .Skip((pageIndex - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync();
+
+            return (list, totalCount);
+        }
         #endregion
     }
 }

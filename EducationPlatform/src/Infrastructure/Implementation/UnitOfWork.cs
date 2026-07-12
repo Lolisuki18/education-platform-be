@@ -131,6 +131,12 @@ namespace Infrastructure.Implementation
         }
         #endregion
 
+        public void Dispose()
+        {
+            // Gọi DisposeAsync một cách đồng bộ để tương thích với IDisposable
+            DisposeAsync().AsTask().GetAwaiter().GetResult();
+        }
+
         public async ValueTask DisposeAsync()
         {
             if (transaction != null)

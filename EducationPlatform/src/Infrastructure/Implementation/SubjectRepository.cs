@@ -37,6 +37,13 @@ namespace Infrastructure.Implementation
                 .Where(x => x.SubjectID == subjectId && x.GradeID == gradeId)
                 .ToListAsync();
         }
+
+        public async Task<bool> IsInUse(Guid subjectId)
+        {
+            var inCourses = await context.Courses.AnyAsync(c => c.SubjectID == subjectId);
+            var inDefaultLessons = await context.DefaultLessons.AnyAsync(dl => dl.SubjectID == subjectId);
+            return inCourses || inDefaultLessons;
+        }
         #endregion
     }
 }

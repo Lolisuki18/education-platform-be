@@ -33,6 +33,23 @@ namespace Domain.AcademicManagement.Aggregate
         }
 
         #region Methods
+        public void Update(string name)
+        {
+            if (string.IsNullOrWhiteSpace(name))
+                throw new DomainException("Grade name is required");
+
+            Name = name.Trim();
+        }
+
+        public void Activate()
+        {
+            IsActive = true;
+        }
+
+        public void Deactivate()
+        {
+            IsActive = false;
+        }
         #endregion
     }
 }

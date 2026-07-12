@@ -9,6 +9,7 @@ namespace Application.Features.Academic.Queries.GetSubjects
 {
     public class GetSubjectsQuery : IRequest<IEnumerable<SubjectDTO>>
     {
+        public bool IncludeInactive { get; set; } = false;
     }
 
     public class GetSubjectsQueryHandler : IRequestHandler<GetSubjectsQuery, IEnumerable<SubjectDTO>>
@@ -27,6 +28,11 @@ namespace Application.Features.Academic.Queries.GetSubjects
             var list = await _unitOfWork
                 .GetRepository<ISubjectRepository>()
                 .GetAllAsync();
+
+            if (!request.IncludeInactive)
+            {
+                list = list.Where(s => s.IsActive).ToList();
+            }
 
             if (list == null || !list.Any())
                 throw new NotFound("Subject list is empty or was not found");

@@ -28,6 +28,11 @@ builder.Services.AddControllers();
 builder.Services.AddProblemDetails();
 builder.Services.AddExceptionHandler<ValidationExceptionHandler>();
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
+builder.Services.AddMemoryCache();
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy(API.Helper.Policies.AdminOnly, policy => policy.RequireRole("Admin"));
+});
 
 builder.Services.AddHttpClient("PayOSClient")
     .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
@@ -42,9 +47,10 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowAll", policy =>
     {
-        policy.AllowAnyOrigin()
+        policy.SetIsOriginAllowed(origin => true)
               .AllowAnyMethod()
-              .AllowAnyHeader();
+              .AllowAnyHeader()
+              .AllowCredentials();
     });
 });
 
@@ -159,22 +165,18 @@ var app = builder.Build();
 
 app.UseExceptionHandler();
 
-// Apply CORS middleware before Authentication/Authorization
-app.UseCors("AllowAll");
 
 // ====================
 // 7. Environment Specific Setup
 // ====================
-if (app.Environment.IsDevelopment())
+app.UseSwagger();
+app.UseSwaggerUI(c =>
 {
-    app.UseSwagger();
-    app.UseSwaggerUI(c =>
-    {
-        c.SwaggerEndpoint("/swagger/v1/swagger.json", "Education Platform API v1");
-        c.RoutePrefix = string.Empty; // Set Swagger as the root page
-    });
-}
-else
+    c.SwaggerEndpoint("/swagger/v1/swagger.json", "Education Platform API v1");
+    c.RoutePrefix = string.Empty; // Set Swagger as the root page
+});
+
+if (!app.Environment.IsDevelopment())
 {
     // Only use HTTPS redirection in Production to avoid Android Emulator issues
     app.UseHsts();
@@ -237,7 +239,10 @@ if (app.Environment.EnvironmentName != "Testing")
 // ====================
 app.UseRouting();
 
+app.UseCors("AllowAll");
+
 app.UseAuthentication();
+app.UseMiddleware<API.Helper.UserActiveMiddleware>();
 app.UseAuthorization();
 
 // ====================

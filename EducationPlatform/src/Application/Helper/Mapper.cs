@@ -26,7 +26,9 @@ namespace Application.Helper
 
             // ----- Order Domain -----
             CreateMap<Order, OrderDTO>();
-            CreateMap<Coupon, CouponDTO>();
+            CreateMap<Coupon, CouponDTO>()
+                .ForMember(dest => dest.Id, opt => opt.MapFrom(src => src.CouponID))
+                .ForMember(dest => dest.CouponID, opt => opt.MapFrom(src => src.CouponID));
 
             // ----- Course Domain -----
             CreateMap<PolicyRule, PolicyRuleDTO>();
