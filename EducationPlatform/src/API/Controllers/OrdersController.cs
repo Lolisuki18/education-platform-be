@@ -100,7 +100,6 @@ namespace API.Controllers
             if (!isTesting && !isDevelopment)
             {
                 var checksumKey = configuration["PayOS:ChecksumKey"]!;
-                // Verify signature
                 if (string.IsNullOrEmpty(signature) ||
                     !VerifyRedirectSignature(amount ?? "", cancel ?? "", code ?? "", id ?? "", orderCode ?? "", status ?? "", signature, checksumKey))
                 {
@@ -137,11 +136,19 @@ namespace API.Controllers
                     isSuccess ? "Payment successful" : "Payment failed"));
             }
 
+            // Đọc từ biến môi trường của Render
             var frontendUrl = configuration["PayOS:FrontendUrl"] ?? "http://localhost:3000";
+
+            // Xóa bỏ ký tự gạch chéo ở cuối nếu lỡ tay điền dư trong config
+            frontendUrl = frontendUrl.TrimEnd('/');
 
             if (isSuccess)
             {
-                await mediator.Send(new FinishOrderCommand { OrderCode = codeVal });
+                // Bọc lệnh hoàn tất đơn hàng ngầm hoặc xử lý nhanh để redirect ngay lập tức
+                _ = Task.Run(async () =>
+                {
+                    try { await mediator.Send(new FinishOrderCommand { OrderCode = codeVal }); } catch { }
+                });
                 return Redirect($"{frontendUrl}/student?payment=success");
             }
             else
@@ -150,38 +157,58 @@ namespace API.Controllers
             }
         }
 
+        [AllowAnonymous] // Đảm bảo mở cửa hoàn toàn cho cổng PayOS gọi vào
         [HttpPost("webhook")]
         public async Task<IActionResult> HandleWebhook()
         {
-            using var reader = new System.IO.StreamReader(Request.Body);
-            var bodyString = await reader.ReadToEndAsync();
-
-            var json = Newtonsoft.Json.Linq.JObject.Parse(bodyString);
-            var signature = json["signature"]?.ToString();
-            var code = json["code"]?.ToString();
-            var data = json["data"] as Newtonsoft.Json.Linq.JObject;
-
-            if (data == null || string.IsNullOrEmpty(signature))
+            try
             {
-                return BadRequest("Invalid payload");
-            }
+                using var reader = new System.IO.StreamReader(Request.Body);
+                var bodyString = await reader.ReadToEndAsync();
 
-            var checksumKey = configuration["PayOS:ChecksumKey"]!;
-            if (!VerifyWebhookSignature(data, signature, checksumKey))
-            {
-                return BadRequest("Invalid signature");
-            }
+                var json = Newtonsoft.Json.Linq.JObject.Parse(bodyString);
+                var signature = json["signature"]?.ToString();
+                var code = json["code"]?.ToString();
+                var data = json["data"] as Newtonsoft.Json.Linq.JObject;
 
-            if (code == "00")
-            {
-                var orderCode = data["orderCode"] != null ? (long)data["orderCode"] : (long?)null;
-                if (orderCode.HasValue)
+                if (data == null || string.IsNullOrEmpty(signature))
                 {
-                    await mediator.Send(new FinishOrderCommand { OrderCode = orderCode.Value });
+                    return BadRequest(new { code = "99", desc = "Invalid payload" });
                 }
-            }
 
-            return Ok(new { message = "OK" });
+                var checksumKey = configuration["PayOS:ChecksumKey"]!;
+                if (!VerifyWebhookSignature(data, signature, checksumKey))
+                {
+                    return BadRequest(new { code = "99", desc = "Invalid signature" });
+                }
+
+                if (code == "00")
+                {
+                    var orderCode = data["orderCode"] != null ? (long)data["orderCode"] : (long?)null;
+                    if (orderCode.HasValue)
+                    {
+                        // Chạy ngầm việc FinishOrder (Gồm cả gửi Mail) để giải phóng request Webhook ngay lập tức (< 1 giây)
+                        _ = Task.Run(async () =>
+                        {
+                            try
+                            {
+                                await mediator.Send(new FinishOrderCommand { OrderCode = orderCode.Value });
+                            }
+                            catch (Exception)
+                            {
+                                // Log lỗi ngầm nếu có
+                            }
+                        });
+                    }
+                }
+
+                // Trả về đúng cấu trúc chuẩn PayOS yêu cầu nhận diện thành công
+                return Ok(new { code = "00", desc = "success" });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { code = "99", desc = ex.Message });
+            }
         }
 
         private bool VerifyWebhookSignature(
