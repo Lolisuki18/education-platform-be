@@ -96,7 +96,8 @@ namespace API.Controllers
             long codeVal = long.TryParse(orderCode, out var parsedCode) ? parsedCode : 0;
 
             var isTesting = environment.IsEnvironment("Testing");
-            if (!isTesting)
+            var isDevelopment = environment.IsEnvironment("Development");
+            if (!isTesting && !isDevelopment)
             {
                 var checksumKey = configuration["PayOS:ChecksumKey"]!;
                 // Verify signature
@@ -120,18 +121,33 @@ namespace API.Controllers
                 IsSuccess = isSuccess
             };
 
+            if (isTesting)
+            {
+                if (isSuccess)
+                {
+                    await mediator.Send(new FinishOrderCommand { OrderCode = codeVal });
+                    returnData.Message = "Payment successful! Your course is now available.";
+                }
+                else
+                {
+                    returnData.Message = "Payment was cancelled or failed. Please try again.";
+                }
+
+                return Ok(ApiResponse<ReturnOrderResponseDto>.Success(returnData,
+                    isSuccess ? "Payment successful" : "Payment failed"));
+            }
+
+            var frontendUrl = configuration["PayOS:FrontendUrl"] ?? "http://localhost:3000";
+
             if (isSuccess)
             {
                 await mediator.Send(new FinishOrderCommand { OrderCode = codeVal });
-                returnData.Message = "Payment successful! Your course is now available.";
+                return Redirect($"{frontendUrl}/student?payment=success");
             }
             else
             {
-                returnData.Message = "Payment was cancelled or failed. Please try again.";
+                return Redirect($"{frontendUrl}/student?payment=cancelled");
             }
-
-            return Ok(ApiResponse<ReturnOrderResponseDto>.Success(returnData,
-                isSuccess ? "Payment successful" : "Payment failed"));
         }
 
         [HttpPost("webhook")]
@@ -217,8 +233,8 @@ namespace API.Controllers
         {
             if (string.IsNullOrEmpty(signature)) return false;
 
-            // Build the query string sorted alphabetically
-            string raw = $"amount={amount}&cancel={cancel.ToLower()}&code={code}&id={id}&orderCode={orderCode}&status={status}";
+            // Build the query string sorted alphabetically (amount is not returned in PayOS redirect)
+            string raw = $"cancel={cancel.ToLower()}&code={code}&id={id}&orderCode={orderCode}&status={status}";
 
             using var hmac = new HMACSHA256(Encoding.UTF8.GetBytes(checksumKey));
             var hash = hmac.ComputeHash(Encoding.UTF8.GetBytes(raw));

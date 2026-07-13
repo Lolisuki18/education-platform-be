@@ -22,10 +22,17 @@ namespace Infrastructure.Services
             var payos = _config.GetSection("PayOS");
             int intAmount = (int)amount;
 
+            // PayOS requires description to be max 25 characters, alphanumeric/spaces, and ASCII only.
+            string safeDescription = $"Thanh toan DH{orderCode}";
+            if (safeDescription.Length > 25)
+            {
+                safeDescription = safeDescription.Substring(0, 25);
+            }
+
             string signature = GenerateSignature(
                 orderCode,
                 intAmount,
-                description,
+                safeDescription,
                 payos["ReturnUrl"]!,
                 payos["CancelUrl"]!,
                 payos["ChecksumKey"]!
@@ -39,7 +46,7 @@ namespace Infrastructure.Services
             {
                 orderCode,
                 amount = intAmount,
-                description,
+                description = safeDescription,
                 cancelUrl = payos["CancelUrl"],
                 returnUrl = payos["ReturnUrl"],
                 expiredAt,
