@@ -157,57 +157,61 @@ namespace API.Controllers
             }
         }
 
-        [AllowAnonymous] // Đảm bảo mở cửa hoàn toàn cho cổng PayOS gọi vào
+        [AllowAnonymous]
         [HttpPost("webhook")]
-        public async Task<IActionResult> HandleWebhook()
+        public IActionResult HandleWebhook([FromBody] Newtonsoft.Json.Linq.JObject payload)
         {
             try
             {
-                using var reader = new System.IO.StreamReader(Request.Body);
-                var bodyString = await reader.ReadToEndAsync();
+                // 1. Lấy dữ liệu an toàn từ payload
+                var signature = payload["signature"]?.ToString();
+                var code = payload["code"]?.ToString();
+                var data = payload["data"] as Newtonsoft.Json.Linq.JObject;
 
-                var json = Newtonsoft.Json.Linq.JObject.Parse(bodyString);
-                var signature = json["signature"]?.ToString();
-                var code = json["code"]?.ToString();
-                var data = json["data"] as Newtonsoft.Json.Linq.JObject;
-
-                if (data == null || string.IsNullOrEmpty(signature))
+                // 2. Trả lời PayOS ngay lập tức nếu đây chỉ là request Ping (test kết nối)
+                if (payload == null || string.IsNullOrEmpty(signature) || data == null)
                 {
-                    return BadRequest(new { code = "99", desc = "Invalid payload" });
+                    return Ok(new { code = "00", desc = "success" });
                 }
 
+                // 3. Xác thực chữ ký
                 var checksumKey = configuration["PayOS:ChecksumKey"]!;
                 if (!VerifyWebhookSignature(data, signature, checksumKey))
                 {
                     return BadRequest(new { code = "99", desc = "Invalid signature" });
                 }
 
+                // 4. Xử lý đơn hàng chạy NGẦM để không làm PayOS bị timeout 10s
                 if (code == "00")
                 {
                     var orderCode = data["orderCode"] != null ? (long)data["orderCode"] : (long?)null;
                     if (orderCode.HasValue)
                     {
-                        // Chạy ngầm việc FinishOrder (Gồm cả gửi Mail) để giải phóng request Webhook ngay lập tức (< 1 giây)
+                        // Task.Run giúp luồng này chạy độc lập dưới background (không dùng await ở đây)
                         _ = Task.Run(async () =>
                         {
                             try
                             {
-                                await mediator.Send(new FinishOrderCommand { OrderCode = orderCode.Value });
+                                // Tạo scope mới nếu mediator cần các service dạng Scoped
+                                using var scope = environment.ApplicationServices.CreateScope();
+                                var scopedMediator = scope.ServiceProvider.GetRequiredService<IMediator>();
+
+                                await scopedMediator.Send(new FinishOrderCommand { OrderCode = orderCode.Value });
                             }
                             catch (Exception)
                             {
-                                // Log lỗi ngầm nếu có
+                                // Bỏ qua lỗi ngầm để tránh sập app
                             }
                         });
                     }
                 }
 
-                // Trả về đúng cấu trúc chuẩn PayOS yêu cầu nhận diện thành công
+                // 5. Trả về đúng mã PayOS yêu cầu ngay lập tức
                 return Ok(new { code = "00", desc = "success" });
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new { code = "99", desc = ex.Message });
+                return Ok(new { code = "99", desc = ex.Message });
             }
         }
 
