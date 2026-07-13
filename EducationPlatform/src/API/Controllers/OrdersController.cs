@@ -24,12 +24,18 @@ namespace API.Controllers
         private readonly IMediator mediator;
         private readonly IConfiguration configuration;
         private readonly IWebHostEnvironment environment;
+        private readonly IServiceScopeFactory scopeFactory;
 
-        public OrdersController(IMediator mediator, IConfiguration configuration, IWebHostEnvironment environment)
+        public OrdersController(
+            IMediator mediator,
+            IConfiguration configuration,
+            IWebHostEnvironment environment,
+            IServiceScopeFactory scopeFactory)
         {
             this.mediator = mediator;
             this.configuration = configuration;
             this.environment = environment;
+            this.scopeFactory = scopeFactory;
         }
 
         [Authorize]
@@ -193,7 +199,7 @@ namespace API.Controllers
                             try
                             {
                                 // Tạo scope mới nếu mediator cần các service dạng Scoped
-                                using var scope = environment.ApplicationServices.CreateScope();
+                                using var scope = scopeFactory.CreateScope();
                                 var scopedMediator = scope.ServiceProvider.GetRequiredService<IMediator>();
 
                                 await scopedMediator.Send(new FinishOrderCommand { OrderCode = orderCode.Value });
