@@ -66,7 +66,7 @@ namespace Infrastructure.Persistence.Seeds
             {
                 var lucStudent = new User(
                     Guid.NewGuid(),
-                    "dongxuanluc2018@gmail.com",
+                    "leninh2004@gmail.com",
                     "28012005",
                     "0000002018",
                     "Luc Student",
