@@ -41,10 +41,10 @@ namespace API.Controllers
         }
 
         [HttpGet]
-        public async Task<ActionResult<ApiResponse<LandingPageResult>>> ListCourses([FromQuery] GetLandingPageQuery query)
+        public async Task<ActionResult<ApiResponse<PagedResult<CourseDTO>>>> ListCourses([FromQuery] GetLandingPageQuery query)
         {
             var result = await mediator.Send(query);
-            return Ok(ApiResponse<LandingPageResult>.Success(result));
+            return Ok(ApiResponse<PagedResult<CourseDTO>>.Success(result));
         }
 
         [HttpGet("{id:guid}")]

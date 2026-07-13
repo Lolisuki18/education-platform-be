@@ -37,13 +37,13 @@ namespace IntegrationTests.Controllers
             // Assert
             response.StatusCode.Should().Be(HttpStatusCode.OK);
 
-            var result = await response.Content.ReadFromJsonAsync<ApiResponse<LandingPageResult>>();
+            var result = await response.Content.ReadFromJsonAsync<ApiResponse<PagedResult<CourseDTO>>>();
             result.Should().NotBeNull();
             result!.IsSuccess.Should().BeTrue();
             result.Data.Should().NotBeNull();
 
             // Check courses list
-            var courses = result.Data!.Courses.ToList();
+            var courses = result.Data!.Items.ToList();
             courses.Should().NotBeEmpty();
 
             // "Math algebra" is published, "Math geometry" is pending, so only "Math algebra" should be returned

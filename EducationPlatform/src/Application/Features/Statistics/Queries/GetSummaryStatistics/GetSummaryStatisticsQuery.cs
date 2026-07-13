@@ -38,8 +38,9 @@ namespace Application.Features.Statistics.Queries.GetSummaryStatistics
 
         public async Task<SummaryStatisticsResult> Handle(GetSummaryStatisticsQuery request, CancellationToken cancellationToken)
         {
-            var from = request.From ?? DateTime.UtcNow.AddMonths(-1);
-            var to = request.To ?? DateTime.UtcNow;
+            // Đổi sang DateTime.MinValue và MaxValue để nếu trùng hợp bị null thì vẫn quét hết database
+            var from = request.From ?? DateTime.MinValue;
+            var to = request.To ?? DateTime.MaxValue;
 
             var grades = await _context.Grades
                 .AsNoTracking()

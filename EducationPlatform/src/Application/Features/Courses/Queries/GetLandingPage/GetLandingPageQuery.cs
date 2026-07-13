@@ -1,15 +1,16 @@
-using Application.Features.Academic.Queries.GetGrades;
-using Application.Features.Academic.Queries.GetSubjects;
 using Application.Results;
 using MediatR;
 using Application.Interface;
 using AutoMapper;
 using AutoMapper.QueryableExtensions;
 using Microsoft.EntityFrameworkCore;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace Application.Features.Courses.Queries.GetLandingPage
 {
-    public class GetLandingPageQuery : IRequest<LandingPageResult>
+    public class GetLandingPageQuery : IRequest<PagedResult<CourseDTO>>
     {
         public string? Title { get; set; }
         public string? GradeName { get; set; }
@@ -18,14 +19,7 @@ namespace Application.Features.Courses.Queries.GetLandingPage
         public int PageSize { get; set; } = 10;
     }
 
-    public class LandingPageResult
-    {
-        public IEnumerable<CourseDTO> Courses { get; set; } = new List<CourseDTO>();
-        public IEnumerable<GradeDTO> Grades { get; set; } = new List<GradeDTO>();
-        public IEnumerable<SubjectDTO> Subjects { get; set; } = new List<SubjectDTO>();
-    }
-
-    public class GetLandingPageQueryHandler : IRequestHandler<GetLandingPageQuery, LandingPageResult>
+    public class GetLandingPageQueryHandler : IRequestHandler<GetLandingPageQuery, PagedResult<CourseDTO>>
     {
         private readonly IApplicationDBContext _context;
         private readonly IMapper _mapper;
@@ -36,7 +30,7 @@ namespace Application.Features.Courses.Queries.GetLandingPage
             _mapper = mapper;
         }
 
-        public async Task<LandingPageResult> Handle(GetLandingPageQuery request, CancellationToken cancellationToken)
+        public async Task<PagedResult<CourseDTO>> Handle(GetLandingPageQuery request, CancellationToken cancellationToken)
         {
             var coursesQuery = _context.Courses
                 .AsNoTracking()
@@ -51,6 +45,8 @@ namespace Application.Features.Courses.Queries.GetLandingPage
             if (!string.IsNullOrWhiteSpace(request.SubjectName))
                 coursesQuery = coursesQuery.Where(c => c.Subject.Name == request.SubjectName);
 
+            var totalCount = await coursesQuery.CountAsync(cancellationToken);
+
             var courses = await coursesQuery
                 .OrderByDescending(c => c.PublishedAt)
                 .Skip((request.PageIndex - 1) * request.PageSize)
@@ -58,21 +54,12 @@ namespace Application.Features.Courses.Queries.GetLandingPage
                 .ProjectTo<CourseDTO>(_mapper.ConfigurationProvider)
                 .ToListAsync(cancellationToken);
 
-            var grades = await _context.Grades
-                .AsNoTracking()
-                .ProjectTo<GradeDTO>(_mapper.ConfigurationProvider)
-                .ToListAsync(cancellationToken);
-
-            var subjects = await _context.Subjects
-                .AsNoTracking()
-                .ProjectTo<SubjectDTO>(_mapper.ConfigurationProvider)
-                .ToListAsync(cancellationToken);
-
-            return new LandingPageResult
+            return new PagedResult<CourseDTO>
             {
-                Courses = courses,
-                Grades = grades,
-                Subjects = subjects
+                Items = courses.AsReadOnly(),
+                PageIndex = request.PageIndex,
+                PageSize = request.PageSize,
+                TotalItems = totalCount
             };
         }
     }

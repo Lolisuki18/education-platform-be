@@ -73,8 +73,6 @@ namespace UnitTests.Application.Features.Courses.Queries.GetLandingPage
             var mockSubjectsDbSet = DbSetMockHelper.CreateMockDbSet(subjectsList);
 
             _mockContext.Setup(c => c.Courses).Returns(mockCoursesDbSet.Object);
-            _mockContext.Setup(c => c.Grades).Returns(mockGradesDbSet.Object);
-            _mockContext.Setup(c => c.Subjects).Returns(mockSubjectsDbSet.Object);
 
             var query = new GetLandingPageQuery();
 
@@ -83,14 +81,11 @@ namespace UnitTests.Application.Features.Courses.Queries.GetLandingPage
 
             // Assert
             result.Should().NotBeNull();
-            result.Courses.Should().HaveCount(1); // Chỉ lấy course đã published
-            result.Courses.First().CourseID.Should().Be(course1.CourseID);
-
-            result.Grades.Should().HaveCount(1);
-            result.Grades.First().GradeID.Should().Be(grade.GradeID);
-
-            result.Subjects.Should().HaveCount(1);
-            result.Subjects.First().SubjectID.Should().Be(subject.SubjectID);
+            result.Items.Should().HaveCount(1); // Chỉ lấy course đã published
+            result.Items.First().CourseID.Should().Be(course1.CourseID);
+            result.PageIndex.Should().Be(1);
+            result.PageSize.Should().Be(10);
+            result.TotalItems.Should().Be(1);
         }
 
         [Fact]
@@ -111,16 +106,10 @@ namespace UnitTests.Application.Features.Courses.Queries.GetLandingPage
             SetPrivateProperty(courseNoMatch, nameof(Course.Subject), subject2);
 
             var coursesList = new List<Course> { courseMatch, courseNoMatch };
-            var gradesList = new List<Grade> { grade1, grade2 };
-            var subjectsList = new List<Subject> { subject1, subject2 };
 
             var mockCoursesDbSet = DbSetMockHelper.CreateMockDbSet(coursesList);
-            var mockGradesDbSet = DbSetMockHelper.CreateMockDbSet(gradesList);
-            var mockSubjectsDbSet = DbSetMockHelper.CreateMockDbSet(subjectsList);
 
             _mockContext.Setup(c => c.Courses).Returns(mockCoursesDbSet.Object);
-            _mockContext.Setup(c => c.Grades).Returns(mockGradesDbSet.Object);
-            _mockContext.Setup(c => c.Subjects).Returns(mockSubjectsDbSet.Object);
 
             // Truy vấn lọc theo Title và GradeName
             var query = new GetLandingPageQuery
@@ -134,9 +123,10 @@ namespace UnitTests.Application.Features.Courses.Queries.GetLandingPage
 
             // Assert
             result.Should().NotBeNull();
-            result.Courses.Should().HaveCount(1);
-            result.Courses.First().CourseID.Should().Be(courseMatch.CourseID);
-            result.Courses.First().Title.Should().Be("Target Physics Course");
+            result.Items.Should().HaveCount(1);
+            result.Items.First().CourseID.Should().Be(courseMatch.CourseID);
+            result.Items.First().Title.Should().Be("Target Physics Course");
+            result.TotalItems.Should().Be(1);
         }
 
         private void SetPrivateProperty(object target, string propertyName, object value)

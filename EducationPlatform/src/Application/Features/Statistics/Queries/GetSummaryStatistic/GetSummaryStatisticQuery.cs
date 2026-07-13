@@ -28,62 +28,55 @@ namespace Application.Features.Statistics.Queries.GetSummaryStatistic
             var from = request.From ?? DateTime.MinValue;
             var to = request.To ?? DateTime.MaxValue;
 
-            // User Summary
+            // 1. User Summary: Bỏ điều kiện Where thời gian để đếm TOÀN BỘ User/Teacher/Student trên hệ thống
             var users = await _context.Users
                 .AsNoTracking()
-                .Where(u => u.CreatedAt >= from && u.CreatedAt <= to)
                 .GroupBy(u => u.Role)
                 .Select(g => new { Role = g.Key, Count = g.Count() })
                 .ToListAsync(cancellationToken);
 
-            // Course Summary
+            // 2. Course Summary: Thường thống kê tổng số khóa học cũng cần lấy tất cả
             var courses = await _context.Courses
                 .AsNoTracking()
-                .Where(c => c.CreatedAt >= from && c.CreatedAt <= to)
                 .GroupBy(c => c.Status)
                 .Select(g => new { Status = g.Key, Count = g.Count() })
                 .ToListAsync(cancellationToken);
 
-            // Enrollment Summary
+            // 3. Enrollment Summary: Lấy toàn bộ lượt đăng ký từ trước đến nay
             var enrollments = await _context.Enrollments
                 .AsNoTracking()
-                .Where(e => e.EnrolledAt >= from && e.EnrolledAt <= to)
                 .GroupBy(e => e.Status)
                 .Select(g => new { Status = g.Key, Count = g.Count() })
                 .ToListAsync(cancellationToken);
 
-            // Revenue Summary
+            // 4. Revenue Summary: Doanh thu THÌ BẮT BUỘC phải giữ lại filter theo ngày để báo cáo theo tuần/tháng/năm
             var revenue = await _context.Orders
                 .AsNoTracking()
                 .Where(o => o.CreatedAt >= from && o.CreatedAt <= to && o.PaidAt != null)
                 .Select(o => new { o.PlatformAmount, o.TeacherAmount })
                 .ToListAsync(cancellationToken);
 
-            // Breakdowns
+            // 5. Breakdowns: Bỏ filter thời gian để hiển thị đúng biểu đồ cơ cấu tổng thể
             var courseByGrade = await _context.Courses
                 .AsNoTracking()
-                .Where(c => c.CreatedAt >= from && c.CreatedAt <= to)
                 .GroupBy(c => c.Grade.Name)
                 .Select(g => new { Name = g.Key, Count = g.Count() })
                 .ToDictionaryAsync(x => x.Name, x => x.Count, cancellationToken);
 
             var courseBySubject = await _context.Courses
                 .AsNoTracking()
-                .Where(c => c.CreatedAt >= from && c.CreatedAt <= to)
                 .GroupBy(c => c.Subject.Name)
                 .Select(g => new { Name = g.Key, Count = g.Count() })
                 .ToDictionaryAsync(x => x.Name, x => x.Count, cancellationToken);
 
             var enrollmentByGrade = await _context.Enrollments
                 .AsNoTracking()
-                .Where(e => e.EnrolledAt >= from && e.EnrolledAt <= to)
                 .GroupBy(e => e.Course.Grade.Name)
                 .Select(g => new { Name = g.Key, Count = g.Count() })
                 .ToDictionaryAsync(x => x.Name, x => x.Count, cancellationToken);
 
             var enrollmentBySubject = await _context.Enrollments
                 .AsNoTracking()
-                .Where(e => e.EnrolledAt >= from && e.EnrolledAt <= to)
                 .GroupBy(e => e.Course.Subject.Name)
                 .Select(g => new { Name = g.Key, Count = g.Count() })
                 .ToDictionaryAsync(x => x.Name, x => x.Count, cancellationToken);
