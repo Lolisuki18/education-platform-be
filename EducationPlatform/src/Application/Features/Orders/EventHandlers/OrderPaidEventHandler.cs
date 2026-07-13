@@ -50,7 +50,18 @@ namespace Application.Features.Orders.EventHandlers
                     string amountStr = (course.Price?.Amount ?? 0).ToString("N0") + " VND";
                     string body = BuildPaymentSuccessEmailBody(student.Name, course.Title, order.OrderCode.ToString(), amountStr, frontendUrl);
 
-                    await _emailService.SendEmailAsync(student.Email, subject, body);
+                    // Fire-and-forget email sending so it does not block the HTTP redirect response
+                    _ = Task.Run(async () =>
+                    {
+                        try
+                        {
+                            await _emailService.SendEmailAsync(student.Email, subject, body);
+                        }
+                        catch (Exception)
+                        {
+                            // Ignored in background task
+                        }
+                    });
                 }
             }
             catch (Exception)

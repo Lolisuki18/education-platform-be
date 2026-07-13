@@ -39,7 +39,8 @@ namespace Infrastructure.Services
                 {
                     Host = smtpHost,
                     Port = smtpPort,
-                    EnableSsl = enableSSL
+                    EnableSsl = enableSSL,
+                    Timeout = 5000 // 5 seconds timeout
                 };
 
                 if (!string.IsNullOrEmpty(username) && !string.IsNullOrEmpty(password))
@@ -86,7 +87,8 @@ namespace Infrastructure.Services
                 {
                     Host = smtpHost,
                     Port = smtpPort,
-                    EnableSsl = enableSSL
+                    EnableSsl = enableSSL,
+                    Timeout = 5000 // 5 seconds timeout
                 };
 
                 if (!string.IsNullOrEmpty(username) && !string.IsNullOrEmpty(password))
