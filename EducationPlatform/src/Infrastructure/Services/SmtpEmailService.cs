@@ -64,6 +64,51 @@ namespace Infrastructure.Services
             }
         }
 
+        public async Task SendEmailAsync(string toEmail, string subject, string body)
+        {
+            try
+            {
+                var config = _configuration;
+                var fromEmail = config["EmailSettings:From"] ?? "noreply@educationplatform.com";
+                var displayName = config["EmailSettings:DisplayName"] ?? "Education Platform";
+                var smtpHost = config["EmailSettings:SmtpHost"] ?? "localhost";
+                var smtpPortStr = config["EmailSettings:SmtpPort"];
+                var smtpPort = int.TryParse(smtpPortStr, out var port) ? port : 25;
+                var username = config["EmailSettings:Username"] ?? string.Empty;
+                var password = config["EmailSettings:Password"] ?? string.Empty;
+                var enableSSLStr = config["EmailSettings:EnableSSL"];
+                var enableSSL = bool.TryParse(enableSSLStr, out var ssl) && ssl;
+
+                var from = new MailAddress(fromEmail, displayName);
+                var to = new MailAddress(toEmail);
+
+                using var smtp = new SmtpClient
+                {
+                    Host = smtpHost,
+                    Port = smtpPort,
+                    EnableSsl = enableSSL
+                };
+
+                if (!string.IsNullOrEmpty(username) && !string.IsNullOrEmpty(password))
+                {
+                    smtp.Credentials = new NetworkCredential(username, password);
+                }
+
+                using var message = new MailMessage(from, to)
+                {
+                    Subject = subject,
+                    Body = body,
+                    IsBodyHtml = true
+                };
+
+                await smtp.SendMailAsync(message);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "[SmtpEmailService] Failed to send custom email to {ToEmail}", toEmail);
+            }
+        }
+
         private static string BuildOtpTemplate(string otp)
         {
             return $@"

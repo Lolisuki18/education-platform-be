@@ -1,6 +1,7 @@
 using Application.Features.Orders.EventHandlers;
 using Domain.Common.Interfaces;
 using Domain.EnrollmentManagement.Aggregate;
+using Application.Interface;
 using Domain.OrderManagement.Events;
 using FluentAssertions;
 using Moq;
@@ -8,6 +9,7 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Xunit;
+using Microsoft.Extensions.Configuration;
 
 namespace UnitTests.Application.Features.Orders.EventHandlers
 {
@@ -15,18 +17,22 @@ namespace UnitTests.Application.Features.Orders.EventHandlers
     {
         private readonly Mock<IUnitOfWork> _mockUnitOfWork;
         private readonly Mock<IEnrollmentRepository> _mockEnrollmentRepository;
+        private readonly Mock<IEmailService> _mockEmailService;
+        private readonly Mock<IConfiguration> _mockConfig;
         private readonly OrderPaidEventHandler _handler;
 
         public OrderPaidEventHandlerTests()
         {
             _mockUnitOfWork = new Mock<IUnitOfWork>();
             _mockEnrollmentRepository = new Mock<IEnrollmentRepository>();
+            _mockEmailService = new Mock<IEmailService>();
+            _mockConfig = new Mock<IConfiguration>();
 
             _mockUnitOfWork
                 .Setup(u => u.GetRepository<IEnrollmentRepository>())
                 .Returns(_mockEnrollmentRepository.Object);
 
-            _handler = new OrderPaidEventHandler(_mockUnitOfWork.Object);
+            _handler = new OrderPaidEventHandler(_mockUnitOfWork.Object, _mockEmailService.Object, _mockConfig.Object);
         }
 
         [Fact]
