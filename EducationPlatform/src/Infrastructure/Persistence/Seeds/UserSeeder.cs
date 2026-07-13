@@ -13,7 +13,7 @@ namespace Infrastructure.Persistence.Seeds
             // ====================
             // Admin
             // ====================
-            if (!await context.Users.AnyAsync(u => u.Role == Role.Admin))
+            if (!await context.Users.AnyAsync(u => u.Role == Role.Admin || u.Email == "longdong32120@gmail.com" || u.Phone == "0000000000"))
             {
                 var admin = new User(
                     Guid.NewGuid(),
@@ -41,7 +41,7 @@ namespace Infrastructure.Persistence.Seeds
             // ====================
             // Nai Teacher
             // ====================
-            if (!await context.Users.AnyAsync(u => u.Email == "nnnai3131@gmail.com"))
+            if (!await context.Users.AnyAsync(u => u.Email == "nnnai3131@gmail.com" || u.Phone == "0000000001"))
             {
                 var naiTeacher = new User(
                     Guid.NewGuid(),
@@ -62,7 +62,7 @@ namespace Infrastructure.Persistence.Seeds
             // ====================
             // Luc Student
             // ====================
-            if (!await context.Users.AnyAsync(u => u.Email == "dongxuanluc2018@gmail.com"))
+            if (!await context.Users.AnyAsync(u => u.Email == "leninh2004@gmail.com" || u.Phone == "0000002018"))
             {
                 var lucStudent = new User(
                     Guid.NewGuid(),
@@ -85,6 +85,7 @@ namespace Infrastructure.Persistence.Seeds
             // ====================
             if (!await context.Users.AnyAsync(u => u.Email.StartsWith("student") || u.Email.StartsWith("teacher")))
             {
+                var existingPhones = await context.Users.Select(u => u.Phone).ToHashSetAsync();
                 var users = new List<User>();
 
                 var endDate = DateTime.Now;
@@ -101,11 +102,18 @@ namespace Infrastructure.Persistence.Seeds
                     var isTeacher = random.NextDouble() < 0.05;
                     var role = isTeacher ? Role.Teacher : Role.Student;
 
+                    string phone;
+                    do
+                    {
+                        phone = $"09{random.Next(10000000, 99999999)}";
+                    } while (existingPhones.Contains(phone));
+                    existingPhones.Add(phone);
+
                     var user = new User(
                         Guid.NewGuid(),
                         isTeacher ? $"teacher{i}@gmail.com" : $"student{i}@gmail.com",
                         "28012005",
-                        $"09{random.Next(10000000, 99999999)}",
+                        phone,
                         isTeacher ? $"Teacher {i}" : $"Student {i}",
                         $"{role} account",
                         role,
