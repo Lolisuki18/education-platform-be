@@ -7,6 +7,7 @@ using Domain.IdentityManagement.Aggregate;
 using Domain.CourseManagement.Aggregate;
 using Domain.OrderManagement.Aggregate;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Application.Features.Orders.EventHandlers
 {
@@ -15,12 +16,18 @@ namespace Application.Features.Orders.EventHandlers
         private readonly IUnitOfWork _unitOfWork;
         private readonly IEmailService _emailService;
         private readonly IConfiguration _configuration;
+        private readonly IServiceScopeFactory? _scopeFactory;
 
-        public OrderPaidEventHandler(IUnitOfWork unitOfWork, IEmailService emailService, IConfiguration configuration)
+        public OrderPaidEventHandler(
+            IUnitOfWork unitOfWork,
+            IEmailService emailService,
+            IConfiguration configuration,
+            IServiceScopeFactory? scopeFactory = null)
         {
             _unitOfWork = unitOfWork;
             _emailService = emailService;
             _configuration = configuration;
+            _scopeFactory = scopeFactory;
         }
 
         public async Task Handle(OrderPaidEvent notification, CancellationToken cancellationToken)
@@ -53,13 +60,31 @@ namespace Application.Features.Orders.EventHandlers
                     // Fire-and-forget email sending so it does not block the HTTP redirect response
                     _ = Task.Run(async () =>
                     {
-                        try
+                        if (_scopeFactory != null)
                         {
-                            await _emailService.SendEmailAsync(student.Email, subject, body);
+                            using (var scope = _scopeFactory.CreateScope())
+                            {
+                                try
+                                {
+                                    var emailService = scope.ServiceProvider.GetRequiredService<IEmailService>();
+                                    await emailService.SendEmailAsync(student.Email, subject, body);
+                                }
+                                catch (Exception)
+                                {
+                                    // Ignored in background task
+                                }
+                            }
                         }
-                        catch (Exception)
+                        else
                         {
-                            // Ignored in background task
+                            try
+                            {
+                                await _emailService.SendEmailAsync(student.Email, subject, body);
+                            }
+                            catch (Exception)
+                            {
+                                // Ignored in background task
+                            }
                         }
                     });
                 }
