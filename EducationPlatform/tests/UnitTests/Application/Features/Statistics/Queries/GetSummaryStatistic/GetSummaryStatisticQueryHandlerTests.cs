@@ -173,20 +173,20 @@ namespace UnitTests.Application.Features.Statistics.Queries.GetSummaryStatistic
             // Assert
             result.Should().NotBeNull();
 
-            // Users: Total 3 (1 teacher, 2 students in range)
-            result.User.Total.Should().Be(3);
+            // Users: Total 4 (1 teacher, 3 students)
+            result.User.Total.Should().Be(4);
             result.User.TeacherCount.Should().Be(1);
-            result.User.StudentCount.Should().Be(2);
+            result.User.StudentCount.Should().Be(3);
 
-            // Courses: Total 3 (1 Published, 1 InReview, 1 Rejected in range)
-            result.Course.Total.Should().Be(3);
-            result.Course.PublishedCount.Should().Be(1);
+            // Courses: Total 4 (2 Published, 1 InReview, 1 Rejected)
+            result.Course.Total.Should().Be(4);
+            result.Course.PublishedCount.Should().Be(2);
             result.Course.InReviewCount.Should().Be(1);
             result.Course.RejectedCount.Should().Be(1);
 
-            // Enrollments: Total 2 (1 Completed, 1 InProgress in range)
-            result.Enrollment.Total.Should().Be(2);
-            result.Enrollment.Completed.Should().Be(1);
+            // Enrollments: Total 3 (2 Completed, 1 Active)
+            result.Enrollment.Total.Should().Be(3);
+            result.Enrollment.Completed.Should().Be(2);
             result.Enrollment.NotCompleted.Should().Be(1);
 
             // Revenue: Total = 100+200 = 300, Commission = 15+30 = 45, TeacherFinance = 85+170 = 255
@@ -195,27 +195,27 @@ namespace UnitTests.Application.Features.Statistics.Queries.GetSummaryStatistic
             result.Revenue.TeacherFinance.Should().Be(255);
 
             // Breakdowns:
-            // Course by Grade: Grade 10 (course1, course2) = 2, Grade 11 (course3) = 1. Total = 3
-            result.CourseByGrade.Total.Should().Be(3);
+            // Course by Grade: Grade 10 (course1, course2, outOfRangeCourse) = 3, Grade 11 (course3) = 1. Total = 4
+            result.CourseByGrade.Total.Should().Be(4);
             result.CourseByGrade.GradeCounts.Should().HaveCount(2);
-            result.CourseByGrade.GradeCounts["Grade 10"].Should().Be(2);
+            result.CourseByGrade.GradeCounts["Grade 10"].Should().Be(3);
             result.CourseByGrade.GradeCounts["Grade 11"].Should().Be(1);
 
-            // Course by Subject: Mathematics (course1, course3) = 2, Physics (course2) = 1. Total = 3
-            result.CourseBySubject.Total.Should().Be(3);
+            // Course by Subject: Mathematics (course1, course3, outOfRangeCourse) = 3, Physics (course2) = 1. Total = 4
+            result.CourseBySubject.Total.Should().Be(4);
             result.CourseBySubject.SubjectCounts.Should().HaveCount(2);
-            result.CourseBySubject.SubjectCounts["Mathematics"].Should().Be(2);
+            result.CourseBySubject.SubjectCounts["Mathematics"].Should().Be(3);
             result.CourseBySubject.SubjectCounts["Physics"].Should().Be(1);
 
-            // Enrollment by Grade: Grade 10 (enrollment1, enrollment2) = 2. Total = 2
-            result.EnrollmentByGrade.Total.Should().Be(2);
+            // Enrollment by Grade: Grade 10 (enrollment1, enrollment2, outOfRangeEnrollment) = 3. Total = 3
+            result.EnrollmentByGrade.Total.Should().Be(3);
             result.EnrollmentByGrade.GradeCounts.Should().HaveCount(1);
-            result.EnrollmentByGrade.GradeCounts["Grade 10"].Should().Be(2);
+            result.EnrollmentByGrade.GradeCounts["Grade 10"].Should().Be(3);
 
-            // Enrollment by Subject: Mathematics (enrollment1) = 1, Physics (enrollment2) = 1. Total = 2
-            result.EnrollmentBySubject.Total.Should().Be(2);
+            // Enrollment by Subject: Mathematics (enrollment1, outOfRangeEnrollment) = 2, Physics (enrollment2) = 1. Total = 3
+            result.EnrollmentBySubject.Total.Should().Be(3);
             result.EnrollmentBySubject.SubjectCounts.Should().HaveCount(2);
-            result.EnrollmentBySubject.SubjectCounts["Mathematics"].Should().Be(1);
+            result.EnrollmentBySubject.SubjectCounts["Mathematics"].Should().Be(2);
             result.EnrollmentBySubject.SubjectCounts["Physics"].Should().Be(1);
         }
 

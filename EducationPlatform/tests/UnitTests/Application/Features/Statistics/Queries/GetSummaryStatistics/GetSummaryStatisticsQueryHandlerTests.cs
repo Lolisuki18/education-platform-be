@@ -89,10 +89,10 @@ namespace UnitTests.Application.Features.Statistics.Queries.GetSummaryStatistics
             result.Summary.Should().NotBeNull();
             result.Summary.User.Total.Should().Be(100);
 
-            // Xác thực Mediator đã được gọi với khoảng thời gian mặc định (trong vòng 1 tháng qua)
+            // Xác thực Mediator đã được gọi với khoảng thời gian mặc định (Min và Max Value)
             _mockMediator.Verify(m => m.Send(It.Is<GetSummaryStatisticQuery>(q =>
-                q.From.HasValue && q.From.Value > DateTime.UtcNow.AddDays(-32) &&
-                q.To.HasValue && q.To.Value <= DateTime.UtcNow
+                q.From == DateTime.MinValue &&
+                q.To == DateTime.MaxValue
             ), It.IsAny<CancellationToken>()), Times.Once);
         }
 
