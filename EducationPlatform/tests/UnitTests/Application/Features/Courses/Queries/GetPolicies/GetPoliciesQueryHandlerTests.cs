@@ -37,29 +37,29 @@ namespace UnitTests.Application.Features.Courses.Queries.GetPolicies
         }
 
         [Fact]
-        public async Task Handle_ActiveOnlyIsTrue_ShouldReturnOnlyActivePolicyRules()
+        public async Task Handle_ActiveOnlyIsTrue_ShouldReturnOnlyActivePolicies()
         {
             // Arrange
-            var activeRule = new PolicyRule(Guid.NewGuid(), "RULE01", "Active Rule", Guid.NewGuid());
+            var activePolicy = new Policy(Guid.NewGuid(), "Active Policy");
 
-            var inactiveRule = new PolicyRule(Guid.NewGuid(), "RULE02", "Inactive Rule", Guid.NewGuid());
-            SetIsActive(inactiveRule, false);
+            var inactivePolicy = new Policy(Guid.NewGuid(), "Inactive Policy");
+            SetIsActive(inactivePolicy, false);
 
-            var rulesList = new List<PolicyRule> { activeRule, inactiveRule };
+            var policiesList = new List<Policy> { activePolicy, inactivePolicy };
 
             _mockPolicyRepository
                 .Setup(r => r.GetAllAsync())
-                .ReturnsAsync(rulesList);
+                .ReturnsAsync(policiesList);
 
             var expectedDtos = new List<PolicyDTO>
             {
-                new PolicyDTO { PolicyID = activeRule.PolicyID, Name = "Active Policy" }
+                new PolicyDTO { PolicyID = activePolicy.PolicyID, Name = "Active Policy" }
             };
 
-            // Thiết lập mock mapper nhận vào danh sách chỉ chứa activeRule
+            // Thiết lập mock mapper nhận vào danh sách chỉ chứa activePolicy
             _mockMapper
-                .Setup(m => m.Map<IEnumerable<PolicyDTO>>(It.Is<IEnumerable<PolicyRule>>(list =>
-                    list.Count() == 1 && list.Contains(activeRule) && !list.Contains(inactiveRule)
+                .Setup(m => m.Map<IEnumerable<PolicyDTO>>(It.Is<IEnumerable<Policy>>(list =>
+                    list.Count() == 1 && list.Contains(activePolicy) && !list.Contains(inactivePolicy)
                 )))
                 .Returns(expectedDtos);
 
@@ -74,30 +74,30 @@ namespace UnitTests.Application.Features.Courses.Queries.GetPolicies
         }
 
         [Fact]
-        public async Task Handle_ActiveOnlyIsFalse_ShouldReturnAllPolicyRules()
+        public async Task Handle_ActiveOnlyIsFalse_ShouldReturnAllPolicies()
         {
             // Arrange
-            var activeRule = new PolicyRule(Guid.NewGuid(), "RULE01", "Active Rule", Guid.NewGuid());
+            var activePolicy = new Policy(Guid.NewGuid(), "Active Policy");
 
-            var inactiveRule = new PolicyRule(Guid.NewGuid(), "RULE02", "Inactive Rule", Guid.NewGuid());
-            SetIsActive(inactiveRule, false);
+            var inactivePolicy = new Policy(Guid.NewGuid(), "Inactive Policy");
+            SetIsActive(inactivePolicy, false);
 
-            var rulesList = new List<PolicyRule> { activeRule, inactiveRule };
+            var policiesList = new List<Policy> { activePolicy, inactivePolicy };
 
             _mockPolicyRepository
                 .Setup(r => r.GetAllAsync())
-                .ReturnsAsync(rulesList);
+                .ReturnsAsync(policiesList);
 
             var expectedDtos = new List<PolicyDTO>
             {
-                new PolicyDTO { PolicyID = activeRule.PolicyID, Name = "Active Policy" },
-                new PolicyDTO { PolicyID = inactiveRule.PolicyID, Name = "Inactive Policy" }
+                new PolicyDTO { PolicyID = activePolicy.PolicyID, Name = "Active Policy" },
+                new PolicyDTO { PolicyID = inactivePolicy.PolicyID, Name = "Inactive Policy" }
             };
 
-            // Thiết lập mock mapper nhận vào toàn bộ danh sách rulesList
+            // Thiết lập mock mapper nhận vào toàn bộ danh sách policiesList
             _mockMapper
-                .Setup(m => m.Map<IEnumerable<PolicyDTO>>(It.Is<IEnumerable<PolicyRule>>(list =>
-                    list.Count() == 2 && list.Contains(activeRule) && list.Contains(inactiveRule)
+                .Setup(m => m.Map<IEnumerable<PolicyDTO>>(It.Is<IEnumerable<Policy>>(list =>
+                    list.Count() == 2 && list.Contains(activePolicy) && list.Contains(inactivePolicy)
                 )))
                 .Returns(expectedDtos);
 
@@ -111,9 +111,9 @@ namespace UnitTests.Application.Features.Courses.Queries.GetPolicies
             _mockPolicyRepository.Verify(r => r.GetAllAsync(), Times.Once);
         }
 
-        private void SetIsActive(PolicyRule target, bool value)
+        private void SetIsActive(Policy target, bool value)
         {
-            var prop = target.GetType().GetProperty(nameof(PolicyRule.IsActive), BindingFlags.Public | BindingFlags.Instance);
+            var prop = target.GetType().GetProperty(nameof(Policy.IsActive), BindingFlags.Public | BindingFlags.Instance);
             prop?.SetValue(target, value);
         }
     }
