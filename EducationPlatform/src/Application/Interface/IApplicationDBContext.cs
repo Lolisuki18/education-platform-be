@@ -1,3 +1,4 @@
+using Domain.CourseManagement.Entity;
 using Domain.CourseManagement.Aggregate;
 using Domain.AcademicManagement.Aggregate;
 using Domain.IdentityManagement.Aggregate;
@@ -15,6 +16,7 @@ namespace Application.Interface
         DbSet<User> Users { get; }
         DbSet<Enrollment> Enrollments { get; }
         DbSet<Order> Orders { get; }
+        DbSet<CourseReview> CourseReviews { get; }
 
         // Add other sets as needed for queries
 

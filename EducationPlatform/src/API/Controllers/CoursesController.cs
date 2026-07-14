@@ -7,6 +7,7 @@ using Application.Features.Complaints.Commands.CreateComplaint;
 using Application.Features.Complaints.Commands.ReviewComplaint;
 using Application.Features.Academic.Queries.GetDefaultLessons;
 using Application.Features.Courses.Queries.GetLandingPage;
+using Application.Features.Courses.Queries.GetCoursesPaged;
 using Application.Features.Courses.Queries.GetCourseDetail;
 using Application.Features.Courses.CreateCourse;
 using API.Models.Courses;
@@ -41,8 +42,21 @@ namespace API.Controllers
         }
 
         [HttpGet]
-        public async Task<ActionResult<ApiResponse<PagedResult<CourseDTO>>>> ListCourses([FromQuery] GetLandingPageQuery query)
+        public async Task<ActionResult<ApiResponse<PagedResult<CourseDTO>>>> ListCourses([FromQuery] GetLandingPageQuery query, [FromQuery] string? status = null)
         {
+            if (User.Identity?.IsAuthenticated == true && (User.IsInRole("Admin") || User.IsInRole("Teacher")))
+            {
+                var pagedQuery = new GetCoursesPagedQuery
+                {
+                    Title = query.Title,
+                    Status = status,
+                    PageIndex = query.PageIndex,
+                    PageSize = query.PageSize
+                };
+                var pagedResult = await mediator.Send(pagedQuery);
+                return Ok(ApiResponse<PagedResult<CourseDTO>>.Success(pagedResult));
+            }
+
             var result = await mediator.Send(query);
             return Ok(ApiResponse<PagedResult<CourseDTO>>.Success(result));
         }
