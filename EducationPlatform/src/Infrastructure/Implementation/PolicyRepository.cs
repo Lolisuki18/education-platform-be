@@ -7,7 +7,7 @@ using Microsoft.EntityFrameworkCore;
 namespace Infrastructure.Implementation
 {
     public class PolicyRepository :
-        GenericRepository<PolicyRule>,
+        GenericRepository<Policy>,
         IPolicyRepository
     {
         #region Attributes

@@ -7,6 +7,7 @@ using Application.Features.Statistics.Queries.GetAnalyticsGrowth;
 using Application.Features.Statistics.Queries.GetAnalyticsDemandAndSupply;
 using Application.Features.Statistics.Queries.GetAnalyticsNormalizedGrowth;
 using Application.Features.Statistics.Queries.GetTopPerformance;
+using Application.Features.Statistics.Queries.GetTeacherSummary;
 using AutoMapper;
 using API.Models.Common;
 
@@ -14,7 +15,7 @@ namespace API.Controllers
 {
     [ApiController]
     [Route("api/statistics")]
-    [Authorize(Roles = "Admin")]
+    [Authorize]
     public class StatisticsController : ControllerBase
     {
         private readonly IMediator mediator;
@@ -26,6 +27,7 @@ namespace API.Controllers
             this.mapper = mapper;
         }
 
+        [Authorize(Roles = "Admin")]
         [HttpGet("summary")]
         public async Task<ActionResult<ApiResponse<SummaryStatisticsResult>>> GetSummary([FromQuery] GetSummaryStatisticsQuery query)
         {
@@ -33,6 +35,7 @@ namespace API.Controllers
             return Ok(ApiResponse<SummaryStatisticsResult>.Success(result));
         }
 
+        [Authorize(Roles = "Admin")]
         [HttpGet("analytics/growth")]
         public async Task<ActionResult<ApiResponse<Application.Results.AnalyticsGrowthDTO>>> GetAnalyticsGrowth([FromQuery] GetAnalyticsGrowthQuery query)
         {
@@ -40,6 +43,7 @@ namespace API.Controllers
             return Ok(ApiResponse<Application.Results.AnalyticsGrowthDTO>.Success(data));
         }
 
+        [Authorize(Roles = "Admin")]
         [HttpGet("analytics/demand-supply")]
         public async Task<ActionResult<ApiResponse<Application.Results.AnalyticsGrowthDTO>>> GetAnalyticsDemandAndSupply([FromQuery] GetAnalyticsDemandAndSupplyQuery query)
         {
@@ -47,6 +51,7 @@ namespace API.Controllers
             return Ok(ApiResponse<Application.Results.AnalyticsGrowthDTO>.Success(data));
         }
 
+        [Authorize(Roles = "Admin")]
         [HttpGet("analytics/normalized-growth")]
         public async Task<ActionResult<ApiResponse<Application.Results.AnalyticsGrowthDTO>>> GetAnalyticsNormalizedGrowth([FromQuery] GetAnalyticsNormalizedGrowthQuery query)
         {
@@ -54,11 +59,20 @@ namespace API.Controllers
             return Ok(ApiResponse<Application.Results.AnalyticsGrowthDTO>.Success(data));
         }
 
+        [Authorize(Roles = "Admin")]
         [HttpGet("analytics/top-performance")]
         public async Task<ActionResult<ApiResponse<Application.Results.TopPerformanceDTO>>> GetTopPerformance([FromQuery] GetTopPerformanceQuery query)
         {
             var data = await mediator.Send(query);
             return Ok(ApiResponse<Application.Results.TopPerformanceDTO>.Success(data));
+        }
+
+        [Authorize(Roles = "Teacher")]
+        [HttpGet("teacher/summary")]
+        public async Task<ActionResult<ApiResponse<TeacherSummaryDTO>>> GetTeacherSummary()
+        {
+            var result = await mediator.Send(new GetTeacherSummaryQuery());
+            return Ok(ApiResponse<TeacherSummaryDTO>.Success(result));
         }
     }
 }
