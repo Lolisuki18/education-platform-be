@@ -650,7 +650,8 @@ namespace Infrastructure.Persistence
                       .IsRequired();
 
                 entity.Property(p => p.Status)
-                      .IsRequired();
+                      .IsRequired()
+                      .IsConcurrencyToken();
 
                 entity.Property(p => p.CreatedAt)
                       .IsRequired();

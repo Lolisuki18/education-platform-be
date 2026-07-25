@@ -32,6 +32,10 @@ namespace UnitTests.Application.Features.Orders.EventHandlers
                 .Setup(u => u.GetRepository<IEnrollmentRepository>())
                 .Returns(_mockEnrollmentRepository.Object);
 
+            _mockEnrollmentRepository
+                .Setup(r => r.GetStudentEnrollments(It.IsAny<Guid>()))
+                .ReturnsAsync(System.Array.Empty<Enrollment>());
+
             _handler = new OrderPaidEventHandler(_mockUnitOfWork.Object, _mockEmailService.Object, _mockConfig.Object);
         }
 

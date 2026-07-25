@@ -32,6 +32,14 @@ namespace Application.Features.Orders.EventHandlers
 
         public async Task Handle(OrderPaidEvent notification, CancellationToken cancellationToken)
         {
+            // Check student is already enrolled in this course
+            var enrollmentRepo = _unitOfWork.GetRepository<IEnrollmentRepository>();
+            var studentEnrollments = await enrollmentRepo.GetStudentEnrollments(notification.StudentID);
+            if (studentEnrollments != null && studentEnrollments.Any(e => e.CourseID == notification.CourseID))
+            {
+                return;
+            }
+
             // Create enrollment when order is paid
             var enrollment = new Enrollment(
                 Guid.NewGuid(),
@@ -39,9 +47,7 @@ namespace Application.Features.Orders.EventHandlers
                 notification.CourseID,
                 null);
 
-            _unitOfWork
-                .GetRepository<IEnrollmentRepository>()
-                .Add(enrollment);
+            enrollmentRepo.Add(enrollment);
 
             // Send payment confirmation email
             try
