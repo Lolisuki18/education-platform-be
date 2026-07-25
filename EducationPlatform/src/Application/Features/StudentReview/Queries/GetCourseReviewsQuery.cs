@@ -34,7 +34,7 @@ namespace Application.Features.StudentReview.Queries
 
             if (courseExist == null) throw new NotFound($"Course not found.");
 
-            //2. lấy danh sách review của khoá học đó
+            //2. get list of reviews for that course
             var reviews = await _unitOfWork.GetRepository<ICourseReviewRepository>()
                 .GetReviewsByCourseId(request.CourseId, request.PageIndex, request.PageSize);
             return _mapper.Map<IEnumerable<CourseReviewDTO>>(reviews);

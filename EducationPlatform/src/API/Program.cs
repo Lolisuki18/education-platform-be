@@ -195,12 +195,15 @@ app.UseExceptionHandler();
 // ====================
 // 7. Environment Specific Setup
 // ====================
-app.UseSwagger();
-app.UseSwaggerUI(c =>
+if (app.Environment.IsDevelopment() || app.Environment.EnvironmentName == "Testing")
 {
-    c.SwaggerEndpoint("/swagger/v1/swagger.json", "Education Platform API v1");
-    c.RoutePrefix = string.Empty; // Set Swagger as the root page
-});
+    app.UseSwagger();
+    app.UseSwaggerUI(c =>
+    {
+        c.SwaggerEndpoint("/swagger/v1/swagger.json", "Education Platform API v1");
+        c.RoutePrefix = string.Empty; // Set Swagger as the root page
+    });
+}
 
 if (!app.Environment.IsDevelopment())
 {

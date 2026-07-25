@@ -28,35 +28,35 @@ namespace Application.Features.Statistics.Queries.GetSummaryStatistic
             var from = request.From ?? DateTime.MinValue;
             var to = request.To ?? DateTime.MaxValue;
 
-            // 1. User Summary: Bỏ điều kiện Where thời gian để đếm TOÀN BỘ User/Teacher/Student trên hệ thống
+            // 1. User Summary: Remove the "Where" condition to count ALL Users/Teachers/Students on the system.
             var users = await _context.Users
                 .AsNoTracking()
                 .GroupBy(u => u.Role)
                 .Select(g => new { Role = g.Key, Count = g.Count() })
                 .ToListAsync(cancellationToken);
 
-            // 2. Course Summary: Thường thống kê tổng số khóa học cũng cần lấy tất cả
+            // 2. Course Summary: Generally, the total number of courses also needs to be taken all
             var courses = await _context.Courses
                 .AsNoTracking()
                 .GroupBy(c => c.Status)
                 .Select(g => new { Status = g.Key, Count = g.Count() })
                 .ToListAsync(cancellationToken);
 
-            // 3. Enrollment Summary: Lấy toàn bộ lượt đăng ký từ trước đến nay
+            // 3. Enrollment Summary: Get all enrollments from the beginning to the present
             var enrollments = await _context.Enrollments
                 .AsNoTracking()
                 .GroupBy(e => e.Status)
                 .Select(g => new { Status = g.Key, Count = g.Count() })
                 .ToListAsync(cancellationToken);
 
-            // 4. Revenue Summary: Doanh thu THÌ BẮT BUỘC phải giữ lại filter theo ngày để báo cáo theo tuần/tháng/năm
+            // 4. Revenue Summary: Revenue MUST keep the time filter to report by week/month/year
             var revenue = await _context.Orders
                 .AsNoTracking()
                 .Where(o => o.CreatedAt >= from && o.CreatedAt <= to && o.PaidAt != null)
                 .Select(o => new { o.PlatformAmount, o.TeacherAmount })
                 .ToListAsync(cancellationToken);
 
-            // 5. Breakdowns: Bỏ filter thời gian để hiển thị đúng biểu đồ cơ cấu tổng thể
+            // 5. Breakdowns: Remove the time filter to display the correct overall structure chart
             var courseByGrade = await _context.Courses
                 .AsNoTracking()
                 .GroupBy(c => c.Grade.Name)

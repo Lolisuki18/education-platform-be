@@ -30,7 +30,7 @@ namespace Application.Features.Courses.Queries.GetCourseDetail
             GetCourseDetailQuery request,
             CancellationToken cancellationToken)
         {
-            // ---------- 1. Parse caller role ----------
+            //1. Parse caller role
             Role? role = null;
             if (_currentUser.IsAuthenticated && !string.IsNullOrWhiteSpace(_currentUser.Role))
             {
@@ -39,7 +39,7 @@ namespace Application.Features.Courses.Queries.GetCourseDetail
                 role = parsed;
             }
 
-            // ---------- 2. Fetch Metadata first ----------
+            // 2. Fetch Metadata first
             var courseMetadata = await _unitOfWork
                 .GetRepository<ICourseRepository>()
                 .GetCourseMetadataByID(request.CourseID);
@@ -47,7 +47,7 @@ namespace Application.Features.Courses.Queries.GetCourseDetail
             if (courseMetadata == null)
                 throw new NotFound($"Course with ID: {request.CourseID} is not found");
 
-            // ---------- 3. Visibility guard: public / student → must be Published ----------
+            // 3. Visibility guard: public / student → must be Published 
             bool isAdmin = role == Role.Admin;
             bool isTeacher = role == Role.Teacher;
 
@@ -57,7 +57,7 @@ namespace Application.Features.Courses.Queries.GetCourseDetail
                     throw new NotFound($"Course with ID: {request.CourseID} is not found");
             }
 
-            // ---------- 4. Determine if detailed chapters are needed ----------
+            //4. Determine if detailed chapters are needed
             // Only Admin or the Teacher who owns the course is allowed to see the chapters/lessons content
             bool canViewChapters = isAdmin || (isTeacher && _currentUser.Id.HasValue && courseMetadata.TeacherID == _currentUser.Id.Value);
 
@@ -76,10 +76,10 @@ namespace Application.Features.Courses.Queries.GetCourseDetail
             if (course == null)
                 throw new NotFound($"Course with ID: {request.CourseID} is not found");
 
-            // ---------- 5. Map to DTO ----------
+            //  5. Map to DTO 
             var dto = _mapper.Map<CourseDetailDTO>(course);
 
-            // ---------- 6. Apply visibility rules on DTO ----------
+            // 6. Apply visibility rules on DTO 
             // Students and anonymous users cannot see course content (only metadata)
             if (role == Role.Student || role == null)
             {

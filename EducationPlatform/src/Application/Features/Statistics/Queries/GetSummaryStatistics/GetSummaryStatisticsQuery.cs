@@ -38,7 +38,7 @@ namespace Application.Features.Statistics.Queries.GetSummaryStatistics
 
         public async Task<SummaryStatisticsResult> Handle(GetSummaryStatisticsQuery request, CancellationToken cancellationToken)
         {
-            // Đổi sang DateTime.MinValue và MaxValue để nếu trùng hợp bị null thì vẫn quét hết database
+            // Change to DateTime.MinValue and DateTime.MaxValue so that if it happens to be null, it still scans the entire database
             var from = request.From ?? DateTime.MinValue;
             var to = request.To ?? DateTime.MaxValue;
 

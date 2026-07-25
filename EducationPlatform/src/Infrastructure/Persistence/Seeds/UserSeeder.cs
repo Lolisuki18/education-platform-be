@@ -9,6 +9,7 @@ namespace Infrastructure.Persistence.Seeds
         public static async Task<UserSeedResult> SeedAsync(EducationPlatformDBContext context)
         {
             var result = new UserSeedResult();
+            var defaultPassword = Environment.GetEnvironmentVariable("SEED_DEFAULT_PASSWORD") ?? "28012005";
 
             // ====================
             // Admin
@@ -18,7 +19,7 @@ namespace Infrastructure.Persistence.Seeds
                 var admin = new User(
                     Guid.NewGuid(),
                     "longdong32120@gmail.com",
-                    "28012005",
+                    defaultPassword,
                     "0000000000",
                     "Dong Xuan Bao Long",
                     "Platform Administrator",
@@ -46,7 +47,7 @@ namespace Infrastructure.Persistence.Seeds
                 var naiTeacher = new User(
                     Guid.NewGuid(),
                     "nnnai3131@gmail.com",
-                    "28012005",
+                    defaultPassword,
                     "0000000001",
                     "Nai Teacher",
                     "Teacher account",
@@ -67,7 +68,7 @@ namespace Infrastructure.Persistence.Seeds
                 var lucStudent = new User(
                     Guid.NewGuid(),
                     "leninh2004@gmail.com",
-                    "28012005",
+                    defaultPassword,
                     "0000002018",
                     "Luc Student",
                     "Student account",
@@ -112,7 +113,7 @@ namespace Infrastructure.Persistence.Seeds
                     var user = new User(
                         Guid.NewGuid(),
                         isTeacher ? $"teacher{i}@gmail.com" : $"student{i}@gmail.com",
-                        "28012005",
+                        defaultPassword,
                         phone,
                         isTeacher ? $"Teacher {i}" : $"Student {i}",
                         $"{role} account",

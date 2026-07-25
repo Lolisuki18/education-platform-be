@@ -70,7 +70,6 @@ namespace Application.Features.Complaints.EventHandlers
                         orderRepo.CreatePenalty(penalty);
                     }
 
-                    // Cleanup: Remove the complaints history as they are resolved by course removal
                     var currentComplaint = await complaintRepo.GetComplaintDetailByID(notification.ComplaintId);
                     var allToRemove = approvedComplaints.ToList();
                     if (currentComplaint != null) allToRemove.Add(currentComplaint);
@@ -80,7 +79,6 @@ namespace Application.Features.Complaints.EventHandlers
             }
             else
             {
-                // Simple rejection if it's the first approved complaint
                 var course = await courseRepo.GetByIdAsync(notification.CourseId);
                 if (course != null)
                 {

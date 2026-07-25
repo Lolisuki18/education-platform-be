@@ -1,6 +1,7 @@
 using Domain.Common.Interfaces;
 using Domain.IdentityManagement.Aggregate;
 using Domain.IdentityManagement.Enum;
+using Domain.IdentityManagement.ValueObject;
 using Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using System.Numerics;
@@ -32,12 +33,12 @@ namespace Infrastructure.Implementation
 
         public async Task<User?> GetByRefreshToken(string refreshToken)
         {
-            var users = await context.Users
-                .Where(u => u.RefreshToken != null)
-                .ToListAsync();
-
-            return users.FirstOrDefault(u =>
-                u.RefreshToken.Verify(refreshToken));
+            var hash = RefreshToken.HashToken(refreshToken);
+            return await context.Users
+                .FirstOrDefaultAsync(u =>
+                    u.RefreshToken != null &&
+                    u.RefreshToken.Hash == hash &&
+                    u.RefreshToken.ExpiresAt > DateTime.UtcNow);
         }
 
         public async Task<User?> GetUserByOTP(string otp)

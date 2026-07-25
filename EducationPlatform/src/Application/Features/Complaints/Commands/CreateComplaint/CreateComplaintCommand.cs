@@ -11,7 +11,6 @@ namespace Application.Features.Complaints.Commands.CreateComplaint
         public Stream? EvidenceFileStream { get; set; }
         public string? EvidenceFileExtension { get; set; }
 
-        // Used by handler internally if path is already known or calculated
         public string? EvidenceImagePath { get; set; }
     }
 }

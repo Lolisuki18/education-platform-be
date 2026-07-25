@@ -2,11 +2,6 @@ using MediatR;
 
 namespace Application.Features.Courses.ReviewCourse
 {
-    /// <summary>
-    /// Command: Admin reviews a course submission.
-    /// Carries the pure data needed to drive the domain method Course.ReviewCourse(…).
-    /// No business logic lives here — only intent + data.
-    /// </summary>
     public class ReviewCourseCommand : IRequest
     {
         // ----- Course to review -----

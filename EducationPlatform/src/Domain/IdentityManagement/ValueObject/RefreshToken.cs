@@ -49,7 +49,7 @@ namespace Domain.IdentityManagement.ValueObject
         }
 
 
-        private static string HashToken(string value)
+        public static string HashToken(string value)
         {
             using var sha256 = SHA256.Create();
             var bytes = sha256.ComputeHash(Encoding.UTF8.GetBytes(value));

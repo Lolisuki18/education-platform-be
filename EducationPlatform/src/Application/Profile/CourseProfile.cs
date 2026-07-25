@@ -10,7 +10,7 @@ namespace Application.Mappings
     {
         public CourseProfile()
         {
-            // Map từ Domain → DTO
+            // Map from Domain to DTO
             CreateMap<Course, CourseDTO>();
             CreateMap<CourseReview, CourseReviewDTO>()
                 .ForMember(dest => dest.CourseReviewID, opt => opt.MapFrom(src => src.Id))

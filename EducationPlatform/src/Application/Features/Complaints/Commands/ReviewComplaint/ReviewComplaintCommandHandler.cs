@@ -45,8 +45,6 @@ namespace Application.Features.Complaints.Commands.ReviewComplaint
             await _unitOfWork.BeginTransactionAsync();
             complaintRepo.UpdateComplaint(complaint);
 
-            // Side effects (like rejecting the course) will be handled by ComplaintApprovedEventHandler
-            // which is dispatched during CommitAsync via DomainEventDispatcherInterceptor.
             await _unitOfWork.CommitAsync(_currentUser.Id.Value.ToString());
 
             return Unit.Value;

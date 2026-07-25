@@ -56,7 +56,6 @@ namespace API.ExceptionHandlers
                 problemDetails.Title = "Conflict";
             }
 
-            // Che giấu lỗi hệ thống cấp thấp khi mã lỗi là 500 (Internal Server Error)
             if (problemDetails.Status == (int)HttpStatusCode.InternalServerError)
             {
                 problemDetails.Detail = "An unexpected error occurred on the server. Please try again later.";

@@ -133,8 +133,11 @@ namespace Infrastructure.Implementation
 
         public void Dispose()
         {
-            // Gọi DisposeAsync một cách đồng bộ để tương thích với IDisposable
-            DisposeAsync().AsTask().GetAwaiter().GetResult();
+            if (transaction != null)
+            {
+                transaction.Dispose();
+                transaction = null;
+            }
         }
 
         public async ValueTask DisposeAsync()

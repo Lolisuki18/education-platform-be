@@ -101,11 +101,22 @@ namespace API.Controllers
             var isSuccess = status == "PAID" && !cancelVal;
             long codeVal = long.TryParse(orderCode, out var parsedCode) ? parsedCode : 0;
 
+            var checksumKey = configuration["PayOS:ChecksumKey"];
             var isTesting = environment.IsEnvironment("Testing");
-            var isDevelopment = environment.IsEnvironment("Development");
-            if (!isTesting && !isDevelopment)
+
+            if (!isTesting)
             {
-                var checksumKey = configuration["PayOS:ChecksumKey"]!;
+                if (string.IsNullOrEmpty(checksumKey) || checksumKey == "YOUR_PAYOS_CHECKSUM_KEY")
+                {
+                    return BadRequest(ApiResponse<ReturnOrderResponseDto>.Success(new ReturnOrderResponseDto
+                    {
+                        OrderCode = codeVal,
+                        Status = status ?? "",
+                        IsSuccess = false,
+                        Message = "Payment signature verification failed. Missing configuration."
+                    }, "PayOS ChecksumKey is missing."));
+                }
+
                 if (string.IsNullOrEmpty(signature) ||
                     !VerifyRedirectSignature(amount ?? "", cancel ?? "", code ?? "", id ?? "", orderCode ?? "", status ?? "", signature, checksumKey))
                 {
@@ -142,15 +153,12 @@ namespace API.Controllers
                     isSuccess ? "Payment successful" : "Payment failed"));
             }
 
-            // Đọc từ biến môi trường của Render
             var frontendUrl = configuration["PayOS:FrontendUrl"] ?? "http://localhost:3000";
 
-            // Xóa bỏ ký tự gạch chéo ở cuối nếu lỡ tay điền dư trong config
             frontendUrl = frontendUrl.TrimEnd('/');
 
             if (isSuccess)
             {
-                // Bọc lệnh hoàn tất đơn hàng ngầm hoặc xử lý nhanh để redirect ngay lập tức
                 _ = Task.Run(async () =>
                 {
                     try { await mediator.Send(new FinishOrderCommand { OrderCode = codeVal }); } catch { }
@@ -169,7 +177,6 @@ namespace API.Controllers
         {
             try
             {
-                // 1. Đọc Body thủ công dưới dạng chuỗi (Tránh hoàn toàn lỗi 400 ép kiểu JSON)
                 using var reader = new System.IO.StreamReader(Request.Body);
                 var bodyString = await reader.ReadToEndAsync();
 
@@ -183,21 +190,17 @@ namespace API.Controllers
                 var code = payload["code"]?.ToString();
                 var data = payload["data"] as Newtonsoft.Json.Linq.JObject;
 
-                // 2. Trả lời ngay 200 OK nếu là ping test từ PayOS
                 if (string.IsNullOrEmpty(signature) || data == null)
                 {
                     return Ok(new { code = "00", desc = "success" });
                 }
 
-                // 3. Xác thực chữ ký
                 var checksumKey = configuration["PayOS:ChecksumKey"]!;
                 if (!VerifyWebhookSignature(data, signature, checksumKey))
                 {
-                    // Trả về Ok (200) nhưng mã lỗi 99 để PayOS không văng lỗi giao diện
                     return Ok(new { code = "99", desc = "Invalid signature" });
                 }
 
-                // 4. Cập nhật đơn hàng ngầm (Fire and Forget)
                 if (code == "00")
                 {
                     var orderCode = data["orderCode"] != null ? (long)data["orderCode"] : (long?)null;
@@ -213,13 +216,12 @@ namespace API.Controllers
                             }
                             catch (Exception)
                             {
-                                // Log lỗi ngầm nếu có
+
                             }
                         });
                     }
                 }
 
-                // 5. Trả về thành công
                 return Ok(new { code = "00", desc = "success" });
             }
             catch (Exception ex)
