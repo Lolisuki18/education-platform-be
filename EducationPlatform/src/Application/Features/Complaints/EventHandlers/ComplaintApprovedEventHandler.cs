@@ -29,12 +29,12 @@ namespace Application.Features.Complaints.EventHandlers
 
             if (complaintCount >= 2)
             {
-                var course = await courseRepo.GetByIdAsync(notification.CourseId);
+                var course = await courseRepo.GetByIdAsync(notification.CourseId, cancellationToken);
                 if (course != null)
                 {
                     // Fatality: Course removed due to multiple complaints
                     course.RejectByComplaint("Course removed due to multiple approved complaints.");
-                    courseRepo.Update(course.CourseID, course);
+                    await courseRepo.UpdateAsync(course.CourseID, course, cancellationToken);
 
                     // Compensation & Penalties
                     var enrollmentRepo = _unitOfWork.GetRepository<IEnrollmentRepository>();
@@ -79,11 +79,11 @@ namespace Application.Features.Complaints.EventHandlers
             }
             else
             {
-                var course = await courseRepo.GetByIdAsync(notification.CourseId);
+                var course = await courseRepo.GetByIdAsync(notification.CourseId, cancellationToken);
                 if (course != null)
                 {
                     course.MarkAsRejected(DateTime.Now, "Rejected due to approved complaint.");
-                    courseRepo.Update(course.CourseID, course);
+                    await courseRepo.UpdateAsync(course.CourseID, course, cancellationToken);
                 }
             }
         }

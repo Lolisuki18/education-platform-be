@@ -6,7 +6,6 @@ using Domain.CourseManagement.Events;
 using Application.Interface;
 using Application.BusinessException;
 using FluentAssertions;
-using Microsoft.AspNetCore.Http;
 using Moq;
 using System;
 using System.Collections.Generic;
@@ -98,11 +97,7 @@ namespace UnitTests.Application.Features.Courses.CreateCourse
         {
             // Arrange
             var teacherId = Guid.NewGuid();
-            using var dummyStream = new MemoryStream();
-            var mockFormFile = new Mock<IFormFile>();
-            mockFormFile.Setup(f => f.FileName).Returns("cover.jpg");
-            mockFormFile.Setup(f => f.OpenReadStream()).Returns(dummyStream);
-
+            using var dummyStream = new MemoryStream(new byte[] { 0xFF, 0xD8, 0xFF, 0x00, 0x00, 0x00, 0x00, 0x00 });
             _mockCurrentUser.Setup(u => u.Id).Returns(teacherId);
 
             var command = new CreateCourseCommand
@@ -111,7 +106,8 @@ namespace UnitTests.Application.Features.Courses.CreateCourse
                 Description = "A course for testing file upload",
                 Price = 50,
                 ThumbnailName = "old_name.png",
-                ThumbnailFile = mockFormFile.Object,
+                ThumbnailFileStream = dummyStream,
+                ThumbnailFileExtension = "jpg",
                 Slug = "file-course",
                 Prerequisites = "None",
                 LearningOutcomes = "Learn file upload",
@@ -142,11 +138,7 @@ namespace UnitTests.Application.Features.Courses.CreateCourse
         {
             // Arrange
             var teacherId = Guid.NewGuid();
-            using var dummyStream = new MemoryStream();
-            var mockFormFile = new Mock<IFormFile>();
-            mockFormFile.Setup(f => f.FileName).Returns("cover.png");
-            mockFormFile.Setup(f => f.OpenReadStream()).Returns(dummyStream);
-
+            using var dummyStream = new MemoryStream(new byte[] { 0x89, 0x50, 0x4E, 0x47, 0x00, 0x00, 0x00, 0x00 });
             _mockCurrentUser.Setup(u => u.Id).Returns(teacherId);
 
             var command = new CreateCourseCommand
@@ -155,7 +147,8 @@ namespace UnitTests.Application.Features.Courses.CreateCourse
                 Description = "A course designed to fail on commit",
                 Price = 50,
                 ThumbnailName = "old_name.png",
-                ThumbnailFile = mockFormFile.Object,
+                ThumbnailFileStream = dummyStream,
+                ThumbnailFileExtension = "png",
                 Slug = "failing-course",
                 Prerequisites = "None",
                 LearningOutcomes = "Test rollback",

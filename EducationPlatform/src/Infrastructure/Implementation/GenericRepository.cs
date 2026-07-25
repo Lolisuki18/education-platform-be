@@ -2,6 +2,11 @@ using Infrastructure.DataAccessException;
 using Domain.Common.Interfaces;
 using Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace Infrastructure.Implementation
 {
@@ -15,14 +20,14 @@ namespace Infrastructure.Implementation
             this.context = context;
         }
 
-        public async Task<T?> GetByIdAsync(Guid id)
+        public async Task<T?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
         {
-            return await context.Set<T>().FindAsync(id);
+            return await context.Set<T>().FindAsync(new object[] { id }, cancellationToken);
         }
 
-        public async Task<IEnumerable<T>> GetAllAsync()
+        public async Task<IEnumerable<T>> GetAllAsync(CancellationToken cancellationToken = default)
         {
-            var entities = await context.Set<T>().AsNoTracking().ToListAsync();
+            var entities = await context.Set<T>().AsNoTracking().ToListAsync(cancellationToken);
             return entities ?? Enumerable.Empty<T>();
         }
 
@@ -31,9 +36,9 @@ namespace Infrastructure.Implementation
             context.Set<T>().Add(entity);
         }
 
-        public void Update(Guid id, T entity)
+        public async Task UpdateAsync(Guid id, T entity, CancellationToken cancellationToken = default)
         {
-            var existingEntity = context.Set<T>().Find(id);
+            var existingEntity = await context.Set<T>().FindAsync(new object[] { id }, cancellationToken);
             if (existingEntity == null)
                 throw new RepositoryException($"Entity with ID:{id} is not found");
 

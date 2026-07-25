@@ -55,10 +55,6 @@ namespace Infrastructure.Services
 
             var json = JsonConvert.SerializeObject(payload);
 
-            _httpClient.DefaultRequestHeaders.Clear();
-            _httpClient.DefaultRequestHeaders.Add("x-client-id", payos["ClientId"]);
-            _httpClient.DefaultRequestHeaders.Add("x-api-key", payos["ApiKey"]);
-
             var requestMessage = new HttpRequestMessage(
                 HttpMethod.Post,
                 "https://api-merchant.payos.vn/v2/payment-requests")

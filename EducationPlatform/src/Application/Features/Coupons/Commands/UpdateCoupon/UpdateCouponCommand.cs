@@ -38,7 +38,7 @@ namespace Application.Features.Coupons.Commands.UpdateCoupon
 
             var repo = _unitOfWork.GetRepository<ICouponRepository>();
 
-            var coupon = await repo.GetByIdAsync(request.CouponId);
+            var coupon = await repo.GetByIdAsync(request.CouponId, cancellationToken);
             if (coupon == null)
                 throw new NotFound("Coupon not found.");
 
@@ -58,7 +58,7 @@ namespace Application.Features.Coupons.Commands.UpdateCoupon
                 throw new Conflict(ex.Message);
             }
 
-            repo.Update(request.CouponId, coupon);
+            await repo.UpdateAsync(request.CouponId, coupon, cancellationToken);
 
             try
             {

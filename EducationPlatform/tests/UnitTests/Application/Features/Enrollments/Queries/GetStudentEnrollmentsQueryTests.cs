@@ -67,7 +67,7 @@ namespace UnitTests.Application.Features.Enrollments.Queries
             var enrollmentsList = new List<Enrollment> { enrollment1, enrollment2 };
 
             _mockEnrollmentRepository
-                .Setup(r => r.GetStudentEnrollments(studentId))
+                .Setup(r => r.GetStudentEnrollments(studentId, It.IsAny<int>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(enrollmentsList);
 
             var expectedDtos = new List<EnrollmentDTO>
@@ -88,7 +88,7 @@ namespace UnitTests.Application.Features.Enrollments.Queries
             // Assert
             result.Should().NotBeNull();
             result.Should().BeEquivalentTo(expectedDtos);
-            _mockEnrollmentRepository.Verify(r => r.GetStudentEnrollments(studentId), Times.Once);
+            _mockEnrollmentRepository.Verify(r => r.GetStudentEnrollments(studentId, It.IsAny<int>(), It.IsAny<int>(), It.IsAny<CancellationToken>()), Times.Once);
         }
     }
 }

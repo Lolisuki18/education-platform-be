@@ -84,7 +84,7 @@ namespace UnitTests.Application.Features.Identity.Commands.Login
             result.RefreshToken.Should().NotBeNullOrEmpty();
 
             _mockUnitOfWork.Verify(u => u.BeginTransactionAsync(), Times.Once);
-            _mockUserRepository.Verify(r => r.Update(user.UserID, user), Times.Once);
+            _mockUserRepository.Verify(r => r.UpdateAsync(user.UserID, user, It.IsAny<CancellationToken>()), Times.Once);
             _mockUnitOfWork.Verify(u => u.CommitAsync(), Times.Once);
         }
 

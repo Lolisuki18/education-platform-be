@@ -69,7 +69,7 @@ namespace UnitTests.Application.Features.Complaints.EventHandlers
             var course = CreateCourseInstance(courseId, teacherId, 100);
 
             _mockCourseRepository
-                .Setup(r => r.GetByIdAsync(courseId))
+                .Setup(r => r.GetByIdAsync(courseId, It.IsAny<CancellationToken>()))
                 .ReturnsAsync(course);
 
             // Act
@@ -79,7 +79,7 @@ namespace UnitTests.Application.Features.Complaints.EventHandlers
             course.Status.Should().Be(CourseStatus.Rejected);
             course.AdminNote.Should().Be("Rejected due to approved complaint.");
 
-            _mockCourseRepository.Verify(r => r.Update(courseId, course), Times.Once);
+            _mockCourseRepository.Verify(r => r.UpdateAsync(courseId, course, It.IsAny<CancellationToken>()), Times.Once);
             _mockOrderRepository.Verify(r => r.CreateCoupons(It.IsAny<IEnumerable<Coupon>>()), Times.Never);
             _mockOrderRepository.Verify(r => r.CreatePenalty(It.IsAny<Penalty>()), Times.Never);
             _mockComplaintRepository.Verify(r => r.RemoveComplaints(It.IsAny<IEnumerable<Complaint>>()), Times.Never);
@@ -106,7 +106,7 @@ namespace UnitTests.Application.Features.Complaints.EventHandlers
             var course = CreateCourseInstance(courseId, teacherId, 100); // Giá khóa học là 100
 
             _mockCourseRepository
-                .Setup(r => r.GetByIdAsync(courseId))
+                .Setup(r => r.GetByIdAsync(courseId, It.IsAny<CancellationToken>()))
                 .ReturnsAsync(course);
 
             // Giả lập khóa học có 2 học sinh đang học
@@ -129,7 +129,7 @@ namespace UnitTests.Application.Features.Complaints.EventHandlers
             course.Status.Should().Be(CourseStatus.Rejected);
             course.AdminNote.Should().Be("Course removed due to multiple approved complaints.");
 
-            _mockCourseRepository.Verify(r => r.Update(courseId, course), Times.Once);
+            _mockCourseRepository.Verify(r => r.UpdateAsync(courseId, course, It.IsAny<CancellationToken>()), Times.Once);
 
             // Kiểm tra bồi thường học sinh: 100 * 7.5% = 7.5 cho mỗi học sinh
             _mockOrderRepository.Verify(r => r.CreateCoupons(It.Is<IEnumerable<Coupon>>(coupons =>

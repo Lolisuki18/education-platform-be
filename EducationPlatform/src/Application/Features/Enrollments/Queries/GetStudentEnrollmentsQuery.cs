@@ -10,6 +10,8 @@ namespace Application.Features.Enrollments.Queries
 {
     public class GetStudentEnrollmentsQuery : IRequest<IEnumerable<EnrollmentDTO>>
     {
+        public int PageIndex { get; set; } = 1;
+        public int PageSize { get; set; } = 10;
     }
 
     public class GetStudentEnrollmentsQueryHandler : IRequestHandler<GetStudentEnrollmentsQuery, IEnumerable<EnrollmentDTO>>
@@ -32,7 +34,7 @@ namespace Application.Features.Enrollments.Queries
 
             var list = await _unitOfWork
                 .GetRepository<IEnrollmentRepository>()
-                .GetStudentEnrollments(_currentUser.Id.Value);
+                .GetStudentEnrollments(_currentUser.Id.Value, request.PageIndex, request.PageSize, cancellationToken);
 
             return _mapper.Map<IEnumerable<EnrollmentDTO>>(list);
         }

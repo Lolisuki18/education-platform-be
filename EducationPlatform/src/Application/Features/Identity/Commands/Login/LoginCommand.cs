@@ -31,7 +31,7 @@ namespace Application.Features.Identity.Commands.Login
             // Validate user existence
             var user = await _unitOfWork
                 .GetRepository<IUserRepository>()
-                .GetUserByEmail(request.Email);
+                .GetUserByEmail(request.Email, cancellationToken);
 
             if (user == null)
                 throw new AuthenticateException("Invalid credentials.");
@@ -51,7 +51,7 @@ namespace Application.Features.Identity.Commands.Login
 
             // Apply persistence
             await _unitOfWork.BeginTransactionAsync();
-            _unitOfWork.GetRepository<IUserRepository>().Update(user.UserID, user);
+            await _unitOfWork.GetRepository<IUserRepository>().UpdateAsync(user.UserID, user, cancellationToken);
             await _unitOfWork.CommitAsync();
 
             return new TokenDTO

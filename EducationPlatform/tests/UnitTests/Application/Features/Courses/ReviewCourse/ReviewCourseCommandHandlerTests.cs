@@ -105,7 +105,7 @@ namespace UnitTests.Application.Features.Courses.ReviewCourse
             course.AdminNote.Should().Be("Excellent course!");
 
             _mockUnitOfWork.Verify(u => u.BeginTransactionAsync(), Times.Once);
-            _mockCourseRepository.Verify(r => r.Update(courseId, course), Times.Once);
+            _mockCourseRepository.Verify(r => r.UpdateAsync(courseId, course, It.IsAny<CancellationToken>()), Times.Once);
             _mockCourseRepository.Verify(r => r.ReplaceViolatedPolicies(courseId, It.Is<IEnumerable<ViolatedPolicy>>(l => !l.Any())), Times.Once);
             _mockUnitOfWork.Verify(u => u.CommitAsync(adminId.ToString()), Times.Once);
         }
@@ -141,7 +141,7 @@ namespace UnitTests.Application.Features.Courses.ReviewCourse
             course.AdminNote.Should().Be("Violates basic instructional guidelines.");
 
             _mockUnitOfWork.Verify(u => u.BeginTransactionAsync(), Times.Once);
-            _mockCourseRepository.Verify(r => r.Update(courseId, course), Times.Once);
+            _mockCourseRepository.Verify(r => r.UpdateAsync(courseId, course, It.IsAny<CancellationToken>()), Times.Once);
             _mockCourseRepository.Verify(r => r.ReplaceViolatedPolicies(courseId, It.Is<IEnumerable<ViolatedPolicy>>(list =>
                 list.Count() == 1 && list.First().PolicyID == policyId
             )), Times.Once);

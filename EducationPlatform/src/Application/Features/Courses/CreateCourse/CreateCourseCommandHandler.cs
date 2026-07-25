@@ -37,12 +37,15 @@ namespace Application.Features.Courses.CreateCourse
                 throw new AuthenticateException("User must be authenticated.");
 
             string thumbnailName = request.ThumbnailName;
-            if (request.ThumbnailFile != null)
+            if (request.ThumbnailFileStream != null && !string.IsNullOrEmpty(request.ThumbnailFileExtension))
             {
-                Application.Helper.FileValidator.Validate(request.ThumbnailFile);
+                var length = request.ThumbnailFileStream.CanSeek ? request.ThumbnailFileStream.Length : 0;
+                var ext = "." + request.ThumbnailFileExtension.TrimStart('.').ToLowerInvariant();
+                Application.Helper.FileValidator.Validate(request.ThumbnailFileStream, length, "thumbnail" + ext);
+
                 thumbnailName = await _storageService.SaveAsync(
-                    request.ThumbnailFile.OpenReadStream(),
-                    Path.GetExtension(request.ThumbnailFile.FileName).TrimStart('.'),
+                    request.ThumbnailFileStream,
+                    request.ThumbnailFileExtension.TrimStart('.'),
                     cancellationToken);
             }
 
@@ -119,7 +122,7 @@ namespace Application.Features.Courses.CreateCourse
             }
             catch
             {
-                if (request.ThumbnailFile != null && thumbnailName != request.ThumbnailName)
+                if (request.ThumbnailFileStream != null && thumbnailName != request.ThumbnailName)
                 {
                     await _storageService.DeleteAsync(thumbnailName);
                 }

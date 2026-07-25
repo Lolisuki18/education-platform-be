@@ -6,7 +6,7 @@ namespace Domain.EnrollmentManagement.Aggregate
         IGenericRepository<Enrollment>
     {
         // Get all enrollments for a student
-        Task<IEnumerable<Enrollment>> GetStudentEnrollments(Guid studentId);
+        Task<IEnumerable<Enrollment>> GetStudentEnrollments(Guid studentId, int pageIndex = 1, int pageSize = 10, CancellationToken cancellationToken = default);
 
         // Get detailed enrollment with course, chapters, lessons, progress, quizzes
         Task<Enrollment?> GetEnrollmentDetailByID(Guid enrollmentId);

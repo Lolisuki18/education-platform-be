@@ -49,6 +49,10 @@ namespace Application.Features.Complaints.Commands.CreateComplaint
                 var ext = "." + request.EvidenceFileExtension.TrimStart('.').ToLowerInvariant();
                 if (!allowedImageExtensions.Contains(ext))
                     throw new BadRequest("Evidence file must be an image (.jpg, .jpeg, .png).");
+
+                var length = request.EvidenceFileStream.CanSeek ? request.EvidenceFileStream.Length : 0;
+                Application.Helper.FileValidator.Validate(request.EvidenceFileStream, length, "evidence" + ext);
+
                 imagePath = await _storageService.SaveAsync(
                     request.EvidenceFileStream,
                     request.EvidenceFileExtension.TrimStart('.'),

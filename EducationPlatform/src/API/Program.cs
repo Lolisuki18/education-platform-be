@@ -205,10 +205,10 @@ if (app.Environment.IsDevelopment() || app.Environment.EnvironmentName == "Testi
     });
 }
 
-if (!app.Environment.IsDevelopment())
+if (!app.Environment.IsDevelopment() && app.Environment.EnvironmentName != "Testing")
 {
-    // Only use HTTPS redirection in Production to avoid Android Emulator issues
     app.UseHsts();
+    app.UseHttpsRedirection();
 }
 
 // ====================

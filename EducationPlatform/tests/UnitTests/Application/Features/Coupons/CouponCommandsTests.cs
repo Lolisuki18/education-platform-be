@@ -100,7 +100,7 @@ namespace UnitTests.Application.Features.Coupons
             var coupon = new Coupon(couponId, "SPRING50", "Spring Sale", 50m, DateTime.UtcNow.AddDays(1), DateTime.UtcNow.AddDays(5), 50);
 
             _mockCouponRepository
-                .Setup(r => r.GetByIdAsync(couponId))
+                .Setup(r => r.GetByIdAsync(couponId, It.IsAny<CancellationToken>()))
                 .ReturnsAsync(coupon);
 
             var command = new UpdateCouponCommand
@@ -122,7 +122,7 @@ namespace UnitTests.Application.Features.Coupons
             coupon.Description.Should().Be("Updated spring sale");
             coupon.DiscountAmount.Should().Be(45m);
             coupon.MaxUsage.Should().Be(60);
-            _mockCouponRepository.Verify(r => r.Update(couponId, coupon), Times.Once);
+            _mockCouponRepository.Verify(r => r.UpdateAsync(couponId, coupon, It.IsAny<CancellationToken>()), Times.Once);
             _mockUnitOfWork.Verify(u => u.CommitAsync(currentUserId.ToString()), Times.Once);
         }
 
@@ -135,7 +135,7 @@ namespace UnitTests.Application.Features.Coupons
 
             var couponId = Guid.NewGuid();
             _mockCouponRepository
-                .Setup(r => r.GetByIdAsync(couponId))
+                .Setup(r => r.GetByIdAsync(couponId, It.IsAny<CancellationToken>()))
                 .ReturnsAsync((Coupon?)null);
 
             var command = new UpdateCouponCommand { CouponId = couponId };
@@ -163,7 +163,7 @@ namespace UnitTests.Application.Features.Coupons
             coupon.Deactivate();
 
             _mockCouponRepository
-                .Setup(r => r.GetByIdAsync(couponId))
+                .Setup(r => r.GetByIdAsync(couponId, It.IsAny<CancellationToken>()))
                 .ReturnsAsync(coupon);
 
             var command = new UpdateCouponStatusCommand { CouponId = couponId, IsActive = true };
@@ -174,7 +174,7 @@ namespace UnitTests.Application.Features.Coupons
 
             // Assert
             coupon.IsActive.Should().BeTrue();
-            _mockCouponRepository.Verify(r => r.Update(couponId, coupon), Times.Once);
+            _mockCouponRepository.Verify(r => r.UpdateAsync(couponId, coupon, It.IsAny<CancellationToken>()), Times.Once);
             _mockUnitOfWork.Verify(u => u.CommitAsync(currentUserId.ToString()), Times.Once);
         }
 
@@ -187,7 +187,7 @@ namespace UnitTests.Application.Features.Coupons
 
             var couponId = Guid.NewGuid();
             _mockCouponRepository
-                .Setup(r => r.GetByIdAsync(couponId))
+                .Setup(r => r.GetByIdAsync(couponId, It.IsAny<CancellationToken>()))
                 .ReturnsAsync((Coupon?)null);
 
             var command = new UpdateCouponStatusCommand { CouponId = couponId, IsActive = true };
@@ -215,7 +215,7 @@ namespace UnitTests.Application.Features.Coupons
             System.Threading.Thread.Sleep(1500); // Wait for expiration
 
             _mockCouponRepository
-                .Setup(r => r.GetByIdAsync(couponId))
+                .Setup(r => r.GetByIdAsync(couponId, It.IsAny<CancellationToken>()))
                 .ReturnsAsync(coupon);
 
             var command = new UpdateCouponStatusCommand { CouponId = couponId, IsActive = true };

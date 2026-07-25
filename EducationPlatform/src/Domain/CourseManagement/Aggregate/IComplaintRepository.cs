@@ -10,7 +10,10 @@ namespace Domain.CourseManagement.Aggregate
 
         Task<IEnumerable<Complaint>> GetComplaintsAsync(
             ComplaintStatus? complaintStatus,
-            Guid? teacherId);
+            Guid? teacherId,
+            int pageIndex = 1,
+            int pageSize = 10,
+            CancellationToken cancellationToken = default);
 
         Task<IEnumerable<Complaint>> GetApprovedByCoursesAsync(Guid courseId);
 

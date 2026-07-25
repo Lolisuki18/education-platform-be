@@ -17,45 +17,53 @@ namespace Infrastructure.Services
             _logger = logger;
         }
 
+        private (MailAddress From, SmtpClient Smtp) CreateSmtpClient()
+        {
+            var config = _configuration;
+            var fromEmail = config["EmailSettings:From"] ?? "noreply@educationplatform.com";
+            var displayName = config["EmailSettings:DisplayName"] ?? "Education Platform";
+            var smtpHost = config["EmailSettings:SmtpHost"] ?? "localhost";
+            var smtpPortStr = config["EmailSettings:SmtpPort"];
+            var smtpPort = int.TryParse(smtpPortStr, out var port) ? port : 25;
+            var username = config["EmailSettings:Username"] ?? string.Empty;
+            var password = config["EmailSettings:Password"] ?? string.Empty;
+            var enableSSLStr = config["EmailSettings:EnableSSL"];
+            var enableSSL = bool.TryParse(enableSSLStr, out var ssl) && ssl;
+
+            var from = new MailAddress(fromEmail, displayName);
+            var smtp = new SmtpClient
+            {
+                Host = smtpHost,
+                Port = smtpPort,
+                EnableSsl = enableSSL,
+                Timeout = 5000 // 5 seconds timeout
+            };
+
+            if (!string.IsNullOrEmpty(username) && !string.IsNullOrEmpty(password))
+            {
+                smtp.Credentials = new NetworkCredential(username, password);
+            }
+
+            return (from, smtp);
+        }
+
         public async Task SendVerificationEmailAsync(string toEmail, string otp)
         {
             try
             {
-                var config = _configuration;
-                var fromEmail = config["EmailSettings:From"] ?? "noreply@educationplatform.com";
-                var displayName = config["EmailSettings:DisplayName"] ?? "Education Platform";
-                var smtpHost = config["EmailSettings:SmtpHost"] ?? "localhost";
-                var smtpPortStr = config["EmailSettings:SmtpPort"];
-                var smtpPort = int.TryParse(smtpPortStr, out var port) ? port : 25;
-                var username = config["EmailSettings:Username"] ?? string.Empty;
-                var password = config["EmailSettings:Password"] ?? string.Empty;
-                var enableSSLStr = config["EmailSettings:EnableSSL"];
-                var enableSSL = bool.TryParse(enableSSLStr, out var ssl) && ssl;
-
-                var from = new MailAddress(fromEmail, displayName);
-                var to = new MailAddress(toEmail);
-
-                using var smtp = new SmtpClient
+                var (from, smtp) = CreateSmtpClient();
+                using (smtp)
                 {
-                    Host = smtpHost,
-                    Port = smtpPort,
-                    EnableSsl = enableSSL,
-                    Timeout = 5000 // 5 seconds timeout
-                };
+                    var to = new MailAddress(toEmail);
+                    using var message = new MailMessage(from, to)
+                    {
+                        Subject = "Email Verification",
+                        Body = BuildOtpTemplate(otp),
+                        IsBodyHtml = true
+                    };
 
-                if (!string.IsNullOrEmpty(username) && !string.IsNullOrEmpty(password))
-                {
-                    smtp.Credentials = new NetworkCredential(username, password);
+                    await smtp.SendMailAsync(message);
                 }
-
-                using var message = new MailMessage(from, to)
-                {
-                    Subject = "Email Verification",
-                    Body = BuildOtpTemplate(otp),
-                    IsBodyHtml = true
-                };
-
-                await smtp.SendMailAsync(message);
             }
             catch (Exception ex)
             {
@@ -69,41 +77,19 @@ namespace Infrastructure.Services
         {
             try
             {
-                var config = _configuration;
-                var fromEmail = config["EmailSettings:From"] ?? "noreply@educationplatform.com";
-                var displayName = config["EmailSettings:DisplayName"] ?? "Education Platform";
-                var smtpHost = config["EmailSettings:SmtpHost"] ?? "localhost";
-                var smtpPortStr = config["EmailSettings:SmtpPort"];
-                var smtpPort = int.TryParse(smtpPortStr, out var port) ? port : 25;
-                var username = config["EmailSettings:Username"] ?? string.Empty;
-                var password = config["EmailSettings:Password"] ?? string.Empty;
-                var enableSSLStr = config["EmailSettings:EnableSSL"];
-                var enableSSL = bool.TryParse(enableSSLStr, out var ssl) && ssl;
-
-                var from = new MailAddress(fromEmail, displayName);
-                var to = new MailAddress(toEmail);
-
-                using var smtp = new SmtpClient
+                var (from, smtp) = CreateSmtpClient();
+                using (smtp)
                 {
-                    Host = smtpHost,
-                    Port = smtpPort,
-                    EnableSsl = enableSSL,
-                    Timeout = 5000 // 5 seconds timeout
-                };
+                    var to = new MailAddress(toEmail);
+                    using var message = new MailMessage(from, to)
+                    {
+                        Subject = subject,
+                        Body = body,
+                        IsBodyHtml = true
+                    };
 
-                if (!string.IsNullOrEmpty(username) && !string.IsNullOrEmpty(password))
-                {
-                    smtp.Credentials = new NetworkCredential(username, password);
+                    await smtp.SendMailAsync(message);
                 }
-
-                using var message = new MailMessage(from, to)
-                {
-                    Subject = subject,
-                    Body = body,
-                    IsBodyHtml = true
-                };
-
-                await smtp.SendMailAsync(message);
             }
             catch (Exception ex)
             {

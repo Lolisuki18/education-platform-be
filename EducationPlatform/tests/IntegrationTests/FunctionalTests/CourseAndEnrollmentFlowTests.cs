@@ -75,7 +75,7 @@ namespace FunctionalTests
                 { "Chapters[0].Lessons[0].VideoUrl", "https://example.com/hello-video" },
                 { "Chapters[0].Lessons[0].Order", "1" }
             };
-            var content = CreateMultipartFormContent(fields, new byte[] { 1, 2, 3 }, "ThumbnailFile", "e2e.jpg", "image/jpeg");
+            var content = CreateMultipartFormContent(fields, new byte[] { 0xFF, 0xD8, 0xFF, 0xE0, 0x00, 0x00, 0x00, 0x00 }, "ThumbnailFile", "e2e.jpg", "image/jpeg");
             var createResponse = await teacherClient.PostAsync("/api/courses", content);
             createResponse.StatusCode.Should().Be(HttpStatusCode.OK);
 

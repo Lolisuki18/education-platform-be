@@ -90,7 +90,7 @@ namespace UnitTests.Application.Features.Orders.Commands.FinishOrder
             order.PaidAt.Should().NotBeNull();
 
             _mockUnitOfWork.Verify(u => u.BeginTransactionAsync(), Times.Once);
-            _mockOrderRepository.Verify(r => r.Update(orderId, order), Times.Once);
+            _mockOrderRepository.Verify(r => r.UpdateAsync(orderId, order, It.IsAny<CancellationToken>()), Times.Once);
             _mockUnitOfWork.Verify(u => u.CommitAsync(studentId.ToString()), Times.Once);
         }
     }

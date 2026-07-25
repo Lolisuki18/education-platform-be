@@ -110,13 +110,32 @@ namespace Infrastructure.Implementation
                 string entityName = entry.Entity.GetType().Name;
                 string action = entry.State.ToString();
 
+                var originalValuesDict = new Dictionary<string, object?>();
+                var currentValuesDict = new Dictionary<string, object?>();
+
+                foreach (var prop in entry.Properties)
+                {
+                    var propName = prop.Metadata.Name;
+
+                    // Filter out sensitive properties (passwords, refresh tokens, OTPs)
+                    if (propName.Contains("Password", StringComparison.OrdinalIgnoreCase) ||
+                        propName.Contains("RefreshToken", StringComparison.OrdinalIgnoreCase) ||
+                        propName.Contains("Otp", StringComparison.OrdinalIgnoreCase))
+                    {
+                        continue;
+                    }
+
+                    originalValuesDict[propName] = prop.OriginalValue;
+                    currentValuesDict[propName] = prop.CurrentValue;
+                }
+
                 string? oldValue = entry.State == EntityState.Added
                     ? null
-                    : JsonSerializer.Serialize(entry.OriginalValues.ToObject());
+                    : JsonSerializer.Serialize(originalValuesDict);
 
                 string? newValue = entry.State == EntityState.Deleted
                     ? null
-                    : JsonSerializer.Serialize(entry.CurrentValues.ToObject());
+                    : JsonSerializer.Serialize(currentValuesDict);
 
                 var auditLog = new AuditLog(
                     entityName: entityName,

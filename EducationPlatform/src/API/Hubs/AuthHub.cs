@@ -1,4 +1,3 @@
-using System.Collections.Concurrent;
 using System.Security.Claims;
 using Microsoft.AspNetCore.SignalR;
 
@@ -7,7 +6,6 @@ namespace API.Hubs
     public class AuthHub : Hub
     {
         #region Attributes
-        private static readonly ConcurrentDictionary<string, HashSet<string>> _connections = new();
         #endregion
 
         #region Properties
@@ -22,11 +20,7 @@ namespace API.Hubs
 
             if (!string.IsNullOrEmpty(userId))
             {
-                var connections = _connections.GetOrAdd(userId, _ => new HashSet<string>());
-                lock (connections)
-                {
-                    connections.Add(Context.ConnectionId);
-                }
+                await Groups.AddToGroupAsync(Context.ConnectionId, $"user-{userId}");
             }
 
             await base.OnConnectedAsync();
@@ -34,21 +28,6 @@ namespace API.Hubs
 
         public override async Task OnDisconnectedAsync(Exception? exception)
         {
-            var userId = Context.User?
-                .FindFirst(ClaimTypes.NameIdentifier)
-                ?.Value;
-
-            if (!string.IsNullOrEmpty(userId) &&
-                _connections.TryGetValue(userId, out var connections))
-            {
-                lock (connections)
-                {
-                    connections.Remove(Context.ConnectionId);
-                    if (connections.Count == 0)
-                        _connections.TryRemove(userId, out _);
-                }
-            }
-
             await base.OnDisconnectedAsync(exception);
         }
 
@@ -56,12 +35,9 @@ namespace API.Hubs
             IHubContext<AuthHub> hubContext,
             string userId)
         {
-            if (_connections.TryGetValue(userId, out var connections))
-            {
-                await hubContext.Clients
-                    .Clients(connections.ToList())
-                    .SendAsync("ForceLogout");
-            }
+            await hubContext.Clients
+                .Group($"user-{userId}")
+                .SendAsync("ForceLogout");
         }
         #endregion
     }

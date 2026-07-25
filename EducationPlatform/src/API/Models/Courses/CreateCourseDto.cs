@@ -1,3 +1,5 @@
+using Microsoft.AspNetCore.Http;
+
 namespace API.Models.Courses
 {
     public class CreateCourseDto
@@ -6,6 +8,7 @@ namespace API.Models.Courses
         public string Description { get; set; } = string.Empty;
         public decimal? Price { get; set; }
         public string ThumbnailName { get; set; } = string.Empty;
+        public IFormFile? ThumbnailFile { get; set; }
         public string? Slug { get; set; } = string.Empty;
         public string Prerequisites { get; set; } = string.Empty;
         public string LearningOutcomes { get; set; } = string.Empty;

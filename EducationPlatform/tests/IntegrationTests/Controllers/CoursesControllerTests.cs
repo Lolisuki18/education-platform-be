@@ -126,7 +126,7 @@ namespace IntegrationTests.Controllers
                 { "Chapters[0].Lessons[0].Order", "1" }
             };
 
-            var fileBytes = new byte[] { 1, 2, 3 };
+            var fileBytes = new byte[] { 0xFF, 0xD8, 0xFF, 0xE0, 0x00, 0x00, 0x00, 0x00 };
             var content = CreateMultipartFormContent(fields, fileBytes, "ThumbnailFile", "calculus.jpg", "image/jpeg");
 
             // Act

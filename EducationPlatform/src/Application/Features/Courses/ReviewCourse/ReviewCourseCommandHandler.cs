@@ -46,8 +46,8 @@ namespace Application.Features.Courses.ReviewCourse
             // ---------- 4. Persist ----------
             await _unitOfWork.BeginTransactionAsync();
 
-            _unitOfWork.GetRepository<ICourseRepository>()
-                       .Update(course.CourseID, course);
+            await _unitOfWork.GetRepository<ICourseRepository>()
+                       .UpdateAsync(course.CourseID, course, cancellationToken);
 
             _unitOfWork.GetRepository<ICourseRepository>()
                        .ReplaceViolatedPolicies(course.CourseID, violatedPolicies);

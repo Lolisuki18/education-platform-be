@@ -4,7 +4,11 @@ using Domain.IdentityManagement.Enum;
 using Domain.IdentityManagement.ValueObject;
 using Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
-using System.Numerics;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace Infrastructure.Implementation
 {
@@ -12,65 +16,58 @@ namespace Infrastructure.Implementation
         GenericRepository<User>,
         IUserRepository
     {
-        #region Attributes
-        #endregion
-
-        #region Properties
-        #endregion
-
         public UserRepository(EducationPlatformDBContext context) : base(context) { }
 
         #region Methods
-        public async Task<User?> GetUserByEmail(string email)
+        public async Task<User?> GetUserByEmail(string email, CancellationToken cancellationToken = default)
         {
-            return await context.Users.FirstOrDefaultAsync(u => u.Email == email);
+            return await context.Users.FirstOrDefaultAsync(u => u.Email == email, cancellationToken);
         }
 
-        public async Task<User?> GetUserByPhone(string phone)
+        public async Task<User?> GetUserByPhone(string phone, CancellationToken cancellationToken = default)
         {
-            return await context.Users.FirstOrDefaultAsync(u => u.Phone == phone);
+            return await context.Users.FirstOrDefaultAsync(u => u.Phone == phone, cancellationToken);
         }
 
-        public async Task<User?> GetByRefreshToken(string refreshToken)
+        public async Task<User?> GetByRefreshToken(string refreshToken, CancellationToken cancellationToken = default)
         {
             var hash = RefreshToken.HashToken(refreshToken);
             return await context.Users
                 .FirstOrDefaultAsync(u =>
                     u.RefreshToken != null &&
                     u.RefreshToken.Hash == hash &&
-                    u.RefreshToken.ExpiresAt > DateTime.UtcNow);
+                    u.RefreshToken.ExpiresAt > DateTime.UtcNow, cancellationToken);
         }
 
-        public async Task<User?> GetUserByOTP(string otp)
+        public async Task<User?> GetUserByOTP(string otp, CancellationToken cancellationToken = default)
         {
             return await context.Users
-                .FirstOrDefaultAsync(u => u.EmailOtp == otp);
+                .FirstOrDefaultAsync(u => u.EmailOtp == otp, cancellationToken);
         }
 
-        public async Task<User?> GetUserForLogin(string email, string password)
+        public async Task<User?> GetUserForLogin(string email, string password, CancellationToken cancellationToken = default)
         {
-            var user = await GetUserByEmail(email);
+            var user = await GetUserByEmail(email, cancellationToken);
             if (user == null || !user.Password.Verify(password))
                 return null;
             return user;
         }
 
-        public async Task<User?> GetUserForRefreshToken(string refreshToken)
+        public async Task<User?> GetUserForRefreshToken(string refreshToken, CancellationToken cancellationToken = default)
         {
-            return await GetByRefreshToken(refreshToken);
+            return await GetByRefreshToken(refreshToken, cancellationToken);
         }
 
-        public async Task<User?> GetUserForVerification(string email, string verificationCode)
+        public async Task<User?> GetUserForVerification(string email, string verificationCode, CancellationToken cancellationToken = default)
         {
             return await context.Users
-                .FirstOrDefaultAsync(u => u.Email == email && u.EmailOtp == verificationCode);
+                .FirstOrDefaultAsync(u => u.Email == email && u.EmailOtp == verificationCode, cancellationToken);
         }
 
-        public async Task<(int TotalUsers, int TotalTeachers, int TotalStudents)> Summary(DateTime? from, DateTime? to)
+        public async Task<(int TotalUsers, int TotalTeachers, int TotalStudents)> Summary(DateTime? from, DateTime? to, CancellationToken cancellationToken = default)
         {
             var query = context.Users.AsQueryable();
 
-            // ===== Apply date filters =====
             if (from.HasValue)
                 query = query.Where(u => u.CreatedAt >= from.Value);
 
@@ -85,7 +82,7 @@ namespace Infrastructure.Implementation
                     TotalTeachers = g.Count(u => u.Role == Role.Teacher),
                     TotalStudents = g.Count(u => u.Role == Role.Student)
                 })
-                .FirstOrDefaultAsync();
+                .FirstOrDefaultAsync(cancellationToken);
 
             return result == null
                 ? (0, 0, 0)
@@ -96,11 +93,11 @@ namespace Infrastructure.Implementation
             DateTime? from,
             DateTime? to,
             string groupBy,
-            string? userRole)
+            string? userRole = null,
+            CancellationToken cancellationToken = default)
         {
             var query = context.Users.AsQueryable();
 
-            // ===== Filters =====
             if (from.HasValue)
                 query = query.Where(u => u.CreatedAt >= from.Value);
 
@@ -110,7 +107,6 @@ namespace Infrastructure.Implementation
             if (!string.IsNullOrEmpty(userRole))
                 query = query.Where(u => u.Role.ToString() == userRole);
 
-            // ===== Step 1: Group in DB =====
             var rawData = await query
                 .GroupBy(u => new
                 {
@@ -125,9 +121,8 @@ namespace Infrastructure.Implementation
                     g.Key.Day,
                     Count = g.Count()
                 })
-                .ToListAsync();
+                .ToListAsync(cancellationToken);
 
-            // ===== Step 2: Format labels in memory =====
             var data = rawData
                 .Select(x => new
                 {
@@ -143,7 +138,6 @@ namespace Infrastructure.Implementation
                 .OrderBy(x => x.Label)
                 .ToList();
 
-            // ===== Build result =====
             var seriesName = string.IsNullOrEmpty(userRole) ? "Users" : userRole;
 
             return new Dictionary<string, List<(string, decimal)>>
@@ -155,7 +149,7 @@ namespace Infrastructure.Implementation
             };
         }
 
-        public async Task<(IEnumerable<User> Users, int TotalCount)> GetUsersPaged(int pageIndex, int pageSize, Role? role)
+        public async Task<(IEnumerable<User> Users, int TotalCount)> GetUsersPaged(int pageIndex, int pageSize, Role? role, CancellationToken cancellationToken = default)
         {
             var query = context.Users.AsQueryable();
 
@@ -164,16 +158,15 @@ namespace Infrastructure.Implementation
                 query = query.Where(u => u.Role == role.Value);
             }
 
-            var totalCount = await query.CountAsync();
+            var totalCount = await query.CountAsync(cancellationToken);
             var list = await query
                 .OrderByDescending(u => u.CreatedAt)
                 .Skip((pageIndex - 1) * pageSize)
                 .Take(pageSize)
-                .ToListAsync();
+                .ToListAsync(cancellationToken);
 
             return (list, totalCount);
         }
         #endregion
     }
 }
-

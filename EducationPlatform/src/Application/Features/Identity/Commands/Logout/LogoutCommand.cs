@@ -21,12 +21,12 @@ namespace Application.Features.Identity.Commands.Logout
 
         public async Task<Unit> Handle(LogoutCommand request, CancellationToken cancellationToken)
         {
-            var user = await _unitOfWork.GetRepository<IUserRepository>().GetByIdAsync(request.UserId);
+            var user = await _unitOfWork.GetRepository<IUserRepository>().GetByIdAsync(request.UserId, cancellationToken);
             if (user != null)
             {
                 user.RevokeRefreshToken();
                 await _unitOfWork.BeginTransactionAsync();
-                _unitOfWork.GetRepository<IUserRepository>().Update(user.UserID, user);
+                await _unitOfWork.GetRepository<IUserRepository>().UpdateAsync(user.UserID, user, cancellationToken);
                 await _unitOfWork.CommitAsync();
             }
             return Unit.Value;

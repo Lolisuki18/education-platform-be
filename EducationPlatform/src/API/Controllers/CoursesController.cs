@@ -70,8 +70,62 @@ namespace API.Controllers
 
         [Authorize(Roles = "Teacher")]
         [HttpPost]
-        public async Task<ActionResult<ApiResponse<Guid>>> CreateCourse([FromForm] CreateCourseCommand command)
+        public async Task<ActionResult<ApiResponse<Guid>>> CreateCourse([FromForm] CreateCourseDto request)
         {
+            var command = new CreateCourseCommand
+            {
+                Title = request.Title,
+                Description = request.Description,
+                Price = request.Price,
+                ThumbnailName = request.ThumbnailName,
+                ThumbnailFileStream = request.ThumbnailFile?.OpenReadStream(),
+                ThumbnailFileExtension = request.ThumbnailFile != null ? Path.GetExtension(request.ThumbnailFile.FileName) : null,
+                Slug = request.Slug,
+                Prerequisites = request.Prerequisites,
+                LearningOutcomes = request.LearningOutcomes,
+                GradeID = request.GradeID,
+                SubjectID = request.SubjectID,
+                Chapters = request.Chapters.Select(c => new CreateChapterCommandDto
+                {
+                    Title = c.Title,
+                    Description = c.Description,
+                    Order = c.Order,
+                    Lessons = c.Lessons.Select(l => new CreateLessonCommandDto
+                    {
+                        Title = l.Title,
+                        Objectives = l.Objectives,
+                        Description = l.Description,
+                        VideoUrl = l.VideoUrl,
+                        Order = l.Order,
+                        Quizzes = l.Quizzes.Select(q => new CreateQuizCommandDto
+                        {
+                            Question = q.Question,
+                            Note = q.Note,
+                            Answer = new CreateQuizAnswerCommandDto
+                            {
+                                Type = q.Answer.Type,
+                                CorrectAnswers = q.Answer.CorrectAnswers,
+                                Options = q.Answer.Options,
+                                TrueOrFalse = q.Answer.TrueOrFalse
+                            }
+                        }).ToList(),
+                        Assignments = l.Assignments.Select(a => new CreateAssignmentCommandDto
+                        {
+                            Title = a.Title,
+                            Description = a.Description,
+                            MaxScore = a.MaxScore
+                        }).ToList(),
+                        Materials = l.Materials.Select(m => new CreateMaterialCommandDto
+                        {
+                            Name = m.Name,
+                            Description = m.Description,
+                            Url = m.Url,
+                            Type = m.Type
+                        }).ToList()
+                    }).ToList()
+                }).ToList()
+            };
+
             var courseId = await mediator.Send(command);
 
             return Ok(ApiResponse<Guid>.Success(courseId, "Course created successfully and is pending review."));
@@ -86,9 +140,8 @@ namespace API.Controllers
             if (request.Chunk == null || request.Chunk.Length == 0)
                 return BadRequest(ApiResponse.Success("Empty chunk", 400));
 
-            Application.Helper.FileValidator.Validate(request.Chunk);
-
             await using var stream = request.Chunk.OpenReadStream();
+            Application.Helper.FileValidator.Validate(stream, request.Chunk.Length, request.Chunk.FileName);
             await storageService.SaveChunkAsync(stream, request.UploadId, request.Index, ct);
 
             return Ok(ApiResponse.Success("Chunk uploaded successfully."));
@@ -139,9 +192,21 @@ namespace API.Controllers
 
         [Authorize(Roles = "Admin,Teacher")]
         [HttpGet("complaints")]
-        public async Task<ActionResult<ApiResponse<IEnumerable<ComplaintDTO>>>> ListComplaints([FromQuery] Domain.CourseManagement.Enum.ComplaintStatus? status)
+        public async Task<ActionResult<ApiResponse<IEnumerable<ComplaintDTO>>>> ListComplaints(
+            [FromQuery] Domain.CourseManagement.Enum.ComplaintStatus? status,
+            [FromQuery] int pageIndex = 1,
+            [FromQuery] int pageSize = 10)
         {
-            var complaints = await mediator.Send(new GetComplaintsQuery { Status = status });
+            if (pageSize > 100) pageSize = 100;
+            if (pageSize <= 0) pageSize = 10;
+            if (pageIndex <= 0) pageIndex = 1;
+
+            var complaints = await mediator.Send(new GetComplaintsQuery
+            {
+                Status = status,
+                PageIndex = pageIndex,
+                PageSize = pageSize
+            });
             return Ok(ApiResponse<IEnumerable<ComplaintDTO>>.Success(complaints));
         }
 

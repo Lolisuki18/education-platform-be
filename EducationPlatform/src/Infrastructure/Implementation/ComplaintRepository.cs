@@ -21,7 +21,10 @@ namespace Infrastructure.Implementation
 
         public async Task<IEnumerable<Complaint>> GetComplaintsAsync(
             ComplaintStatus? complaintStatus,
-            Guid? teacherId)
+            Guid? teacherId,
+            int pageIndex = 1,
+            int pageSize = 10,
+            CancellationToken cancellationToken = default)
         {
             var query = context.Complaints
                 .AsNoTracking()
@@ -44,7 +47,9 @@ namespace Infrastructure.Implementation
 
             return await query
                 .OrderByDescending(c => c.CreatedAt)
-                .ToListAsync();
+                .Skip((pageIndex - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync(cancellationToken);
         }
 
         public async Task<IEnumerable<Complaint>> GetApprovedByCoursesAsync(Guid courseId)

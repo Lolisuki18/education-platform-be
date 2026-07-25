@@ -40,7 +40,7 @@ namespace Application.Features.Identity.Commands.RefreshToken
             {
                 user.RevokeRefreshToken();
                 await _unitOfWork.BeginTransactionAsync();
-                _unitOfWork.GetRepository<IUserRepository>().Update(user.UserID, user);
+                await _unitOfWork.GetRepository<IUserRepository>().UpdateAsync(user.UserID, user, cancellationToken);
                 await _unitOfWork.CommitAsync();
 
                 throw new AuthenticateException("Refresh token has expired.");
@@ -57,7 +57,7 @@ namespace Application.Features.Identity.Commands.RefreshToken
 
             // Apply persistence
             await _unitOfWork.BeginTransactionAsync();
-            _unitOfWork.GetRepository<IUserRepository>().Update(user.UserID, user);
+            await _unitOfWork.GetRepository<IUserRepository>().UpdateAsync(user.UserID, user, cancellationToken);
             await _unitOfWork.CommitAsync();
 
             return new TokenDTO

@@ -145,7 +145,7 @@ namespace UnitTests.Application.Features.Identity.Commands.RefreshToken
             result.RefreshToken.Should().NotBe(tokenString); // Phải tạo ra một token mới khác token cũ
 
             _mockUnitOfWork.Verify(u => u.BeginTransactionAsync(), Times.Once);
-            _mockUserRepository.Verify(r => r.Update(user.UserID, user), Times.Once);
+            _mockUserRepository.Verify(r => r.UpdateAsync(user.UserID, user, It.IsAny<CancellationToken>()), Times.Once);
             _mockUnitOfWork.Verify(u => u.CommitAsync(), Times.Once);
         }
     }

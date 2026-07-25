@@ -22,9 +22,13 @@ namespace API.Controllers
         }
 
         [HttpGet]
-        public async Task<ActionResult<ApiResponse<IEnumerable<EnrollmentDTO>>>> ListEnrollments()
+        public async Task<ActionResult<ApiResponse<IEnumerable<EnrollmentDTO>>>> ListEnrollments([FromQuery] int pageIndex = 1, [FromQuery] int pageSize = 10)
         {
-            var result = await mediator.Send(new GetStudentEnrollmentsQuery());
+            if (pageSize > 100) pageSize = 100;
+            if (pageSize <= 0) pageSize = 10;
+            if (pageIndex <= 0) pageIndex = 1;
+
+            var result = await mediator.Send(new GetStudentEnrollmentsQuery { PageIndex = pageIndex, PageSize = pageSize });
             return Ok(ApiResponse<IEnumerable<EnrollmentDTO>>.Success(result));
         }
 

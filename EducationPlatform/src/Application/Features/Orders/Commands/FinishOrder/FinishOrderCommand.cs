@@ -33,7 +33,7 @@ namespace Application.Features.Orders.Commands.FinishOrder
             if (order == null)
                 throw new NotFound($"Order with code: {request.OrderCode} not found.");
 
-            if (order.Status == Domain.OrderManagement.Enum.OrderStatus.Pending)
+            if (order.Status != Domain.OrderManagement.Enum.OrderStatus.Created)
             {
                 return _mapper.Map<OrderDTO>(order);
             }
@@ -43,7 +43,7 @@ namespace Application.Features.Orders.Commands.FinishOrder
 
             // Apply persistence
             await _unitOfWork.BeginTransactionAsync();
-            _unitOfWork.GetRepository<IOrderRepository>().Update(order.OrderID, order);
+            await _unitOfWork.GetRepository<IOrderRepository>().UpdateAsync(order.OrderID, order, cancellationToken);
             await _unitOfWork.CommitAsync(order.StudentID.ToString());
 
             return _mapper.Map<OrderDTO>(order);

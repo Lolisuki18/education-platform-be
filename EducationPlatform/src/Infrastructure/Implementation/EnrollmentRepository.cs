@@ -21,7 +21,7 @@ namespace Infrastructure.Implementation
 
         #region Methods
 
-        public async Task<IEnumerable<Enrollment>> GetStudentEnrollments(Guid studentId)
+        public async Task<IEnumerable<Enrollment>> GetStudentEnrollments(Guid studentId, int pageIndex = 1, int pageSize = 10, CancellationToken cancellationToken = default)
         {
             return await context.Enrollments
                 .AsNoTracking()
@@ -29,7 +29,9 @@ namespace Infrastructure.Implementation
                 .Include(e => e.CourseProgress)
                 .Where(e => e.StudentID == studentId)
                 .OrderByDescending(e => e.EnrolledAt)
-                .ToListAsync();
+                .Skip((pageIndex - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync(cancellationToken);
         }
 
         public async Task<Enrollment?> GetEnrollmentDetailByID(Guid enrollmentId)

@@ -62,7 +62,7 @@ namespace UnitTests.Application.Features.Complaints.Queries.GetComplaints
             _mockCurrentUser.Setup(u => u.Id).Returns(teacherId);
 
             _mockComplaintRepository
-                .Setup(r => r.GetComplaintsAsync(query.Status, teacherId))
+                .Setup(r => r.GetComplaintsAsync(query.Status, teacherId, It.IsAny<int>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(complaints);
 
             _mockMapper
@@ -76,7 +76,7 @@ namespace UnitTests.Application.Features.Complaints.Queries.GetComplaints
             result.Should().NotBeNull();
             result.Should().BeEquivalentTo(expectedDtos);
 
-            _mockComplaintRepository.Verify(r => r.GetComplaintsAsync(query.Status, teacherId), Times.Once);
+            _mockComplaintRepository.Verify(r => r.GetComplaintsAsync(query.Status, teacherId, It.IsAny<int>(), It.IsAny<int>(), It.IsAny<CancellationToken>()), Times.Once);
         }
 
         [Fact]
@@ -99,7 +99,7 @@ namespace UnitTests.Application.Features.Complaints.Queries.GetComplaints
             _mockCurrentUser.Setup(u => u.Role).Returns(Role.Admin.ToString());
 
             _mockComplaintRepository
-                .Setup(r => r.GetComplaintsAsync(query.Status, null))
+                .Setup(r => r.GetComplaintsAsync(query.Status, null, It.IsAny<int>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(complaints);
 
             _mockMapper
@@ -113,7 +113,7 @@ namespace UnitTests.Application.Features.Complaints.Queries.GetComplaints
             result.Should().NotBeNull();
             result.Should().BeEquivalentTo(expectedDtos);
 
-            _mockComplaintRepository.Verify(r => r.GetComplaintsAsync(query.Status, null), Times.Once);
+            _mockComplaintRepository.Verify(r => r.GetComplaintsAsync(query.Status, null, It.IsAny<int>(), It.IsAny<int>(), It.IsAny<CancellationToken>()), Times.Once);
         }
     }
 }

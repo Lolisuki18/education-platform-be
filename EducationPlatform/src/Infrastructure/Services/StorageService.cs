@@ -104,6 +104,9 @@ namespace Infrastructure.Services
             int chunkIndex,
             CancellationToken ct)
         {
+            if (!Guid.TryParse(uploadId, out _))
+                throw new ArgumentException("Invalid uploadId format");
+
             var tempDir = Path.Combine(root, "temp", uploadId);
             Directory.CreateDirectory(tempDir);
 
@@ -126,6 +129,9 @@ namespace Infrastructure.Services
             string extension,
             CancellationToken ct)
         {
+            if (!Guid.TryParse(uploadId, out _))
+                throw new ArgumentException("Invalid uploadId format");
+
             var tempDir = Path.Combine(root, "temp", uploadId);
 
             if (!Directory.Exists(tempDir))
@@ -149,8 +155,11 @@ namespace Infrastructure.Services
             );
 
             var chunks = Directory
-                .GetFiles(tempDir)
-                .OrderBy(f => int.Parse(Path.GetFileName(f)));
+                .EnumerateFiles(tempDir)
+                .Select(f => new { Path = f, FileName = Path.GetFileName(f) })
+                .Where(x => int.TryParse(x.FileName, out _))
+                .OrderBy(x => int.Parse(x.FileName))
+                .Select(x => x.Path);
 
             foreach (var chunk in chunks)
             {
