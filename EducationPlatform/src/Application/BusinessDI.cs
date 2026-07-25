@@ -22,7 +22,7 @@ namespace Application
             // Register FluentValidation
             services.AddValidatorsFromAssembly(typeof(ApplicationDI).Assembly);
 
-            // Đăng ký các service
+            // Register services
 
 
             return services;

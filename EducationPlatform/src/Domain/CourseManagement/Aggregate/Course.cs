@@ -141,17 +141,13 @@ namespace Domain.CourseManagement.Aggregate
 
             AdminNote = adminNote;
 
-            // -----------------------
             // Reset all chapters
-            // -----------------------
             foreach (var chapter in chapters)
             {
                 chapter.NoteAsNonViolated();
             }
 
-            // -----------------------
             // Mark violated chapters
-            // -----------------------
             if (hasViolatedChapters)
             {
                 foreach (var (chapterId, note) in violatedChapterNotes!)
@@ -164,14 +160,11 @@ namespace Domain.CourseManagement.Aggregate
                 }
             }
 
-            // -----------------------
             // Clear existing violated policies
-            // -----------------------
             violatedPolicies.Clear();
 
-            // -----------------------
             // Add new violated policies if any
-            // -----------------------
+
             if (hasViolatedPolicies)
             {
                 foreach (var policyId in violatedPolicyIds!)
@@ -187,9 +180,6 @@ namespace Domain.CourseManagement.Aggregate
                 PublishedAt = DateTime.UtcNow;
                 Status = CourseStatus.Published;
             }
-
-            // Raise domain event — DomainEventDispatcherInterceptor will dispatch this
-            // automatically when UnitOfWork.CommitAsync() is called from the Handler.
             AddDomainEvent(new Events.CourseReviewedEvent(CourseID, Title, Status, adminId, TeacherID));
 
             return violatedPolicies;

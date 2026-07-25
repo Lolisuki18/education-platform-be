@@ -9,19 +9,19 @@ namespace Infrastructure.Persistence.Seeds
         public static async Task<UserSeedResult> SeedAsync(EducationPlatformDBContext context)
         {
             var result = new UserSeedResult();
-            var defaultPassword = Environment.GetEnvironmentVariable("SEED_DEFAULT_PASSWORD") ?? "28012005";
+            var defaultPassword = Environment.GetEnvironmentVariable("SEED_DEFAULT_PASSWORD") ?? "18102004";
 
             // ====================
             // Admin
             // ====================
-            if (!await context.Users.AnyAsync(u => u.Role == Role.Admin || u.Email == "longdong32120@gmail.com" || u.Phone == "0000000000"))
+            if (!await context.Users.AnyAsync(u => u.Role == Role.Admin || u.Email == "leninh2004@gmail.com" || u.Phone == "0000000000"))
             {
                 var admin = new User(
                     Guid.NewGuid(),
-                    "longdong32120@gmail.com",
+                    "leninh2004@gmail.com",
                     defaultPassword,
                     "0000000000",
-                    "Dong Xuan Bao Long",
+                    "Le Nguyen An Ninh",
                     "Platform Administrator",
                     Role.Admin,
                     null,

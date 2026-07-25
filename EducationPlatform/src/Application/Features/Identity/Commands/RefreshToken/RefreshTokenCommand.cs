@@ -37,7 +37,14 @@ namespace Application.Features.Identity.Commands.RefreshToken
 
             // Validate refresh token
             if (!user.CanRefresh(request.RefreshToken))
+            {
+                user.RevokeRefreshToken();
+                await _unitOfWork.BeginTransactionAsync();
+                _unitOfWork.GetRepository<IUserRepository>().Update(user.UserID, user);
+                await _unitOfWork.CommitAsync();
+
                 throw new AuthenticateException("Refresh token has expired.");
+            }
 
             // Generate new token
             var token = _tokenService.GenerateToken(user);

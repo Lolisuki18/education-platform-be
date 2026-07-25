@@ -84,9 +84,10 @@ Sau khi khởi chạy, bạn có thể truy cập Swagger UI tại: `https://loc
 
 **Không bao giờ commit secrets vào Git.** Thay vào đó, hãy sử dụng biến môi trường hoặc CI/CD secrets.
 
-| Biến                        | Mô tả                                          | Bắt buộc      |
-| :-------------------------- | :--------------------------------------------- | :------------ |
-| `TEST_DB_CONNECTION_STRING` | Chuỗi kết nối PostgreSQL cho Integration Tests | Khi chạy test |
+| Biến                        | Mô tả                                          | Bắt buộc                     |
+| :-------------------------- | :--------------------------------------------- | :--------------------------- |
+| `TEST_DB_CONNECTION_STRING` | Chuỗi kết nối PostgreSQL cho Integration Tests | Khi chạy test                |
+| `SEED_DEFAULT_PASSWORD`     | Mật khẩu mặc định khi seed tài khoản hệ thống  | Không (Mặc định: `18102004`) |
 
 ### Chạy Integration Tests cục bộ
 
