@@ -69,6 +69,7 @@ namespace IntegrationTests
             // 3. Verify Email
             var verifyResponse = await Client.PostAsJsonAsync("/api/auth/verify-email", new VerifyEmailRequestDto
             {
+                Email = email,
                 Otp = otp
             });
             verifyResponse.EnsureSuccessStatusCode();

@@ -35,15 +35,16 @@ namespace UnitTests.Application.Features.Identity.Commands.VerifyEmail
         }
 
         [Fact]
-        public async Task Handle_OtpNotFound_ShouldThrowNotFoundException()
+        public async Task Handle_UserNotFound_ShouldThrowNotFoundException()
         {
             // Arrange
+            var email = "notfound@gmail.com";
             var otp = "123456";
             _mockUserRepository
-                .Setup(r => r.GetUserByOTP(otp))
+                .Setup(r => r.GetUserByEmail(email))
                 .ReturnsAsync((User?)null);
 
-            var command = new VerifyEmailCommand { Otp = otp };
+            var command = new VerifyEmailCommand { Email = email, Otp = otp };
 
             // Act
             Func<Task> act = async () => await _handler.Handle(command, CancellationToken.None);
@@ -57,28 +58,28 @@ namespace UnitTests.Application.Features.Identity.Commands.VerifyEmail
         public async Task Handle_EmailAlreadyVerified_ShouldThrowDomainException()
         {
             // Arrange
+            var email = "verified@gmail.com";
             var otp = "123456";
             var user = new User(
                 Guid.NewGuid(),
-                "verified@gmail.com",
+                email,
                 "password123",
                 "0123456789",
                 "Test User",
                 null,
                 Role.Student,
                 DateTime.UtcNow,
-                isVerified: true // Đã xác minh
+                isVerified: true
             );
 
-            // Set OTP using reflection since it is readonly/private setter
             SetPrivateProperty(user, nameof(User.EmailOtp), otp);
             SetPrivateProperty(user, nameof(User.EmailOtpExpiresAt), DateTime.UtcNow.AddMinutes(5));
 
             _mockUserRepository
-                .Setup(r => r.GetUserByOTP(otp))
+                .Setup(r => r.GetUserByEmail(email))
                 .ReturnsAsync(user);
 
-            var command = new VerifyEmailCommand { Otp = otp };
+            var command = new VerifyEmailCommand { Email = email, Otp = otp };
 
             // Act
             Func<Task> act = async () => await _handler.Handle(command, CancellationToken.None);
@@ -92,9 +93,10 @@ namespace UnitTests.Application.Features.Identity.Commands.VerifyEmail
         public async Task Handle_OtpExpired_ShouldThrowDomainException()
         {
             // Arrange
+            var email = "test@gmail.com";
             var user = new User(
                 Guid.NewGuid(),
-                "test@gmail.com",
+                email,
                 "password123",
                 "0123456789",
                 "Test User",
@@ -104,15 +106,14 @@ namespace UnitTests.Application.Features.Identity.Commands.VerifyEmail
                 isVerified: false
             );
 
-            // Sinh OTP với thời gian sống âm (đã hết hạn từ 5 phút trước)
             user.GenerateEmailOtp(TimeSpan.FromMinutes(-5));
             var expiredOtp = user.EmailOtp!;
 
             _mockUserRepository
-                .Setup(r => r.GetUserByOTP(expiredOtp))
+                .Setup(r => r.GetUserByEmail(email))
                 .ReturnsAsync(user);
 
-            var command = new VerifyEmailCommand { Otp = expiredOtp };
+            var command = new VerifyEmailCommand { Email = email, Otp = expiredOtp };
 
             // Act
             Func<Task> act = async () => await _handler.Handle(command, CancellationToken.None);
@@ -126,9 +127,10 @@ namespace UnitTests.Application.Features.Identity.Commands.VerifyEmail
         public async Task Handle_ValidOtp_ShouldVerifyEmailAndCommitSuccessfully()
         {
             // Arrange
+            var email = "test@gmail.com";
             var user = new User(
                 Guid.NewGuid(),
-                "test@gmail.com",
+                email,
                 "password123",
                 "0123456789",
                 "Test User",
@@ -138,15 +140,14 @@ namespace UnitTests.Application.Features.Identity.Commands.VerifyEmail
                 isVerified: false
             );
 
-            // Sinh OTP hợp lệ
             user.GenerateEmailOtp(TimeSpan.FromMinutes(5));
             var validOtp = user.EmailOtp!;
 
             _mockUserRepository
-                .Setup(r => r.GetUserByOTP(validOtp))
+                .Setup(r => r.GetUserByEmail(email))
                 .ReturnsAsync(user);
 
-            var command = new VerifyEmailCommand { Otp = validOtp };
+            var command = new VerifyEmailCommand { Email = email, Otp = validOtp };
 
             // Act
             var result = await _handler.Handle(command, CancellationToken.None);
@@ -158,7 +159,7 @@ namespace UnitTests.Application.Features.Identity.Commands.VerifyEmail
             user.EmailOtpExpiresAt.Should().BeNull();
 
             _mockUnitOfWork.Verify(u => u.BeginTransactionAsync(), Times.Once);
-            _mockUnitOfWork.Verify(u => u.CommitAsync(), Times.Once);
+            _mockUnitOfWork.Verify(u => u.CommitAsync(It.IsAny<string>()), Times.Once);
         }
 
         private void SetPrivateProperty(object target, string propertyName, object value)

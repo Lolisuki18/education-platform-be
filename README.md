@@ -31,16 +31,16 @@ Dự án tuân thủ nghiêm ngặt mô hình **Clean Architecture** nhằm đ�
 
 ## 🛠️ Công Nghệ Sử Dụng
 
-| Công nghệ                 | Mục đích                       |
-| :------------------------ | :----------------------------- |
-| **.NET 9.0**              | Framework chính cho Backend    |
-| **Entity Framework Core** | ORM để giao tiếp với Database  |
-| **PostgreSQL**            | Cơ sở dữ liệu quan hệ          |
-| **MediatR**               | Thực hiện mô hình CQRS         |
-| **AutoMapper**            | Ánh xạ giữa Entity và DTO      |
-| **SignalR**               | Truyền thông thời gian thực    |
-| **PayOS**                 | Cổng thanh toán                |
-| **FFmpeg**                | Xử lý video/audio              |
+| Công nghệ                 | Mục đích                      |
+| :------------------------ | :---------------------------- |
+| **.NET 9.0**              | Framework chính cho Backend   |
+| **Entity Framework Core** | ORM để giao tiếp với Database |
+| **PostgreSQL**            | Cơ sở dữ liệu quan hệ         |
+| **MediatR**               | Thực hiện mô hình CQRS        |
+| **AutoMapper**            | Ánh xạ giữa Entity và DTO     |
+| **SignalR**               | Truyền thông thời gian thực   |
+| **PayOS**                 | Cổng thanh toán               |
+| **FFmpeg**                | Xử lý video/audio             |
 
 ## 🚀 Hướng Dẫn Cài Đặt
 
@@ -53,6 +53,7 @@ Dự án tuân thủ nghiêm ngặt mô hình **Clean Architecture** nhằm đ�
 ### ⚙️ Cấu Hình
 
 1.  **Clone repository:**
+
     ```bash
     git clone https://github.com/Lolisuki18/EducationPlatformBE.git
     cd EducationPlatform
@@ -78,6 +79,24 @@ dotnet run --project src/API
 ```
 
 Sau khi khởi chạy, bạn có thể truy cập Swagger UI tại: `https://localhost:7025/swagger` (hoặc cổng cấu hình tương ứng).
+
+## 🔑 Biến Môi Trường (Environment Variables)
+
+**Không bao giờ commit secrets vào Git.** Thay vào đó, hãy sử dụng biến môi trường hoặc CI/CD secrets.
+
+| Biến                        | Mô tả                                          | Bắt buộc      |
+| :-------------------------- | :--------------------------------------------- | :------------ |
+| `TEST_DB_CONNECTION_STRING` | Chuỗi kết nối PostgreSQL cho Integration Tests | Khi chạy test |
+
+### Chạy Integration Tests cục bộ
+
+```bash
+# Thiết lập biến môi trường trước khi chạy test
+$env:TEST_DB_CONNECTION_STRING = "Host=localhost;Database=EducationPlatformDB_Test;Username=postgres;Password=<your_password>"
+dotnet test EducationPlatform/tests/IntegrationTests
+```
+
+> **Lưu ý bảo mật:** File `appsettings.json` đã được thêm vào `.gitignore`. Chỉ sử dụng `appsettings.Example.json` làm template.
 
 ## 🤝 Nhóm Thực Hiện
 

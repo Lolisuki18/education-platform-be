@@ -56,6 +56,7 @@ namespace FunctionalTests
             // 3. Verify the email using the OTP
             var verifyResponse = await Client.PostAsJsonAsync("/api/auth/verify-email", new VerifyEmailRequestDto
             {
+                Email = email,
                 Otp = otp
             });
             verifyResponse.StatusCode.Should().Be(HttpStatusCode.OK);
@@ -122,7 +123,11 @@ namespace FunctionalTests
                 otp = user!.EmailOtp!;
             }
 
-            var verifyResponse = await shortClient.PostAsJsonAsync("/api/auth/verify-email", new VerifyEmailRequestDto { Otp = otp });
+            var verifyResponse = await shortClient.PostAsJsonAsync("/api/auth/verify-email", new VerifyEmailRequestDto
+            {
+                Email = email,
+                Otp = otp
+            });
             verifyResponse.StatusCode.Should().Be(HttpStatusCode.OK);
 
             // Login to get token with 2-second expiry

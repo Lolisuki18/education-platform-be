@@ -12,6 +12,7 @@ using Microsoft.IdentityModel.Tokens;
 using API.Hubs;
 using API.ExceptionHandlers;
 using Microsoft.OpenApi.Models;
+using Microsoft.AspNetCore.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -34,6 +35,20 @@ builder.Services.AddAuthorization(options =>
     options.AddPolicy(API.Helper.Policies.AdminOnly, policy => policy.RequireRole("Admin"));
 });
 
+// Configure Rate Limiting to protect auth/OTP endpoints from brute-force
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+
+    var isTesting = builder.Environment.EnvironmentName == "Testing";
+    options.AddFixedWindowLimiter("AuthLimiter", opt =>
+    {
+        opt.Window = TimeSpan.FromMinutes(1);
+        opt.PermitLimit = isTesting ? 10000 : 5; // Bypass rate limit during integration tests
+        opt.QueueLimit = 0;
+    });
+});
+
 builder.Services.AddHttpClient("PayOSClient")
     .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
     {
@@ -47,10 +62,21 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowAll", policy =>
     {
-        policy.SetIsOriginAllowed(origin => true)
-              .AllowAnyMethod()
-              .AllowAnyHeader()
-              .AllowCredentials();
+        var allowedOrigins = builder.Configuration.GetSection("CorsSettings:AllowedOrigins").Get<string[]>();
+        if (allowedOrigins != null && allowedOrigins.Length > 0)
+        {
+            policy.WithOrigins(allowedOrigins)
+                  .AllowAnyMethod()
+                  .AllowAnyHeader()
+                  .AllowCredentials();
+        }
+        else
+        {
+            policy.WithOrigins("http://localhost:3000")
+                  .AllowAnyMethod()
+                  .AllowAnyHeader()
+                  .AllowCredentials();
+        }
     });
 });
 
@@ -238,6 +264,8 @@ if (app.Environment.EnvironmentName != "Testing")
 // 10. Middleware Pipeline
 // ====================
 app.UseRouting();
+
+app.UseRateLimiter();
 
 app.UseCors("AllowAll");
 

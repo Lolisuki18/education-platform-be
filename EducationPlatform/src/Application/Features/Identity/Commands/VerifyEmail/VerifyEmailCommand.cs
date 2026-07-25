@@ -7,6 +7,7 @@ namespace Application.Features.Identity.Commands.VerifyEmail
 {
     public class VerifyEmailCommand : IRequest<Unit>
     {
+        public string Email { get; set; } = string.Empty;
         public string Otp { get; set; } = string.Empty;
     }
 
@@ -21,15 +22,15 @@ namespace Application.Features.Identity.Commands.VerifyEmail
 
         public async Task<Unit> Handle(VerifyEmailCommand request, CancellationToken cancellationToken)
         {
-            // Validate user existence
+            // Validate user existence by email (instead of globally by OTP)
             var user = await _unitOfWork
                 .GetRepository<IUserRepository>()
-                .GetUserByOTP(request.Otp);
+                .GetUserByEmail(request.Email);
 
             if (user == null)
                 throw new NotFound("User not found.");
 
-            // Apply domain
+            // Apply domain logic (compares request.Otp with user's stored EmailOtp)
             user.VerifyEmail(request.Otp);
 
             // Apply persistence

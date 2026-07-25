@@ -20,6 +20,11 @@ namespace IntegrationTests
     {
         private Respawner? _respawner;
 
+
+        private static readonly string TestConnectionString =
+            Environment.GetEnvironmentVariable("TEST_DB_CONNECTION_STRING")
+            ?? "Host=localhost;Database=EducationPlatformDB_Test;Username=postgres;Password=12345";
+
         protected override void ConfigureWebHost(IWebHostBuilder builder)
         {
             builder.UseEnvironment("Testing");
@@ -27,7 +32,7 @@ namespace IntegrationTests
             {
                 configBuilder.AddInMemoryCollection(new Dictionary<string, string?>
                 {
-                    { "ConnectionStrings:Server", "Host=localhost;Database=EducationPlatformDB_Test;Username=postgres;Password=12345" },
+                    { "ConnectionStrings:Server", TestConnectionString },
                     { "Storage:RootPath", Path.Combine(Directory.GetCurrentDirectory(), "test_storage") },
                     { "EmailSettings:SmtpHost", "localhost" },
                     { "EmailSettings:SmtpPort", "25" },
@@ -53,7 +58,7 @@ namespace IntegrationTests
                 services.AddDbContext<EducationPlatformDBContext>((sp, options) =>
                 {
                     var interceptor = sp.GetRequiredService<Infrastructure.Persistence.Interceptors.DomainEventDispatcherInterceptor>();
-                    options.UseNpgsql("Host=localhost;Database=EducationPlatformDB_Test;Username=postgres;Password=12345")
+                    options.UseNpgsql(TestConnectionString)
                            .AddInterceptors(interceptor)
                            .ConfigureWarnings(w => w.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning));
                 });

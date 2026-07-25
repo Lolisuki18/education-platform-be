@@ -7,6 +7,7 @@ using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.SignalR;
+using Microsoft.AspNetCore.RateLimiting;
 using Application.Features.Identity.Commands.Login;
 using Application.Features.Identity.Commands.Register;
 using Application.Features.Identity.Commands.VerifyEmail;
@@ -16,6 +17,7 @@ namespace API.Controllers
 {
     [ApiController]
     [Route("api/auth")]
+    [EnableRateLimiting("AuthLimiter")]
     public class AuthController : ControllerBase
     {
         private readonly IMediator mediator;
@@ -64,7 +66,11 @@ namespace API.Controllers
         [HttpPost("verify-email")]
         public async Task<ActionResult<ApiResponse>> VerifyEmail([FromBody] VerifyEmailRequestDto request)
         {
-            await mediator.Send(new VerifyEmailCommand { Otp = request.Otp });
+            await mediator.Send(new VerifyEmailCommand
+            {
+                Email = request.Email,
+                Otp = request.Otp
+            });
             return Ok(ApiResponse.Success("Email verified successfully."));
         }
 
