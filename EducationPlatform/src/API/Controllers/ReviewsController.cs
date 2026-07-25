@@ -12,11 +12,11 @@ namespace API.Controllers
     [Route("api/courses/{courseId:guid}/reviews")]
     public class ReviewsController : ControllerBase
     {
-        private readonly IMediator _mediator;
+        private readonly IMediator mediator;
 
         public ReviewsController(IMediator mediator)
         {
-            _mediator = mediator;
+            this.mediator = mediator;
         }
 
         [Authorize(Roles = "Student")]
@@ -24,14 +24,14 @@ namespace API.Controllers
         public async Task<ActionResult<ApiResponse<CourseReviewDTO>>> CreateReview(Guid courseId, [FromBody] CreateReviewCommand command)
         {
             command.CourseId = courseId;
-            var result = await _mediator.Send(command);
+            var result = await mediator.Send(command);
             return Ok(ApiResponse<CourseReviewDTO>.Success(result, "Review submitted successfully."));
         }
 
         [HttpGet]
         public async Task<ActionResult<ApiResponse<IEnumerable<CourseReviewDTO>>>> GetCourseReviews(Guid courseId, [FromQuery] int pageIndex = 1, [FromQuery] int pageSize = 10)
         {
-            var result = await _mediator.Send(new GetCourseReviewsQuery
+            var result = await mediator.Send(new GetCourseReviewsQuery
             {
                 CourseId = courseId,
                 PageIndex = pageIndex,

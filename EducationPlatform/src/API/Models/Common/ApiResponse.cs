@@ -34,6 +34,16 @@ namespace API.Models.Common
                 Message = message
             };
         }
+
+        public static ApiResponse Error(string message, int statusCode = 400)
+        {
+            return new ApiResponse
+            {
+                IsSuccess = false,
+                StatusCode = statusCode,
+                Message = message
+            };
+        }
     }
 
     public class PagedApiResponse<T> : ApiResponse<IEnumerable<T>>

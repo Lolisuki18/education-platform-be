@@ -127,7 +127,7 @@ namespace Infrastructure.Implementation
         }
 
 
-        public void ReplaceViolatedPolicies(
+        public async Task ReplaceViolatedPolicies(
             Guid courseId,
             IEnumerable<ViolatedPolicy> newViolatedPolicies)
         {
@@ -135,9 +135,9 @@ namespace Infrastructure.Implementation
                 newViolatedPolicies = Enumerable.Empty<ViolatedPolicy>();
 
             // Remove existing policies for the course
-            var existingPolicies = context.ViolatedPolicies
+            var existingPolicies = await context.ViolatedPolicies
                                           .Where(vp => vp.CourseID == courseId)
-                                          .ToList();
+                                          .ToListAsync();
 
             if (existingPolicies.Any())
                 context.ViolatedPolicies.RemoveRange(existingPolicies);

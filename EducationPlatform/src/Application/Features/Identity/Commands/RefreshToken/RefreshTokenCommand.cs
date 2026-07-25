@@ -16,6 +16,8 @@ namespace Application.Features.Identity.Commands.RefreshToken
 
     public class RefreshTokenCommandHandler : IRequestHandler<RefreshTokenCommand, TokenDTO>
     {
+        private static readonly TimeSpan RefreshTokenLifetime = TimeSpan.FromDays(7);
+
         private readonly Application.Interface.ITokenService _tokenService;
         private readonly IUnitOfWork _unitOfWork;
 
@@ -53,7 +55,7 @@ namespace Application.Features.Identity.Commands.RefreshToken
             var newRefreshToken = _tokenService.GenerateRefreshToken();
 
             // Apply domain
-            user.IssueRefreshToken(newRefreshToken, TimeSpan.FromDays(7));
+            user.IssueRefreshToken(newRefreshToken, RefreshTokenLifetime);
 
             // Apply persistence
             await _unitOfWork.BeginTransactionAsync();

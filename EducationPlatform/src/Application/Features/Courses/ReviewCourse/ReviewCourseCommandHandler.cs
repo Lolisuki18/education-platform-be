@@ -49,7 +49,7 @@ namespace Application.Features.Courses.ReviewCourse
             await _unitOfWork.GetRepository<ICourseRepository>()
                        .UpdateAsync(course.CourseID, course, cancellationToken);
 
-            _unitOfWork.GetRepository<ICourseRepository>()
+            await _unitOfWork.GetRepository<ICourseRepository>()
                        .ReplaceViolatedPolicies(course.CourseID, violatedPolicies);
 
             await _unitOfWork.CommitAsync(_currentUser.Id.Value.ToString());

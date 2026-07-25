@@ -27,7 +27,7 @@ namespace Domain.CourseManagement.Aggregate
             Guid courseId);
 
 
-        void ReplaceViolatedPolicies(
+        Task ReplaceViolatedPolicies(
             Guid courseId,
             IEnumerable<ViolatedPolicy> newViolatedPolicies);
 

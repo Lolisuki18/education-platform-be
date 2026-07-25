@@ -23,7 +23,13 @@ namespace IntegrationTests
 
         private static readonly string TestConnectionString =
             Environment.GetEnvironmentVariable("TEST_DB_CONNECTION_STRING")
-            ?? "Host=localhost;Database=EducationPlatformDB_Test;Username=postgres;Password=12345";
+            ?? new ConfigurationBuilder()
+                .SetBasePath(Directory.GetCurrentDirectory())
+                .AddJsonFile("appsettings.json", optional: false)
+                .Build()
+                .GetConnectionString("Test")
+            ?? throw new InvalidOperationException(
+                "Test database connection string not configured. Set TEST_DB_CONNECTION_STRING or ConnectionStrings:Test in appsettings.json.");
 
         protected override void ConfigureWebHost(IWebHostBuilder builder)
         {

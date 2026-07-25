@@ -138,7 +138,7 @@ namespace API.Controllers
             CancellationToken ct)
         {
             if (request.Chunk == null || request.Chunk.Length == 0)
-                return BadRequest(ApiResponse.Success("Empty chunk", 400));
+                return BadRequest(ApiResponse.Error("Empty chunk"));
 
             await using var stream = request.Chunk.OpenReadStream();
             Application.Helper.FileValidator.Validate(stream, request.Chunk.Length, request.Chunk.FileName);

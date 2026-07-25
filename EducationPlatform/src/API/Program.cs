@@ -86,6 +86,8 @@ builder.Services.AddCors(options =>
 builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddApplication();
 builder.Services.AddAutoMapper(cfg => cfg.AddMaps(typeof(API.Helper.MappingProfile).Assembly));
+builder.Services.AddHealthChecks()
+    .AddDbContextCheck<EducationPlatformDBContext>();
 
 // ====================
 // 5. JWT Authentication & SignalR Setup
@@ -191,6 +193,8 @@ var app = builder.Build();
 
 app.UseExceptionHandler();
 
+var logger = app.Services.GetRequiredService<ILogger<Program>>();
+
 
 // ====================
 // 7. Environment Specific Setup
@@ -224,7 +228,7 @@ if (string.IsNullOrWhiteSpace(storageRootPath))
 if (!Directory.Exists(storageRootPath))
 {
     Directory.CreateDirectory(storageRootPath);
-    Console.WriteLine($"[Storage] Created storage directory: {storageRootPath}");
+    logger.LogInformation("Created storage directory: {StorageRootPath}", storageRootPath);
 }
 
 app.UseStaticFiles();
@@ -250,12 +254,12 @@ if (app.Environment.EnvironmentName != "Testing")
             {
                 await db.Database.MigrateAsync();
                 await Seeder.SeedAsync(db);
-                Console.WriteLine("[Database] Migrated and seeded successfully.");
+                logger.LogInformation("Database migrated and seeded successfully.");
                 break;
             }
             catch (DbException ex) // Handle both PostgreSQL and SQL Server issues safely
             {
-                Console.WriteLine($"[Database] Not ready, retrying in 5s... ({i + 1}/{retries}). Error: {ex.Message}");
+                logger.LogWarning(ex, "Database not ready, retrying in 5s... ({Attempt}/{Retries})", i + 1, retries);
                 await Task.Delay(5000);
                 if (i == retries - 1) throw;
             }
@@ -283,6 +287,8 @@ app.MapControllers();
 app.MapHub<AuthHub>("/authHub");
 app.MapHub<CourseHub>("/courseHub");
 app.MapGet("/", () => "API is running successfully!");
+app.MapHealthChecks("/healthz");
+app.MapHealthChecks("/readiness");
 
 app.Run();
 

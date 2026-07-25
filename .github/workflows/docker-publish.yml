@@ -5,7 +5,28 @@ on:
     branches: ["main"]
 
 jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "9.0.x"
+
+      - name: Restore dependencies
+        run: dotnet restore EducationPlatform/EducationPlatform.sln
+
+      - name: Build
+        run: dotnet build EducationPlatform/EducationPlatform.sln --no-restore --configuration Release
+
+      - name: Run unit tests
+        run: dotnet test EducationPlatform/tests/UnitTests/UnitTests.csproj --no-build --configuration Release
+
   build-and-push:
+    needs: test
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code

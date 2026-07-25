@@ -19,6 +19,8 @@ namespace Application.Features.Identity.Commands.Register
 
     public class RegisterCommandHandler : IRequestHandler<RegisterCommand, Unit>
     {
+        private static readonly TimeSpan OtpLifetime = TimeSpan.FromMinutes(5);
+
         private readonly IUnitOfWork _unitOfWork;
         private readonly Application.Interface.IEmailService _emailService;
 
@@ -57,7 +59,7 @@ namespace Application.Features.Identity.Commands.Register
 
                 // Reuse unverified user
                 user = userByEmail;
-                user.GenerateEmailOtp(TimeSpan.FromMinutes(5));
+                user.GenerateEmailOtp(OtpLifetime);
             }
             else
             {
@@ -72,7 +74,7 @@ namespace Application.Features.Identity.Commands.Register
                     DateTime.Now
                 );
 
-                user.GenerateEmailOtp(TimeSpan.FromMinutes(5));
+                user.GenerateEmailOtp(OtpLifetime);
                 userRepo.Add(user);
             }
 
