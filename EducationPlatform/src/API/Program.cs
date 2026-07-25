@@ -11,20 +11,29 @@ using Microsoft.Extensions.FileProviders;
 using Microsoft.IdentityModel.Tokens;
 using API.Hubs;
 using API.ExceptionHandlers;
+using API.Middlewares;
 using Microsoft.OpenApi.Models;
 using Microsoft.AspNetCore.RateLimiting;
+using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// ====================
 // 1. Core Configuration
-// ====================
-// Fix PostgreSQL DateTime issue
 AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
 
-// ====================
+builder.Host.UseSerilog((context, services, configuration) => configuration
+    .ReadFrom.Configuration(context.Configuration)
+    .Enrich.FromLogContext()
+    .Enrich.WithMachineName()
+    .WriteTo.Console(outputTemplate:
+        "[{Timestamp:HH:mm:ss} {Level:u3}] ({CorrelationId}) {Message:lj}{NewLine}{Exception}")
+    .WriteTo.File("logs/log-.txt",
+        rollingInterval: RollingInterval.Day,
+        retainedFileCountLimit: 14,
+        outputTemplate:
+        "{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} [{Level:u3}] ({CorrelationId}) {Message:lj}{NewLine}{Exception}"));
+
 // 2. Web API Services
-// ====================
 builder.Services.AddControllers();
 builder.Services.AddProblemDetails();
 builder.Services.AddExceptionHandler<ValidationExceptionHandler>();
@@ -55,9 +64,7 @@ builder.Services.AddHttpClient("PayOSClient")
         SslProtocols = System.Security.Authentication.SslProtocols.Tls12
     });
 
-// ====================
 // 3. CORS Configuration (Crucial for Flutter Web / Swagger)
-// ====================
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowAll", policy =>
@@ -80,18 +87,14 @@ builder.Services.AddCors(options =>
     });
 });
 
-// ====================
 // 4. Dependency Injection (Layered)
-// ====================
 builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddApplication();
 builder.Services.AddAutoMapper(cfg => cfg.AddMaps(typeof(API.Helper.MappingProfile).Assembly));
 builder.Services.AddHealthChecks()
     .AddDbContextCheck<EducationPlatformDBContext>();
 
-// ====================
 // 5. JWT Authentication & SignalR Setup
-// ====================
 builder.Services.AddAuthentication(options =>
 {
     options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
@@ -152,9 +155,8 @@ builder.Services.AddAuthentication(options =>
     };
 });
 
-// ====================
 // 6. Swagger Configuration
-// ====================
+
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
 {
@@ -189,19 +191,18 @@ builder.Services.AddSwaggerGen(c =>
 
 builder.Services.AddSignalR();
 
-// ========================================================================
 // BUID THE APP
-// ========================================================================
 var app = builder.Build();
+
+app.UseMiddleware<CorrelationIdMiddleware>();
+app.UseSerilogRequestLogging();
 
 app.UseExceptionHandler();
 
 var logger = app.Services.GetRequiredService<ILogger<Program>>();
 
 
-// ====================
 // 7. Environment Specific Setup
-// ====================
 if (app.Environment.IsDevelopment() || app.Environment.EnvironmentName == "Testing")
 {
     app.UseSwagger();
@@ -218,9 +219,7 @@ if (!app.Environment.IsDevelopment() && app.Environment.EnvironmentName != "Test
     app.UseHttpsRedirection();
 }
 
-// ====================
 // 8. Storage & Media Files
-// ====================
 var storageRootPath = builder.Configuration["Storage:RootPath"];
 if (string.IsNullOrWhiteSpace(storageRootPath))
 {
@@ -241,9 +240,7 @@ app.UseStaticFiles(new StaticFileOptions
     RequestPath = "/media"
 });
 
-// ====================
 // 9. DB Migration & Seeding
-// ====================
 if (app.Environment.EnvironmentName != "Testing")
 {
     using (var scope = app.Services.CreateAsyncScope())
@@ -270,9 +267,7 @@ if (app.Environment.EnvironmentName != "Testing")
     }
 }
 
-// ====================
 // 10. Middleware Pipeline
-// ====================
 app.UseRouting();
 
 app.UseRateLimiter();
@@ -283,9 +278,7 @@ app.UseAuthentication();
 app.UseMiddleware<API.Helper.UserActiveMiddleware>();
 app.UseAuthorization();
 
-// ====================
 // 11. Endpoints & Hubs
-// ====================
 app.MapControllers();
 app.MapHub<AuthHub>("/authHub");
 app.MapHub<CourseHub>("/courseHub");

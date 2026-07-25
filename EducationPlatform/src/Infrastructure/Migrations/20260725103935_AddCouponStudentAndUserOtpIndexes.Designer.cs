@@ -9,11 +9,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 #nullable disable
 
-namespace Infrastructure.Persistence.Migrations
+namespace Infrastructure.Migrations
 {
     [DbContext(typeof(EducationPlatformDBContext))]
-    [Migration("20260725102305_FixCouponUserCascadeDelete")]
-    partial class FixCouponUserCascadeDelete
+    [Migration("20260725103935_AddCouponStudentAndUserOtpIndexes")]
+    partial class AddCouponStudentAndUserOtpIndexes
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -738,6 +738,8 @@ namespace Infrastructure.Persistence.Migrations
 
                     b.HasIndex("Email")
                         .IsUnique();
+
+                    b.HasIndex("EmailOtp");
 
                     b.HasIndex("Phone")
                         .IsUnique();

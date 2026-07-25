@@ -2,7 +2,7 @@
 
 #nullable disable
 
-namespace Infrastructure.Persistence.Migrations
+namespace Infrastructure.Migrations
 {
     /// <inheritdoc />
     public partial class FixCouponUserCascadeDelete : Migration

@@ -13,6 +13,7 @@ namespace Infrastructure.Implementation
         public async Task<Complaint?> GetComplaintDetailByID(Guid complaintId)
         {
             return await context.Complaints
+                .AsNoTracking()
                 .Include(c => c.User) // Student
                 .Include(c => c.Course)
                     .ThenInclude(c => c.Teacher) // Teacher
@@ -54,7 +55,9 @@ namespace Infrastructure.Implementation
 
         public async Task<IEnumerable<Complaint>> GetApprovedByCoursesAsync(Guid courseId)
         {
+            // RemoveComplaints() re-attaches results explicitly, so no-tracking is safe here too.
             return await context.Complaints
+                .AsNoTracking()
                 .Where(c => c.CourseID == courseId &&
                             c.Status == ComplaintStatus.Approved)
                 .ToListAsync();

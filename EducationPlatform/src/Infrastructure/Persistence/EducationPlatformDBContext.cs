@@ -221,6 +221,8 @@ namespace Infrastructure.Persistence
 
                 entity.HasIndex(u => u.Phone)
                       .IsUnique();
+
+                entity.HasIndex(u => u.EmailOtp);
             });
 
             // ====================
@@ -571,6 +573,8 @@ namespace Infrastructure.Persistence
 
                 entity.HasIndex(c => c.Code)
                       .IsUnique();
+
+                entity.HasIndex(c => c.StudentID);
 
                 entity.Property(c => c.DiscountAmount)
                       .IsRequired()
