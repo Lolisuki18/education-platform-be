@@ -62,6 +62,7 @@ appsettings.local.json
 secrets.json
 **/appsettings.json
 !**/UnitTests/appsettings.json
+!**/IntegrationTests/appsettings.json
 
 # OS generated files
 .DS_Store
