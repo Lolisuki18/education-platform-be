@@ -11,9 +11,8 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Domain.OrderManagement.Enum;
 using Microsoft.Extensions.Configuration;
-using System.Security.Cryptography;
-using System.Text;
 using Microsoft.AspNetCore.Hosting;
+using Application.Interface;
 
 namespace API.Controllers
 {
@@ -25,17 +24,40 @@ namespace API.Controllers
         private readonly IConfiguration configuration;
         private readonly IWebHostEnvironment environment;
         private readonly IServiceScopeFactory scopeFactory;
+        private readonly ILogger<OrdersController> logger;
+        private readonly IPayOSSignatureVerifier signatureVerifier;
 
         public OrdersController(
             IMediator mediator,
             IConfiguration configuration,
             IWebHostEnvironment environment,
-            IServiceScopeFactory scopeFactory)
+            IServiceScopeFactory scopeFactory,
+            ILogger<OrdersController> logger,
+            IPayOSSignatureVerifier signatureVerifier)
         {
             this.mediator = mediator;
             this.configuration = configuration;
             this.environment = environment;
             this.scopeFactory = scopeFactory;
+            this.logger = logger;
+            this.signatureVerifier = signatureVerifier;
+        }
+
+        private void FinishOrderInBackground(long orderCode)
+        {
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    using var scope = scopeFactory.CreateScope();
+                    var scopedMediator = scope.ServiceProvider.GetRequiredService<IMediator>();
+                    await scopedMediator.Send(new FinishOrderCommand { OrderCode = orderCode });
+                }
+                catch (Exception ex)
+                {
+                    logger.LogError(ex, "Failed to finalize order {OrderCode} in background.", orderCode);
+                }
+            });
         }
 
         [Authorize]
@@ -118,7 +140,7 @@ namespace API.Controllers
                 }
 
                 if (string.IsNullOrEmpty(signature) ||
-                    !VerifyRedirectSignature(amount ?? "", cancel ?? "", code ?? "", id ?? "", orderCode ?? "", status ?? "", signature, checksumKey))
+                    !signatureVerifier.VerifyRedirectSignature(amount ?? "", cancel ?? "", code ?? "", id ?? "", orderCode ?? "", status ?? "", signature, checksumKey))
                 {
                     return BadRequest(ApiResponse<ReturnOrderResponseDto>.Success(new ReturnOrderResponseDto
                     {
@@ -159,10 +181,7 @@ namespace API.Controllers
 
             if (isSuccess)
             {
-                _ = Task.Run(async () =>
-                {
-                    try { await mediator.Send(new FinishOrderCommand { OrderCode = codeVal }); } catch { }
-                });
+                FinishOrderInBackground(codeVal);
                 return Redirect($"{frontendUrl}/student?payment=success");
             }
             else
@@ -196,7 +215,10 @@ namespace API.Controllers
                 }
 
                 var checksumKey = configuration["PayOS:ChecksumKey"]!;
-                if (!VerifyWebhookSignature(data, signature, checksumKey))
+                var dataDict = data.Properties()
+                    .ToDictionary(p => p.Name, p => JTokenToString(p.Value));
+
+                if (!signatureVerifier.VerifyWebhookSignature(dataDict, signature, checksumKey))
                 {
                     return Ok(new { code = "99", desc = "Invalid signature" });
                 }
@@ -206,19 +228,7 @@ namespace API.Controllers
                     var orderCode = data["orderCode"] != null ? (long)data["orderCode"] : (long?)null;
                     if (orderCode.HasValue)
                     {
-                        _ = Task.Run(async () =>
-                        {
-                            try
-                            {
-                                using var scope = scopeFactory.CreateScope();
-                                var scopedMediator = scope.ServiceProvider.GetRequiredService<IMediator>();
-                                await scopedMediator.Send(new FinishOrderCommand { OrderCode = orderCode.Value });
-                            }
-                            catch (Exception)
-                            {
-
-                            }
-                        });
+                        FinishOrderInBackground(orderCode.Value);
                     }
                 }
 
@@ -226,67 +236,19 @@ namespace API.Controllers
             }
             catch (Exception ex)
             {
+                logger.LogError(ex, "Failed to process PayOS webhook payload.");
                 return Ok(new { code = "99", desc = ex.Message });
             }
         }
 
-        private bool VerifyWebhookSignature(
-            Newtonsoft.Json.Linq.JObject data,
-            string signature,
-            string checksumKey)
+        private static string JTokenToString(Newtonsoft.Json.Linq.JToken val)
         {
-            // Sort keys alphabetically
-            var sortedProperties = data.Properties()
-                .Where(p => p.Name != "signature")
-                .OrderBy(p => p.Name);
-
-            // Construct the query string
-            var queryString = string.Join("&", sortedProperties.Select(p =>
+            return val.Type switch
             {
-                var val = p.Value;
-                string strVal = "";
-                if (val.Type == Newtonsoft.Json.Linq.JTokenType.Null)
-                {
-                    strVal = "";
-                }
-                else if (val.Type == Newtonsoft.Json.Linq.JTokenType.Boolean)
-                {
-                    strVal = (bool)val ? "true" : "false";
-                }
-                else
-                {
-                    strVal = val.ToString();
-                }
-                return $"{p.Name}={strVal}";
-            }));
-
-            using var hmac = new HMACSHA256(Encoding.UTF8.GetBytes(checksumKey));
-            var hash = hmac.ComputeHash(Encoding.UTF8.GetBytes(queryString));
-            var computedSignature = BitConverter.ToString(hash).Replace("-", "").ToLower();
-
-            return string.Equals(computedSignature, signature, StringComparison.OrdinalIgnoreCase);
-        }
-
-        private bool VerifyRedirectSignature(
-            string amount,
-            string cancel,
-            string code,
-            string id,
-            string orderCode,
-            string status,
-            string signature,
-            string checksumKey)
-        {
-            if (string.IsNullOrEmpty(signature)) return false;
-
-            // Build the query string sorted alphabetically (amount is not returned in PayOS redirect)
-            string raw = $"cancel={cancel.ToLower()}&code={code}&id={id}&orderCode={orderCode}&status={status}";
-
-            using var hmac = new HMACSHA256(Encoding.UTF8.GetBytes(checksumKey));
-            var hash = hmac.ComputeHash(Encoding.UTF8.GetBytes(raw));
-            var computedSignature = BitConverter.ToString(hash).Replace("-", "").ToLower();
-
-            return string.Equals(computedSignature, signature, StringComparison.OrdinalIgnoreCase);
+                Newtonsoft.Json.Linq.JTokenType.Null => "",
+                Newtonsoft.Json.Linq.JTokenType.Boolean => (bool)val ? "true" : "false",
+                _ => val.ToString()
+            };
         }
     }
 }

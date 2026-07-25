@@ -136,7 +136,7 @@ namespace Infrastructure.Implementation
             {
                 var enrollment = await context.Enrollments.FirstOrDefaultAsync(e => e.EnrollmentID == enrollmentId);
                 if (enrollment != null && enrollment.CompletedAt == null)
-                    enrollment.GetType().GetProperty("CompletedAt")?.SetValue(enrollment, DateTime.UtcNow);
+                    enrollment.CompleteEnrollment(null);
             }
         }
 

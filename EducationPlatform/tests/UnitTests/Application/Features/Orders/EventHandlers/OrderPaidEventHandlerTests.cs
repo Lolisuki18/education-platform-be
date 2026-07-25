@@ -10,6 +10,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Xunit;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 
 namespace UnitTests.Application.Features.Orders.EventHandlers
 {
@@ -19,6 +20,7 @@ namespace UnitTests.Application.Features.Orders.EventHandlers
         private readonly Mock<IEnrollmentRepository> _mockEnrollmentRepository;
         private readonly Mock<IEmailService> _mockEmailService;
         private readonly Mock<IConfiguration> _mockConfig;
+        private readonly Mock<ILogger<OrderPaidEventHandler>> _mockLogger;
         private readonly OrderPaidEventHandler _handler;
 
         public OrderPaidEventHandlerTests()
@@ -27,6 +29,7 @@ namespace UnitTests.Application.Features.Orders.EventHandlers
             _mockEnrollmentRepository = new Mock<IEnrollmentRepository>();
             _mockEmailService = new Mock<IEmailService>();
             _mockConfig = new Mock<IConfiguration>();
+            _mockLogger = new Mock<ILogger<OrderPaidEventHandler>>();
 
             _mockUnitOfWork
                 .Setup(u => u.GetRepository<IEnrollmentRepository>())
@@ -36,7 +39,7 @@ namespace UnitTests.Application.Features.Orders.EventHandlers
                 .Setup(r => r.GetStudentEnrollments(It.IsAny<Guid>()))
                 .ReturnsAsync(System.Array.Empty<Enrollment>());
 
-            _handler = new OrderPaidEventHandler(_mockUnitOfWork.Object, _mockEmailService.Object, _mockConfig.Object);
+            _handler = new OrderPaidEventHandler(_mockUnitOfWork.Object, _mockEmailService.Object, _mockConfig.Object, _mockLogger.Object);
         }
 
         [Fact]

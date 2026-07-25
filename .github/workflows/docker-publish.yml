@@ -7,6 +7,22 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_DB: EducationPlatformDB_Test
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: 12345
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -22,8 +38,10 @@ jobs:
       - name: Build
         run: dotnet build EducationPlatform/EducationPlatform.sln --no-restore --configuration Release
 
-      - name: Run unit tests
-        run: dotnet test EducationPlatform/tests/UnitTests/UnitTests.csproj --no-build --configuration Release
+      - name: Run all tests (unit + integration)
+        run: dotnet test EducationPlatform/EducationPlatform.sln --no-build --configuration Release
+        env:
+          TEST_DB_CONNECTION_STRING: "Host=localhost;Database=EducationPlatformDB_Test;Username=postgres;Password=12345"
 
   build-and-push:
     needs: test
@@ -43,4 +61,6 @@ jobs:
         with:
           context: . # Nếu Dockerfile nằm ở thư mục gốc của project
           push: true
-          tags: lolisuki18/education-platform-be:latest
+          tags: |
+            lolisuki18/education-platform-be:latest
+            lolisuki18/education-platform-be:${{ github.sha }}

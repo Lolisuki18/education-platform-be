@@ -1,6 +1,7 @@
 using Application.Interface;
 using Microsoft.Extensions.Configuration;
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading;
@@ -17,6 +18,9 @@ namespace Infrastructure.Services
         private readonly string root;
         private readonly Cloudinary? _cloudinary;
         private readonly ILogger<StorageService> _logger;
+
+        private static readonly HashSet<string> AllowedCompleteUploadExtensions =
+            new(StringComparer.OrdinalIgnoreCase) { "mp4", "mov", "webm", "mkv" };
         #endregion
 
         #region Properties
@@ -132,6 +136,10 @@ namespace Infrastructure.Services
             if (!Guid.TryParse(uploadId, out _))
                 throw new ArgumentException("Invalid uploadId format");
 
+            var normalizedExtension = extension.TrimStart('.');
+            if (!AllowedCompleteUploadExtensions.Contains(normalizedExtension))
+                throw new ArgumentException("Invalid or unsupported file extension.");
+
             var tempDir = Path.Combine(root, "temp", uploadId);
 
             if (!Directory.Exists(tempDir))
@@ -139,7 +147,7 @@ namespace Infrastructure.Services
 
             var finalRelativePath = Path.Combine(
                 "videos",
-                $"{uploadId}.{extension}"
+                $"{uploadId}.{normalizedExtension}"
             );
 
             var finalFullPath = Path.Combine(root, finalRelativePath);

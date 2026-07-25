@@ -61,28 +61,24 @@ namespace UnitTests.Application.Features.Users.Commands
         {
             // Arrange
             var currentUserId = Guid.NewGuid();
-            var targetUserId = Guid.NewGuid();
             _mockCurrentUser.Setup(u => u.Id).Returns(currentUserId);
 
             _mockUserRepository
-                .Setup(r => r.GetByIdAsync(targetUserId))
+                .Setup(r => r.GetByIdAsync(currentUserId))
                 .ReturnsAsync((User?)null);
 
-            var command = new UpdateUserDetailsCommand
-            {
-                UserId = targetUserId
-            };
+            var command = new UpdateUserDetailsCommand();
 
             // Act
             Func<Task> act = async () => await _handler.Handle(command, CancellationToken.None);
 
             // Assert
             await act.Should().ThrowAsync<NotFound>()
-                .WithMessage($"User with ID: {targetUserId} not found.");
+                .WithMessage($"User with ID: {currentUserId} not found.");
         }
 
         [Fact]
-        public async Task Handle_EmptyUserIdInRequest_ShouldFallbackToCurrentUserIdAndUpdateSuccessfully()
+        public async Task Handle_ValidRequest_ShouldUpdateCurrentUserOnlySuccessfully()
         {
             // Arrange
             var currentUserId = Guid.NewGuid();
@@ -111,7 +107,6 @@ namespace UnitTests.Application.Features.Users.Commands
 
             var command = new UpdateUserDetailsCommand
             {
-                UserId = Guid.Empty, // rỗng -> lấy currentUserId
                 Name = "New Name",
                 Phone = "0987654321",
                 Bio = "New Bio"
@@ -125,63 +120,13 @@ namespace UnitTests.Application.Features.Users.Commands
             result.UserID.Should().Be(currentUserId);
             result.Name.Should().Be("New Name");
 
-            // Xác thực các thuộc tính Domain của User được cập nhật chính xác
             user.Name.Should().Be("New Name");
             user.Phone.Should().Be("0987654321");
             user.Bio.Should().Be("New Bio");
 
             _mockUnitOfWork.Verify(u => u.CommitAsync(currentUserId.ToString()), Times.Once);
-        }
-
-        [Fact]
-        public async Task Handle_SpecificUserIdInRequest_ShouldUpdateSpecifiedUserSuccessfully()
-        {
-            // Arrange
-            var adminId = Guid.NewGuid();
-            var targetUserId = Guid.NewGuid();
-            _mockCurrentUser.Setup(u => u.Id).Returns(adminId);
-
-            var targetUser = new User(
-                targetUserId,
-                "target@gmail.com",
-                "password123",
-                "0123456789",
-                "Old Target Name",
-                "Old Target Bio",
-                Role.Student,
-                DateTime.UtcNow,
-                isVerified: true
-            );
-
-            _mockUserRepository
-                .Setup(r => r.GetByIdAsync(targetUserId))
-                .ReturnsAsync(targetUser);
-
-            var expectedDto = new UserDTO { UserID = targetUserId, Name = "New Target Name" };
-            _mockMapper
-                .Setup(m => m.Map<UserDTO>(targetUser))
-                .Returns(expectedDto);
-
-            var command = new UpdateUserDetailsCommand
-            {
-                UserId = targetUserId, // cập nhật cho user khác
-                Name = "New Target Name",
-                Phone = "0987654321",
-                Bio = "New Target Bio"
-            };
-
-            // Act
-            var result = await _handler.Handle(command, CancellationToken.None);
-
-            // Assert
-            result.Should().NotBeNull();
-            result.UserID.Should().Be(targetUserId);
-
-            targetUser.Name.Should().Be("New Target Name");
-            targetUser.Phone.Should().Be("0987654321");
-            targetUser.Bio.Should().Be("New Target Bio");
-
-            _mockUnitOfWork.Verify(u => u.CommitAsync(adminId.ToString()), Times.Once);
+            // A caller can never target another user's account: only GetByIdAsync(currentUserId) is ever invoked.
+            _mockUserRepository.Verify(r => r.GetByIdAsync(It.Is<Guid>(id => id != currentUserId)), Times.Never);
         }
     }
 }

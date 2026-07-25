@@ -15,8 +15,6 @@ namespace Application.Features.Users.Commands
 {
     public class UpdateUserDetailsCommand : IRequest<UserDTO>
     {
-        public Guid UserId { get; set; }
-
         public string Name { get; set; }
 
         public string Phone { get; set; }
@@ -42,7 +40,7 @@ namespace Application.Features.Users.Commands
             if (!_currentUser.Id.HasValue)
                 throw new AuthenticateException("User must be authenticated.");
 
-            var userId = request.UserId == Guid.Empty ? _currentUser.Id.Value : request.UserId;
+            var userId = _currentUser.Id.Value;
 
             var user = await _unitOfWork.GetRepository<IUserRepository>().GetByIdAsync(userId);
 

@@ -214,15 +214,8 @@ namespace API.Controllers
         [HttpGet("complaints/{id:guid}")]
         public async Task<ActionResult<ApiResponse<ReviewComplaintResponseDto>>> GetComplaintDetailForReview(Guid id)
         {
-            var complaint = await mediator.Send(new GetComplaintDetailQuery { ComplaintID = id });
-            var course = await mediator.Send(new GetCourseDetailQuery { CourseID = complaint.CourseID });
-
-            return Ok(ApiResponse<ReviewComplaintResponseDto>.Success(new ReviewComplaintResponseDto
-            {
-                Complaint = complaint,
-                Course = course,
-                Message = "Complaint detail loaded."
-            }));
+            var response = await BuildComplaintReviewResponse(id, "Complaint detail loaded.");
+            return Ok(ApiResponse<ReviewComplaintResponseDto>.Success(response));
         }
 
         [Authorize(Roles = "Admin")]
@@ -236,30 +229,16 @@ namespace API.Controllers
                 AdminNote = request.AdminNote
             });
 
-            var complaint = await mediator.Send(new GetComplaintDetailQuery { ComplaintID = request.ComplaintID });
-            var course = await mediator.Send(new GetCourseDetailQuery { CourseID = complaint.CourseID });
-
-            return Ok(ApiResponse<ReviewComplaintResponseDto>.Success(new ReviewComplaintResponseDto
-            {
-                Message = "Complaint reviewed successfully.",
-                Complaint = complaint,
-                Course = course
-            }));
+            var response = await BuildComplaintReviewResponse(request.ComplaintID, "Complaint reviewed successfully.");
+            return Ok(ApiResponse<ReviewComplaintResponseDto>.Success(response));
         }
 
         [Authorize(Roles = "Admin")]
         [HttpGet("review/{id:guid}")]
         public async Task<ActionResult<ApiResponse<ReviewCourseResponseDto>>> GetCourseForReview(Guid id)
         {
-            var course = await mediator.Send(new GetCourseDetailQuery { CourseID = id });
-            var policies = await mediator.Send(new GetPoliciesQuery());
-
-            return Ok(ApiResponse<ReviewCourseResponseDto>.Success(new ReviewCourseResponseDto
-            {
-                Course = course,
-                Policies = policies,
-                Message = "Course loaded for review."
-            }));
+            var response = await BuildCourseReviewResponse(id, "Course loaded for review.");
+            return Ok(ApiResponse<ReviewCourseResponseDto>.Success(response));
         }
 
         [Authorize(Roles = "Admin")]
@@ -271,15 +250,34 @@ namespace API.Controllers
 
             await courseHub.Clients.All.SendAsync("CourseReviewed", request.CourseID);
 
-            var course = await mediator.Send(new GetCourseDetailQuery { CourseID = request.CourseID });
+            var response = await BuildCourseReviewResponse(request.CourseID, "Course reviewed successfully.");
+            return Ok(ApiResponse<ReviewCourseResponseDto>.Success(response));
+        }
+
+        private async Task<ReviewComplaintResponseDto> BuildComplaintReviewResponse(Guid complaintId, string message)
+        {
+            var complaint = await mediator.Send(new GetComplaintDetailQuery { ComplaintID = complaintId });
+            var course = await mediator.Send(new GetCourseDetailQuery { CourseID = complaint.CourseID });
+
+            return new ReviewComplaintResponseDto
+            {
+                Complaint = complaint,
+                Course = course,
+                Message = message
+            };
+        }
+
+        private async Task<ReviewCourseResponseDto> BuildCourseReviewResponse(Guid courseId, string message)
+        {
+            var course = await mediator.Send(new GetCourseDetailQuery { CourseID = courseId });
             var policies = await mediator.Send(new GetPoliciesQuery());
 
-            return Ok(ApiResponse<ReviewCourseResponseDto>.Success(new ReviewCourseResponseDto
+            return new ReviewCourseResponseDto
             {
-                Message = "Course reviewed successfully.",
                 Course = course,
-                Policies = policies
-            }));
+                Policies = policies,
+                Message = message
+            };
         }
     }
 }

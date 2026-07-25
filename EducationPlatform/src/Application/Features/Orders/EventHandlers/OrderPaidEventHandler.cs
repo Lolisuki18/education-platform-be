@@ -8,6 +8,7 @@ using Domain.CourseManagement.Aggregate;
 using Domain.OrderManagement.Aggregate;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 namespace Application.Features.Orders.EventHandlers
 {
@@ -17,16 +18,19 @@ namespace Application.Features.Orders.EventHandlers
         private readonly IEmailService _emailService;
         private readonly IConfiguration _configuration;
         private readonly IServiceScopeFactory? _scopeFactory;
+        private readonly ILogger<OrderPaidEventHandler> _logger;
 
         public OrderPaidEventHandler(
             IUnitOfWork unitOfWork,
             IEmailService emailService,
             IConfiguration configuration,
+            ILogger<OrderPaidEventHandler> logger,
             IServiceScopeFactory? scopeFactory = null)
         {
             _unitOfWork = unitOfWork;
             _emailService = emailService;
             _configuration = configuration;
+            _logger = logger;
             _scopeFactory = scopeFactory;
         }
 
@@ -75,9 +79,9 @@ namespace Application.Features.Orders.EventHandlers
                                     var emailService = scope.ServiceProvider.GetRequiredService<IEmailService>();
                                     await emailService.SendEmailAsync(student.Email, subject, body);
                                 }
-                                catch (Exception)
+                                catch (Exception ex)
                                 {
-                                    // Ignored in background task
+                                    _logger.LogError(ex, "Failed to send payment confirmation email for order {OrderCode} to {StudentEmail}.", order.OrderCode, student.Email);
                                 }
                             }
                         }
@@ -87,17 +91,18 @@ namespace Application.Features.Orders.EventHandlers
                             {
                                 await _emailService.SendEmailAsync(student.Email, subject, body);
                             }
-                            catch (Exception)
+                            catch (Exception ex)
                             {
-                                // Ignored in background task
+                                _logger.LogError(ex, "Failed to send payment confirmation email for order {OrderCode} to {StudentEmail}.", order.OrderCode, student.Email);
                             }
                         }
                     });
                 }
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                // Prevent email sending failures from reverting order completion
+                // Prevent email sending failures from reverting order completion, but don't lose the signal.
+                _logger.LogError(ex, "Failed to prepare payment confirmation email for order {OrderId}.", notification.OrderID);
             }
 
             await Task.CompletedTask;

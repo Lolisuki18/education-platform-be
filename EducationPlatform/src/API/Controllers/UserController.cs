@@ -34,7 +34,6 @@ namespace API.Controllers
         {
             var command = new UpdateUserDetailsCommand
             {
-                UserId = Guid.Empty,
                 Name = request.Name,
                 Phone = request.Phone,
                 Bio = request.Bio

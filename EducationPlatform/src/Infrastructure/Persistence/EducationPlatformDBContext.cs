@@ -619,7 +619,7 @@ namespace Infrastructure.Persistence
                 entity.HasOne<User>()
                       .WithMany()
                       .HasForeignKey(c => c.StudentID)
-                      .OnDelete(DeleteBehavior.Cascade);
+                      .OnDelete(DeleteBehavior.Restrict);
             });
 
             // ====================
@@ -752,6 +752,14 @@ namespace Infrastructure.Persistence
 
                 entity.Property(cp => cp.IsCompleted).IsRequired();
                 entity.Property(cp => cp.EnrollmentID).IsRequired();
+
+                // Optimistic concurrency: prevents two concurrent lesson/quiz submissions
+                // for the same enrollment from silently overwriting each other's recalculated progress.
+                entity.Property<uint>("xmin")
+                      .HasColumnName("xmin")
+                      .HasColumnType("xid")
+                      .ValueGeneratedOnAddOrUpdate()
+                      .IsConcurrencyToken();
 
                 entity.HasMany(cp => cp.ChapterProgresses)
                       .WithOne()

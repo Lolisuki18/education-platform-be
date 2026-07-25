@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using System.Net;
 using Application.BusinessException;
 
@@ -54,6 +55,12 @@ namespace API.ExceptionHandlers
             {
                 problemDetails.Status = (int)HttpStatusCode.Conflict;
                 problemDetails.Title = "Conflict";
+            }
+            else if (exception is DbUpdateConcurrencyException)
+            {
+                problemDetails.Status = (int)HttpStatusCode.Conflict;
+                problemDetails.Title = "Concurrent Update";
+                problemDetails.Detail = "This resource was updated by another request. Please retry.";
             }
 
             if (problemDetails.Status == (int)HttpStatusCode.InternalServerError)

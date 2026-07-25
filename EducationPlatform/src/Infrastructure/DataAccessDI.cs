@@ -51,6 +51,7 @@ namespace Infrastructure
             services.AddScoped<Application.Interface.ITokenService, Infrastructure.Services.JwtTokenService>();
 
             services.AddScoped<Application.Interface.IPaymentService, Infrastructure.Services.PayOSPaymentService>();
+            services.AddScoped<Application.Interface.IPayOSSignatureVerifier, Infrastructure.Services.PayOSSignatureVerifier>();
             services.AddScoped<Application.Interface.IEmailService, Infrastructure.Services.SmtpEmailService>();
             services.AddScoped<Domain.Common.Interfaces.INotificationService,
                                Infrastructure.Services.LogNotificationService>();

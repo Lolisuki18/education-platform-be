@@ -106,6 +106,9 @@ builder.Services.AddAuthentication(options =>
 
     if (string.IsNullOrWhiteSpace(secretKey))
         throw new InvalidOperationException("Missing configuration: JwtSettings:SecretKey");
+    if (Encoding.UTF8.GetByteCount(secretKey) < 32)
+        throw new InvalidOperationException(
+            "JwtSettings:SecretKey must be at least 32 bytes (256 bits) long for HS256 signing.");
     if (string.IsNullOrWhiteSpace(issuer))
         throw new InvalidOperationException("Missing configuration: JwtSettings:Issuer");
     if (string.IsNullOrWhiteSpace(audience))
