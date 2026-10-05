@@ -36,6 +36,11 @@ namespace Domain.OrderManagement.Aggregate
             Guid studentId,
             Guid courseId);
 
+        /// <summary>Whether the student has an order that is still waiting for payment inside its payment window.</summary>
+        Task<bool> HasOpenOrderAsync(
+            Guid studentId,
+            DateTime now);
+
         /// <summary>Unpaid orders created before <paramref name="createdBefore"/>.</summary>
         Task<List<Order>> GetUnpaidOrdersCreatedBefore(
             DateTime createdBefore,

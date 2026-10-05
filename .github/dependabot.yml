@@ -1,0 +1,43 @@
+version: 2
+
+updates:
+  # NuGet: one grouped pull request per week instead of one per package
+  - package-ecosystem: nuget
+    directory: /EducationPlatform
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    groups:
+      minor-and-patch:
+        update-types: [minor, patch]
+    ignore:
+      # The application targets .NET 9: the 10.x Microsoft packages need .NET 10
+      - dependency-name: Microsoft.EntityFrameworkCore*
+        update-types: [version-update:semver-major]
+      - dependency-name: Microsoft.AspNetCore.*
+        update-types: [version-update:semver-major]
+      - dependency-name: Microsoft.Extensions.*
+        update-types: [version-update:semver-major]
+      # MediatR 13+ is commercially licensed, so a major bump needs a human decision
+      - dependency-name: MediatR
+        update-types: [version-update:semver-major]
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    groups:
+      actions:
+        patterns: ["*"]
+
+  - package-ecosystem: docker
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    ignore:
+      # Stay on the .NET 9 images until the application itself moves to .NET 10
+      - dependency-name: mcr.microsoft.com/dotnet/*
+        update-types: [version-update:semver-major]

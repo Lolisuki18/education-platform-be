@@ -107,6 +107,14 @@ File trong `Storage/videos` không còn phục vụ công khai. `GET /media/vide
 
 `GET /api/notifications?unreadOnly=&pageIndex=&pageSize=`, `GET /api/notifications/unread-count`, `POST /api/notifications/{id}/read`, `POST /api/notifications/read-all`. Thông báo mới cũng được đẩy realtime tới mọi kết nối `/courseHub` của người nhận qua sự kiện `Notification`. Tắt email đi kèm bằng `Notifications:EmailEnabled=false`. Thông báo tự xoá sau `Retention:NotificationDays` ngày.
 
+### 🔒 Dữ liệu cá nhân (xuất dữ liệu & xoá tài khoản)
+
+- `GET /api/user/me/export`: tải bản sao dữ liệu của chính mình (hồ sơ, ghi danh, đơn hàng, đánh giá, khiếu nại, thông báo, khoá học đang dạy) dưới dạng JSON. Không bao giờ có hash mật khẩu, mã OTP hay token.
+- `DELETE /api/user/me` (body `{ "password": "..." }`): người dùng tự xoá tài khoản, phải nhập lại mật khẩu. `DELETE /api/user/{id}` (admin): xoá theo yêu cầu của người khác. Cả hai giới hạn 5 lần / 10 phút.
+- Đây là **ẩn danh hoá, không xoá dòng**: đơn hàng, ghi danh và đánh giá vẫn trỏ tới người dùng nên dòng `Users` được giữ lại nhưng email, số điện thoại, tên, giới thiệu, mã OTP bị xoá (email/sđt được giải phóng, đăng ký lại bằng chính chúng được), mật khẩu bị thay bằng giá trị ngẫu nhiên, mọi phiên đăng nhập bị thu hồi. Thông báo của người đó bị xoá, các dòng audit cũ chứa email/sđt cũng bị xoá và audit mới không còn ghi các trường này.
+- Không cho xoá khi: còn đơn đang chờ thanh toán, giáo viên còn khoá học đã xuất bản (admin phải gỡ trước), hoặc là admin cuối cùng (HTTP 409).
+- Còn được giữ lại có chủ đích: đơn hàng (nghĩa vụ kế toán), nội dung đánh giá và khiếu nại (hiển thị dưới tên "Deleted user").
+
 ### 🔀 Phiên bản API
 
 Mọi endpoint truy cập được qua cả `/api/...` (như trước đây) và `/api/v1/...`. Swagger chỉ liệt kê các route `/api/v1/...`. Frontend nên chuyển dần sang `/api/v1`.
@@ -199,8 +207,10 @@ Mỗi request được gắn một `CorrelationId` (đọc từ header `X-Correl
 
 ## 🔄 CI/CD
 
-- **`.github/workflows/dotnet-ci.yml`**: chạy trên mọi push/PR vào `main`, `develop`, `master` — kiểm tra format, build, quét lỗ hổng NuGet, chạy toàn bộ test (unit + integration, có service PostgreSQL đi kèm).
-- **`.github/workflows/docker-publish.yml`**: chạy khi push vào `main` — build + chạy test trước, chỉ build & push Docker image (tag `latest` và tag theo commit SHA) khi test pass.
+- **`.github/workflows/dotnet-ci.yml`**: chạy trên mọi push/PR vào `main`, `develop`, `master`.
+  - Job `build-and-test`: kiểm tra format, build, quét lỗ hổng NuGet, chạy toàn bộ test (unit + integration, có service PostgreSQL đi kèm), kiểm tra ngưỡng coverage.
+  - Job `docker` (chạy sau khi test pass): build Docker image trên mọi PR (Dockerfile hỏng sẽ làm PR đỏ), quét bằng **Trivy** (fail khi có lỗ hổng CRITICAL/HIGH đã có bản vá), và chỉ khi push vào `main` mới đẩy image lên Docker Hub (tag `latest` và tag theo commit SHA). Cần secret `DOCKERHUB_USERNAME`, `DOCKERHUB_TOKEN`.
+- **`.github/dependabot.yml`**: mỗi tuần mở PR nâng NuGet (gộp minor/patch thành một PR), GitHub Actions và image Docker. Bỏ qua bản major của EF Core/ASP.NET/image .NET (app đang ở .NET 9) và MediatR (từ v13 là phần mềm có phí).
 - **`.github/workflows/codeql.yml`**: quét bảo mật tĩnh (CodeQL) cho code C#.
 
 ## 🤝 Nhóm Thực Hiện

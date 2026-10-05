@@ -14,6 +14,7 @@ namespace API.Extensions
         public const string VerifyEmail = "verify-email";
         public const string RefreshToken = "refresh-token";
         public const string Upload = "upload";
+        public const string Account = "account";
     }
 
     public class RateLimitingOptions
@@ -64,6 +65,10 @@ namespace API.Extensions
 
                 options.AddPolicy(RateLimitPolicies.RefreshToken, context =>
                     Partition(IsEnabled(context), ClientKey(context), 30, TimeSpan.FromMinutes(1)));
+
+                // Re-entering the password to delete an account, and the personal data download
+                options.AddPolicy(RateLimitPolicies.Account, context =>
+                    Partition(IsEnabled(context), ClientKey(context), 5, TimeSpan.FromMinutes(10)));
 
                 // A video is uploaded as many chunks, so this is generous per user but still bounded
                 options.AddPolicy(RateLimitPolicies.Upload, context =>

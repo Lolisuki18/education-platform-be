@@ -90,6 +90,15 @@ namespace Infrastructure.Implementation
         }
 
 
+        public async Task<bool> HasPublishedCourseAsync(
+            Guid teacherId,
+            CancellationToken cancellationToken = default)
+        {
+            return await context.Courses
+                .AsNoTracking()
+                .AnyAsync(c => c.TeacherID == teacherId && c.Status == CourseStatus.Published, cancellationToken);
+        }
+
         public async Task<bool> SlugExistsAsync(
             string slug,
             CancellationToken cancellationToken = default)

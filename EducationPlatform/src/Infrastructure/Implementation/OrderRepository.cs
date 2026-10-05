@@ -141,6 +141,20 @@ namespace Infrastructure.Implementation
                     o.Status == OrderStatus.Created);
         }
 
+        public async Task<bool> HasOpenOrderAsync(
+            Guid studentId,
+            DateTime now)
+        {
+            var oldestOpen = now - Order.PaymentWindow;
+
+            return await context.Orders
+                .AsNoTracking()
+                .AnyAsync(o =>
+                    o.StudentID == studentId &&
+                    o.Status == OrderStatus.Created &&
+                    o.CreatedAt > oldestOpen);
+        }
+
         public async Task<List<Order>> GetUnpaidOrdersCreatedBefore(
             DateTime createdBefore,
             int take)

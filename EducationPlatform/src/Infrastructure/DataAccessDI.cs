@@ -85,6 +85,7 @@ namespace Infrastructure
             services.AddSingleton<Application.Interface.ILoginAttemptTracker, Infrastructure.Services.MemoryLoginAttemptTracker>();
             services.AddSingleton<Application.Interface.IUserActivityCache, Infrastructure.Services.MemoryUserActivityCache>();
 
+            services.AddScoped<Application.Interface.IPersonalDataReader, Infrastructure.Services.PersonalDataReader>();
             services.AddScoped<Application.Interface.IPaymentService, Infrastructure.Services.PayOSPaymentService>();
             services.AddScoped<Application.Interface.IPayOSSignatureVerifier, Infrastructure.Services.PayOSSignatureVerifier>();
             // E-mails are queued and sent by a background service, so SMTP trouble never reaches the request

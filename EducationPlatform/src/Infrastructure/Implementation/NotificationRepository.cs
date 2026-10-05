@@ -48,5 +48,12 @@ namespace Infrastructure.Implementation
                 .Where(n => n.UserID == userId && n.ReadAt == null)
                 .ExecuteUpdateAsync(setters => setters.SetProperty(n => n.ReadAt, now), cancellationToken);
         }
+
+        public async Task<int> DeleteAllForUserAsync(Guid userId, CancellationToken cancellationToken = default)
+        {
+            return await context.Notifications
+                .Where(n => n.UserID == userId)
+                .ExecuteDeleteAsync(cancellationToken);
+        }
     }
 }

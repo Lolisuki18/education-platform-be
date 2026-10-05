@@ -82,3 +82,55 @@ jobs:
       with:
         name: coverage
         path: coverage/**/coverage.cobertura.xml
+
+  docker:
+    # Builds the production image on every run (so a broken Dockerfile fails the pull request), scans it, and
+    # publishes it only for a push to main, after the tests above passed.
+    needs: build-and-test
+    runs-on: ubuntu-latest
+    env:
+      IMAGE: lolisuki18/education-platform-be
+      PUBLISH: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Build image
+      uses: docker/build-push-action@v6
+      with:
+        context: .
+        load: true
+        tags: ${{ env.IMAGE }}:scan
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+
+    - name: Scan image for vulnerabilities
+      uses: aquasecurity/trivy-action@0.28.0
+      with:
+        image-ref: ${{ env.IMAGE }}:scan
+        severity: CRITICAL,HIGH
+        # Only fail on problems that already have a fix: nothing can be done about the rest
+        ignore-unfixed: true
+        exit-code: '1'
+
+    - name: Login to Docker Hub
+      if: env.PUBLISH == 'true'
+      uses: docker/login-action@v3
+      with:
+        username: ${{ secrets.DOCKERHUB_USERNAME }}
+        password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+    - name: Push image
+      if: env.PUBLISH == 'true'
+      uses: docker/build-push-action@v6
+      with:
+        context: .
+        push: true
+        tags: |
+          ${{ env.IMAGE }}:latest
+          ${{ env.IMAGE }}:${{ github.sha }}
+        cache-from: type=gha

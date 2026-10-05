@@ -121,6 +121,18 @@ namespace Infrastructure.Implementation
             "AuditLog"
         };
 
+        /// <summary>
+        /// Personal data of a user is never copied into the audit trail: it would outlive the account and could
+        /// not be erased with it. The trail still records which user changed and when.
+        /// </summary>
+        private static readonly HashSet<string> UserPersonalProperties = new(StringComparer.Ordinal)
+        {
+            "Email",
+            "Phone",
+            "Name",
+            "Bio"
+        };
+
         private async Task AddAuditLogsAsync(string? performedBy)
         {
             var entries = context.ChangeTracker.Entries()
@@ -149,6 +161,9 @@ namespace Infrastructure.Implementation
                     {
                         continue;
                     }
+
+                    if (entityName == "User" && UserPersonalProperties.Contains(propName))
+                        continue;
 
                     originalValuesDict[propName] = prop.OriginalValue;
                     currentValuesDict[propName] = prop.CurrentValue;
