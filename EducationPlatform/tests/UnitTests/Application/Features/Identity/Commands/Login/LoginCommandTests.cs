@@ -123,7 +123,7 @@ namespace UnitTests.Application.Features.Identity.Commands.Login
             var user = new User(
                 Guid.NewGuid(),
                 email,
-                "correctpassword",
+                "correctpassword1",
                 "0123456789",
                 "Test User",
                 null,

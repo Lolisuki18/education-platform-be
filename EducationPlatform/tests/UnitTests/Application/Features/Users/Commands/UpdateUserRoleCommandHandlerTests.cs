@@ -18,6 +18,7 @@ namespace UnitTests.Application.Features.Users.Commands
         private readonly Mock<IUnitOfWork> _mockUnitOfWork;
         private readonly Mock<IUserRepository> _mockUserRepository;
         private readonly Mock<ICurrentUser> _mockCurrentUser;
+        private readonly Mock<IUserActivityCache> _mockActivityCache;
         private readonly UpdateUserRoleCommandHandler _handler;
 
         public UpdateUserRoleCommandHandlerTests()
@@ -25,6 +26,7 @@ namespace UnitTests.Application.Features.Users.Commands
             _mockUnitOfWork = new Mock<IUnitOfWork>();
             _mockUserRepository = new Mock<IUserRepository>();
             _mockCurrentUser = new Mock<ICurrentUser>();
+            _mockActivityCache = new Mock<IUserActivityCache>();
 
             _mockUnitOfWork
                 .Setup(u => u.GetRepository<IUserRepository>())
@@ -32,7 +34,8 @@ namespace UnitTests.Application.Features.Users.Commands
 
             _handler = new UpdateUserRoleCommandHandler(
                 _mockUnitOfWork.Object,
-                _mockCurrentUser.Object);
+                _mockCurrentUser.Object,
+                _mockActivityCache.Object);
         }
 
         [Fact]
@@ -75,6 +78,9 @@ namespace UnitTests.Application.Features.Users.Commands
             // Assert
             user.Role.Should().Be(Role.Teacher);
             _mockUnitOfWork.Verify(u => u.CommitAsync(currentUserId.ToString()), Times.Once);
+
+            // The cached role is stale now; without this the old token would keep working until the cache expires
+            _mockActivityCache.Verify(c => c.Invalidate(targetUserId), Times.Once);
         }
     }
 }

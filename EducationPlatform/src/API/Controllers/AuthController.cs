@@ -35,6 +35,7 @@ namespace API.Controllers
         }
 
         [EnableRateLimiting(RateLimitPolicies.Login)]
+        [AllowAnonymous]
         [HttpPost("login")]
         public async Task<ActionResult<ApiResponse<LoginResponseDto>>> Login([FromBody] LoginRequestDto request)
         {
@@ -52,6 +53,7 @@ namespace API.Controllers
         }
 
         [EnableRateLimiting(RateLimitPolicies.Register)]
+        [AllowAnonymous]
         [HttpPost("register")]
         public async Task<ActionResult<ApiResponse>> Register([FromBody] RegisterRequestDto request)
         {
@@ -69,6 +71,7 @@ namespace API.Controllers
         }
 
         [EnableRateLimiting(RateLimitPolicies.VerifyEmail)]
+        [AllowAnonymous]
         [HttpPost("verify-email")]
         public async Task<ActionResult<ApiResponse>> VerifyEmail([FromBody] VerifyEmailRequestDto request)
         {
@@ -81,6 +84,7 @@ namespace API.Controllers
         }
 
         [EnableRateLimiting(RateLimitPolicies.RefreshToken)]
+        [AllowAnonymous]
         [HttpPost("refresh-token")]
         public async Task<ActionResult<ApiResponse<LoginResponseDto>>> RefreshToken([FromBody] RefreshTokenRequestDto request)
         {

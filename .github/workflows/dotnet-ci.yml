@@ -37,7 +37,10 @@ jobs:
     - name: Setup .NET SDK
       uses: actions/setup-dotnet@v4
       with:
-        dotnet-version: '9.0.x'
+        # The app targets .NET 9; the test projects target .NET 10 (Mvc.Testing 10), so both SDKs are needed
+        dotnet-version: |
+          9.0.x
+          10.0.x
         cache: true
         cache-dependency-path: 'EducationPlatform/EducationPlatform.sln'
 

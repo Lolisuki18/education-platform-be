@@ -31,6 +31,7 @@ namespace API.Controllers
             return Ok(ApiResponse<CourseReviewDTO>.Success(result, "Review submitted successfully."));
         }
 
+        [AllowAnonymous]
         [HttpGet]
         public async Task<ActionResult<ApiResponse<IEnumerable<CourseReviewDTO>>>> GetCourseReviews(Guid courseId, [FromQuery] int pageIndex = 1, [FromQuery] int pageSize = 10)
         {

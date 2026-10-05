@@ -1,5 +1,6 @@
 using System;
 using FluentAssertions;
+using Application.Interface;
 using Infrastructure.Services;
 using Microsoft.Extensions.Caching.Memory;
 using Xunit;
@@ -57,21 +58,22 @@ namespace UnitTests.InfrastructureTests
         [Fact]
         public void UnknownUser_ShouldBeAMiss()
         {
-            _cache.TryGetIsActive(Guid.NewGuid(), out _).Should().BeFalse();
+            _cache.TryGet(Guid.NewGuid(), out _).Should().BeFalse();
         }
 
         [Fact]
         public void StoredStatus_ShouldBeReturned_UntilInvalidated()
         {
             var id = Guid.NewGuid();
-            _cache.SetIsActive(id, true);
+            _cache.Set(id, new UserStatus(true, "Teacher"));
 
-            _cache.TryGetIsActive(id, out var active).Should().BeTrue();
-            active.Should().BeTrue();
+            _cache.TryGet(id, out var status).Should().BeTrue();
+            status.IsActive.Should().BeTrue();
+            status.Role.Should().Be("Teacher");
 
             _cache.Invalidate(id);
 
-            _cache.TryGetIsActive(id, out _).Should().BeFalse();
+            _cache.TryGet(id, out _).Should().BeFalse();
         }
     }
 }

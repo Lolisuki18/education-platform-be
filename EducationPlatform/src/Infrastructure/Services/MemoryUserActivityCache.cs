@@ -4,8 +4,8 @@ using Microsoft.Extensions.Caching.Memory;
 namespace Infrastructure.Services
 {
     /// <summary>
-    /// In-process implementation. With several API instances an instance only learns about a status change
-    /// made elsewhere when its entry expires, so <see cref="CacheDuration"/> is the worst-case delay.
+    /// In-process implementation. With several API instances an instance only learns about a status or role
+    /// change made elsewhere when its entry expires, so <see cref="CacheDuration"/> is the worst-case delay.
     /// </summary>
     public class MemoryUserActivityCache : IUserActivityCache
     {
@@ -18,14 +18,14 @@ namespace Infrastructure.Services
             _cache = cache;
         }
 
-        public bool TryGetIsActive(Guid userId, out bool isActive)
+        public bool TryGet(Guid userId, out UserStatus status)
         {
-            return _cache.TryGetValue(Key(userId), out isActive);
+            return _cache.TryGetValue(Key(userId), out status);
         }
 
-        public void SetIsActive(Guid userId, bool isActive)
+        public void Set(Guid userId, UserStatus status)
         {
-            _cache.Set(Key(userId), isActive, CacheDuration);
+            _cache.Set(Key(userId), status, CacheDuration);
         }
 
         public void Invalidate(Guid userId)
@@ -33,6 +33,6 @@ namespace Infrastructure.Services
             _cache.Remove(Key(userId));
         }
 
-        private static string Key(Guid userId) => $"UserActive:{userId}";
+        private static string Key(Guid userId) => $"UserStatus:{userId}";
     }
 }

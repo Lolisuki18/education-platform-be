@@ -1,7 +1,9 @@
 using System.Data.Common;
 using Infrastructure.Persistence.Seeds;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
 namespace Infrastructure.Persistence
@@ -11,6 +13,24 @@ namespace Infrastructure.Persistence
     {
         // Arbitrary but fixed: every instance must ask for the same advisory lock
         private const long AdvisoryLockKey = 7426913501;
+
+        /// <summary>
+        /// Demo data is opt-in: on by default only in Development, and only when <c>Database:SeedDemoData</c> says so elsewhere.
+        /// </summary>
+        internal static SeedOptions ReadSeedOptions(IServiceProvider services)
+        {
+            var configuration = services.GetRequiredService<IConfiguration>();
+            var environment = services.GetRequiredService<IHostEnvironment>();
+
+            var options = new SeedOptions
+            {
+                DemoData = configuration.GetValue("Database:SeedDemoData", environment.IsDevelopment()),
+                DemoPassword = Environment.GetEnvironmentVariable("SEED_DEFAULT_PASSWORD") ?? SeedOptions.DefaultDemoPassword
+            };
+
+            configuration.GetSection("Admin").Bind(options.Admin);
+            return options;
+        }
 
         public static async Task InitializeAsync(
             IServiceProvider services,
@@ -32,7 +52,7 @@ namespace Infrastructure.Persistence
                         await db.Database.ExecuteSqlRawAsync($"SELECT pg_advisory_lock({AdvisoryLockKey})", cancellationToken);
 
                         await db.Database.MigrateAsync(cancellationToken);
-                        await Seeder.SeedAsync(db);
+                        await Seeder.SeedAsync(db, ReadSeedOptions(scope.ServiceProvider), logger);
                     }
                     finally
                     {

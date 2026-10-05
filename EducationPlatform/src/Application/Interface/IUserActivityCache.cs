@@ -1,14 +1,17 @@
 namespace Application.Interface
 {
+    /// <summary>What the API needs to know about an account on every authenticated request.</summary>
+    public readonly record struct UserStatus(bool IsActive, string Role);
+
     /// <summary>
-    /// Short-lived cache of "is this account still active", consulted on every authenticated request.
-    /// Changing an account's status must call <see cref="Invalidate"/> so the change applies immediately.
+    /// Short-lived cache of <see cref="UserStatus"/>, consulted on every authenticated request.
+    /// Changing an account's status or role must call <see cref="Invalidate"/> so the change applies immediately.
     /// </summary>
     public interface IUserActivityCache
     {
-        bool TryGetIsActive(Guid userId, out bool isActive);
+        bool TryGet(Guid userId, out UserStatus status);
 
-        void SetIsActive(Guid userId, bool isActive);
+        void Set(Guid userId, UserStatus status);
 
         void Invalidate(Guid userId);
     }

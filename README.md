@@ -132,6 +132,10 @@ Các khoá cấu hình vận hành (đặt trong `appsettings.json` hoặc dạn
 | :------------------------------------ | :---------------------- | :----------------------------------------------------------------------- |
 | `RateLimiting:Enabled`                | `true`                  | Bật/tắt rate limit (theo user, hoặc theo IP khi chưa đăng nhập)          |
 | `Database:AutoMigrate`                | `true`                  | Tự migrate + seed lúc khởi động                                          |
+| `Database:SeedDemoData`               | chỉ Development        | Seed user/khoá học/đơn hàng giả. **Không bật ở Production**              |
+| `Admin:Email` / `Admin:Password`      | (trống)                 | Tài khoản admin đầu tiên, chỉ tạo khi chưa có admin nào (mật khẩu ≥ 8 ký tự, có chữ và số) |
+| `Retention:*`                         | bật, 7 / 365 / 7 ngày   | Dọn refresh session hết hạn, audit log cũ, tài khoản không xác thực email |
+| `JwtSettings:ExpiryMinutes`           | `60`                    | Thời hạn access token (cho phép số lẻ)                                   |
 | `Swagger:Enabled`                     | chỉ Development         | Bật Swagger UI                                                           |
 | `Security:UseHttpsRedirection`        | `true` ngoài Development | HTTPS redirect + HSTS                                                    |
 | `Logging:File:Enabled`                | chỉ Development         | Ghi log ra file `logs/` (container nên chỉ log ra console)               |
@@ -147,6 +151,10 @@ $env:TEST_DB_CONNECTION_STRING = "Host=localhost;Database=EducationPlatformDB_Te
 dotnet test EducationPlatform/tests/IntegrationTests
 ```
 
+> **Tài khoản & mật khẩu:** hệ thống không còn tự tạo tài khoản mặc định. Ở Production hãy đặt `Admin__Email` + `Admin__Password` cho lần chạy đầu tiên. Nếu DB được seed bởi phiên bản cũ, tài khoản admin trong đó có mật khẩu mặc định đã bị lộ trong source: **đổi ngay**, ứng dụng sẽ ghi log mức Critical mỗi lần khởi động cho đến khi bạn đổi. Dữ liệu demo cũ (user `studentN@gmail.com`, khoá học, đơn hàng giả) cần được xoá thủ công.
+>
+> Chính sách mật khẩu: 8–72 byte, có ít nhất một chữ và một số. Mã OTP chỉ nằm trong email (DB lưu hash), gửi lại tối đa 1 lần/60 giây. Email được gửi nền qua hàng đợi có retry nên SMTP lỗi không làm chậm hay hỏng request.
+>
 > CI chạy unit test kèm coverage (tối thiểu 65% dòng cho Domain + Application, xem `.github/scripts/check-coverage.py`) rồi mới chạy integration test.
 
 > **Lưu ý bảo mật:** File `appsettings.json` đã được thêm vào `.gitignore`. Chỉ sử dụng `appsettings.Example.json` làm template.

@@ -47,7 +47,10 @@ namespace Application.Features.Courses.Queries.GetLandingPage
                 .Where(c => c.Status == Domain.CourseManagement.Enum.CourseStatus.Published);
 
             if (!string.IsNullOrWhiteSpace(request.Title))
-                coursesQuery = coursesQuery.Where(c => c.Title.Contains(request.Title));
+            {
+                var pattern = Application.Common.SearchPattern.Contains(request.Title);
+                coursesQuery = coursesQuery.Where(c => EF.Functions.Like(c.Title.ToLower(), pattern, Application.Common.SearchPattern.EscapeCharacter));
+            }
 
             if (!string.IsNullOrWhiteSpace(request.GradeName))
                 coursesQuery = coursesQuery.Where(c => c.Grade.Name == request.GradeName);

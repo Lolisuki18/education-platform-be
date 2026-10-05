@@ -35,7 +35,7 @@ namespace Infrastructure.Persistence.Seeds
             var courseIds = coursePrices.Keys.ToList();
 
             // 3-year range (2021 ? now)
-            var endDate = DateTime.Now;
+            var endDate = DateTime.UtcNow;
             var startDate = endDate.AddYears(-3);
 
             while (createdCount < targetCount)

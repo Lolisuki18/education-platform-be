@@ -34,7 +34,10 @@ jobs:
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: "9.0.x"
+          # The app targets .NET 9; the test projects target .NET 10, so both SDKs are needed
+          dotnet-version: |
+            9.0.x
+            10.0.x
 
       - name: Restore dependencies
         run: dotnet restore EducationPlatform/EducationPlatform.sln

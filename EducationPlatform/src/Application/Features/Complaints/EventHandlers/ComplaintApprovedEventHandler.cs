@@ -82,7 +82,7 @@ namespace Application.Features.Complaints.EventHandlers
                 var course = await courseRepo.GetByIdAsync(notification.CourseId, cancellationToken);
                 if (course != null)
                 {
-                    course.MarkAsRejected(DateTime.Now, "Rejected due to approved complaint.");
+                    course.MarkAsRejected(DateTime.UtcNow, "Rejected due to approved complaint.");
                     await courseRepo.UpdateAsync(course.CourseID, course, cancellationToken);
                 }
             }

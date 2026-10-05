@@ -34,8 +34,7 @@ namespace IntegrationTests
                 Role.Teacher,
                 DateTime.Now
             );
-            teacher.GenerateEmailOtp(TimeSpan.FromMinutes(5));
-            teacher.VerifyEmail(teacher.EmailOtp!);
+            teacher.VerifyEmail(teacher.GenerateEmailOtp(TimeSpan.FromMinutes(5)));
             context.Set<User>().Add(teacher);
 
             // Seed a second Teacher User for role authorization checks
@@ -49,8 +48,7 @@ namespace IntegrationTests
                 Role.Teacher,
                 DateTime.Now
             );
-            teacher2.GenerateEmailOtp(TimeSpan.FromMinutes(5));
-            teacher2.VerifyEmail(teacher2.EmailOtp!);
+            teacher2.VerifyEmail(teacher2.GenerateEmailOtp(TimeSpan.FromMinutes(5)));
             context.Set<User>().Add(teacher2);
 
             // Seed an Admin User
@@ -64,8 +62,7 @@ namespace IntegrationTests
                 Role.Admin,
                 DateTime.Now
             );
-            admin.GenerateEmailOtp(TimeSpan.FromMinutes(5));
-            admin.VerifyEmail(admin.EmailOtp!);
+            admin.VerifyEmail(admin.GenerateEmailOtp(TimeSpan.FromMinutes(5)));
             context.Set<User>().Add(admin);
 
             // Seed a Student User
@@ -79,8 +76,7 @@ namespace IntegrationTests
                 Role.Student,
                 DateTime.Now
             );
-            student.GenerateEmailOtp(TimeSpan.FromMinutes(5));
-            student.VerifyEmail(student.EmailOtp!);
+            student.VerifyEmail(student.GenerateEmailOtp(TimeSpan.FromMinutes(5)));
             context.Set<User>().Add(student);
 
             // Seed a Coupon for Student

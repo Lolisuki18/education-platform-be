@@ -1,3 +1,5 @@
+using System.Text;
+using Domain.IdentityManagement.ValueObject;
 using FluentValidation;
 
 namespace Application.Features.Identity.Commands.Register
@@ -8,11 +10,16 @@ namespace Application.Features.Identity.Commands.Register
         {
             RuleFor(v => v.Email)
                 .NotEmpty().WithMessage("Email is required.")
-                .EmailAddress().WithMessage("Invalid email format.");
+                .EmailAddress().WithMessage("Invalid email format.")
+                .MaximumLength(200).WithMessage("Email must not exceed 200 characters.");
 
             RuleFor(v => v.Password)
                 .NotEmpty().WithMessage("Password is required.")
-                .MinimumLength(8).WithMessage("Password must be at least 8 characters.");
+                .MinimumLength(Password.MinLength).WithMessage($"Password must be at least {Password.MinLength} characters.")
+                .Must(p => p == null || Encoding.UTF8.GetByteCount(p) <= Password.MaxBytes)
+                    .WithMessage($"Password must not exceed {Password.MaxBytes} bytes.")
+                .Must(p => p != null && p.Any(char.IsLetter) && p.Any(char.IsDigit))
+                    .WithMessage("Password must contain at least one letter and one digit.");
 
             RuleFor(v => v.Phone)
                 .NotEmpty().WithMessage("Phone is required.")

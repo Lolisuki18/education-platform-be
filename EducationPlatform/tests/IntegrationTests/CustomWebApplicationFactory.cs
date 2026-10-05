@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.TestHost;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Moq;
 using Respawn;
 using Xunit;
@@ -54,6 +55,8 @@ namespace IntegrationTests
                     { "Database:AutoMigrate", "false" },
                     { "Security:UseHttpsRedirection", "false" },
                     { "Orders:ExpiredOrderCleanupEnabled", "false" },
+                    { "Retention:Enabled", "false" },
+                    { "Database:SeedDemoData", "false" },
 
                     { "PayOS:ClientId", "test-client-id" },
                     { "PayOS:ApiKey", "test-api-key" },
@@ -123,6 +126,10 @@ namespace IntegrationTests
                     .Returns(true);
 
                 services.AddSingleton(fakeVerifier.Object);
+
+                // E-mails are captured instead of queued for SMTP; tests read verification codes from the capture
+                services.RemoveAll<Application.Interface.IEmailService>();
+                services.AddScoped<Application.Interface.IEmailService, CapturingEmailService>();
 
                 // 3. Remove existing storage service registration, and add mock
                 var storageDescriptor = services.FirstOrDefault(d => d.ServiceType == typeof(Application.Interface.IStorageService));

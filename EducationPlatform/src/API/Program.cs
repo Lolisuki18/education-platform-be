@@ -5,6 +5,7 @@ using API.Middlewares;
 using Application;
 using Infrastructure;
 using Infrastructure.Persistence;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.Extensions.FileProviders;
 using Serilog;
@@ -42,6 +43,10 @@ builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 builder.Services.AddAuthorization(options =>
 {
     options.AddPolicy(API.Helpers.Policies.AdminOnly, policy => policy.RequireRole("Admin"));
+
+    // Secure by default: an endpoint without an explicit [Authorize] / [AllowAnonymous] requires a signed-in user,
+    // so forgetting the attribute on a new endpoint closes it instead of leaving it open.
+    options.FallbackPolicy = new AuthorizationPolicyBuilder().RequireAuthenticatedUser().Build();
 });
 
 builder.Services.AddForwardedHeadersSupport(builder.Configuration);
@@ -150,13 +155,13 @@ app.UseAuthorization();
 app.MapControllers();
 app.MapHub<AuthHub>("/authHub");
 app.MapHub<CourseHub>("/courseHub");
-app.MapGet("/", () => "API is running successfully!");
+app.MapGet("/", () => "API is running successfully!").AllowAnonymous();
 
 // Liveness: the process is up (no dependencies checked, so a database blip does not restart the container)
-app.MapHealthChecks("/healthz", new HealthCheckOptions { Predicate = _ => false });
+app.MapHealthChecks("/healthz", new HealthCheckOptions { Predicate = _ => false }).AllowAnonymous();
 
 // Readiness: dependencies are reachable, safe to route traffic here
-app.MapHealthChecks("/readiness", new HealthCheckOptions { Predicate = check => check.Tags.Contains("ready") });
+app.MapHealthChecks("/readiness", new HealthCheckOptions { Predicate = check => check.Tags.Contains("ready") }).AllowAnonymous();
 
 app.Run();
 

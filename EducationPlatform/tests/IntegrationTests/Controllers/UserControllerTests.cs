@@ -205,5 +205,35 @@ namespace IntegrationTests.Controllers
             var meResponseAfter = await Client.GetAsync("/api/user/me");
             meResponseAfter.StatusCode.Should().Be(HttpStatusCode.Forbidden);
         }
+
+        [Fact]
+        public async Task ChangingARole_MakesTheOldTokenAskForARefresh_ThenTheNewRoleApplies()
+        {
+            // A student signs in (own client, so the admin client below is independent)
+            var studentClient = Factory.CreateClient();
+            var login = await studentClient.PostAsJsonAsync("/api/auth/login",
+                new API.Models.Auth.LoginRequestDto { Email = "student@example.com", Password = "Password123!" });
+            var tokens = (await login.Content.ReadFromJsonAsync<ApiResponse<API.Models.Auth.LoginResponseDto>>())!.Data!;
+            studentClient.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", tokens.AccessToken);
+            (await studentClient.GetAsync("/api/user/me")).StatusCode.Should().Be(HttpStatusCode.OK);
+
+            // An admin turns the student into a teacher
+            var adminClient = await CreateAuthenticatedClientAsync("admin@example.com", "Password123!");
+            var studentId = await ExecuteDbContextAsync(async db =>
+                (await db.Set<User>().FirstAsync(u => u.Email == "student@example.com")).UserID);
+            var change = await adminClient.PutAsJsonAsync($"/api/user/{studentId}/role",
+                new API.Models.Users.UpdateUserRoleRequestDto { Role = Domain.IdentityManagement.Enum.Role.Teacher });
+            change.StatusCode.Should().Be(HttpStatusCode.OK);
+
+            // The old token still says "Student": the API asks the client to renew its session...
+            (await studentClient.GetAsync("/api/user/me")).StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+
+            // ...and the renewed token carries the new role
+            var refresh = await studentClient.PostAsJsonAsync("/api/auth/refresh-token", new { refreshToken = tokens.RefreshToken });
+            refresh.StatusCode.Should().Be(HttpStatusCode.OK);
+            var renewed = (await refresh.Content.ReadFromJsonAsync<ApiResponse<API.Models.Auth.LoginResponseDto>>())!.Data!;
+            studentClient.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", renewed.AccessToken);
+            (await studentClient.GetAsync("/api/user/me")).StatusCode.Should().Be(HttpStatusCode.OK);
+        }
     }
 }

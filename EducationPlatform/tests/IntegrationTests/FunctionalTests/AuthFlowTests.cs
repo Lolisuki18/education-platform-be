@@ -43,15 +43,18 @@ namespace FunctionalTests
             registerResponse.StatusCode.Should().Be(HttpStatusCode.Accepted);
 
             // 2. Fetch the OTP from the in-memory database
-            string otp;
             using (var scope = Factory.Services.CreateScope())
             {
                 var db = scope.ServiceProvider.GetRequiredService<EducationPlatformDBContext>();
                 var user = await db.Set<User>().FirstOrDefaultAsync(u => u.Email == email);
                 user.Should().NotBeNull();
                 user!.IsVerified.Should().BeFalse();
-                otp = user.EmailOtp!;
+
+                // Only a hash is stored, never the code that was e-mailed
+                user.EmailOtp.Should().NotBe(TestEmailCapture.GetOtp(email));
             }
+
+            var otp = TestEmailCapture.GetOtp(email);
 
             // 3. Verify the email using the OTP
             var verifyResponse = await Client.PostAsJsonAsync("/api/auth/verify-email", new VerifyEmailRequestDto
@@ -93,7 +96,7 @@ namespace FunctionalTests
                 {
                     configBuilder.AddInMemoryCollection(new Dictionary<string, string?>
                     {
-                        { "JwtSettings:ExpirySeconds", "2" }
+                        { "JwtSettings:ExpiryMinutes", "0.0334" } // about two seconds
                     });
                 });
             });
@@ -114,14 +117,7 @@ namespace FunctionalTests
             });
             registerResponse.StatusCode.Should().Be(HttpStatusCode.Accepted);
 
-            string otp;
-            using (var scope = shortExpiryFactory.Services.CreateScope())
-            {
-                var db = scope.ServiceProvider.GetRequiredService<EducationPlatformDBContext>();
-                var user = await db.Set<User>().FirstOrDefaultAsync(u => u.Email == email);
-                user.Should().NotBeNull();
-                otp = user!.EmailOtp!;
-            }
+            var otp = TestEmailCapture.GetOtp(email);
 
             var verifyResponse = await shortClient.PostAsJsonAsync("/api/auth/verify-email", new VerifyEmailRequestDto
             {

@@ -6,38 +6,10 @@ namespace Infrastructure.Persistence.Seeds
 {
     public static class UserSeeder
     {
-        public static async Task<UserSeedResult> SeedAsync(EducationPlatformDBContext context)
+        public static async Task<UserSeedResult> SeedAsync(EducationPlatformDBContext context, string defaultPassword)
         {
+            // Demo accounts only: see Seeder for why they never reach a production database
             var result = new UserSeedResult();
-            var defaultPassword = Environment.GetEnvironmentVariable("SEED_DEFAULT_PASSWORD") ?? "18102004";
-
-            // ====================
-            // Admin
-            // ====================
-            if (!await context.Users.AnyAsync(u => u.Role == Role.Admin || u.Email == "leninh2004@gmail.com" || u.Phone == "0000000000"))
-            {
-                var admin = new User(
-                    Guid.NewGuid(),
-                    "leninh2004@gmail.com",
-                    defaultPassword,
-                    "0000000000",
-                    "Le Nguyen An Ninh",
-                    "Platform Administrator",
-                    Role.Admin,
-                    null,
-                    true
-                );
-
-                context.Users.Add(admin);
-                result.AdminIds.Add(admin.UserID);
-            }
-            else
-            {
-                result.AdminIds = await context.Users
-                    .Where(u => u.Role == Role.Admin)
-                    .Select(u => u.UserID)
-                    .ToListAsync();
-            }
 
             // ====================
             // Nai Teacher
@@ -89,7 +61,7 @@ namespace Infrastructure.Persistence.Seeds
                 var existingPhones = await context.Users.Select(u => u.Phone).ToHashSetAsync();
                 var users = new List<User>();
 
-                var endDate = DateTime.Now;
+                var endDate = DateTime.UtcNow;
                 var startDate = endDate.AddYears(-3);
 
                 var random = new Random();

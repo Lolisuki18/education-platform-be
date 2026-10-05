@@ -26,6 +26,17 @@ namespace Infrastructure
                 .ValidateDataAnnotations()
                 .ValidateOnStart();
 
+            services.AddSingleton<Microsoft.Extensions.Options.IValidateOptions<Application.Options.JwtOptions>, Application.Options.JwtOptionsValidator>();
+            services.AddOptions<Application.Options.JwtOptions>()
+                .Bind(configuration.GetSection(Application.Options.JwtOptions.SectionName))
+                .ValidateOnStart();
+
+            services.AddOptions<Application.Options.EmailOptions>()
+                .Bind(configuration.GetSection(Application.Options.EmailOptions.SectionName));
+
+            services.AddOptions<Application.Options.RetentionOptions>()
+                .Bind(configuration.GetSection(Application.Options.RetentionOptions.SectionName));
+
             services.AddOptions<Application.Options.UploadOptions>()
                 .Bind(configuration.GetSection(Application.Options.UploadOptions.SectionName));
 
@@ -53,6 +64,8 @@ namespace Infrastructure
             services.AddScoped<ISubjectRepository, SubjectRepository>();
             services.AddScoped<IUserRepository, UserRepository>();
             services.AddScoped<IUnitOfWork, UnitOfWork>();
+            services.AddScoped<Infrastructure.Services.AfterCommitQueue>();
+            services.AddScoped<Application.Interface.IAfterCommitQueue>(sp => sp.GetRequiredService<Infrastructure.Services.AfterCommitQueue>());
 
             // ----- Application Services -----
             services.AddHttpContextAccessor();
@@ -64,7 +77,11 @@ namespace Infrastructure
 
             services.AddScoped<Application.Interface.IPaymentService, Infrastructure.Services.PayOSPaymentService>();
             services.AddScoped<Application.Interface.IPayOSSignatureVerifier, Infrastructure.Services.PayOSSignatureVerifier>();
-            services.AddScoped<Application.Interface.IEmailService, Infrastructure.Services.SmtpEmailService>();
+            // E-mails are queued and sent by a background service, so SMTP trouble never reaches the request
+            services.AddSingleton<Infrastructure.Services.Email.EmailQueue>();
+            services.AddSingleton<Infrastructure.Services.Email.IEmailSender, Infrastructure.Services.Email.SmtpEmailSender>();
+            services.AddScoped<Application.Interface.IEmailService, Infrastructure.Services.Email.QueuedEmailService>();
+            services.AddHostedService<Infrastructure.Services.Email.EmailDispatchService>();
             services.AddScoped<Domain.Common.Interfaces.INotificationService,
                                Infrastructure.Services.LogNotificationService>();
 
@@ -72,6 +89,11 @@ namespace Infrastructure
 
             // Register background services
             services.AddHostedService<Infrastructure.Services.StorageCleanupService>();
+
+            if (configuration.GetValue("Retention:Enabled", true))
+            {
+                services.AddHostedService<Infrastructure.Services.DataRetentionService>();
+            }
 
             if (configuration.GetValue("Orders:ExpiredOrderCleanupEnabled", true))
             {

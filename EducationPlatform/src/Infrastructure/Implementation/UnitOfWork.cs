@@ -1,5 +1,6 @@
 using Domain.Common.Interfaces;
 using Infrastructure.Persistence;
+using Infrastructure.Services;
 using Domain.AuditManagement.Aggregate;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
@@ -15,6 +16,7 @@ namespace Infrastructure.Implementation
         private readonly Dictionary<Type, object> repositories = new();
 
         private readonly EducationPlatformDBContext context;
+        private readonly AfterCommitQueue afterCommit;
         private IDbContextTransaction? transaction;
         #endregion
 
@@ -23,10 +25,12 @@ namespace Infrastructure.Implementation
 
         public UnitOfWork(
             EducationPlatformDBContext context,
-            IServiceProvider provider)
+            IServiceProvider provider,
+            AfterCommitQueue afterCommit)
         {
             this.context = context;
             this.provider = provider;
+            this.afterCommit = afterCommit;
         }
 
         #region Methods
@@ -57,22 +61,25 @@ namespace Infrastructure.Implementation
         public async Task<int> CommitAsync(
             string? performedBy = null)
         {
+            int changed;
+
             try
             {
                 await AddAuditLogsAsync(performedBy);
 
-                int changed = await context.SaveChangesAsync();
+                changed = await context.SaveChangesAsync();
 
                 if (transaction != null)
                 {
                     await transaction.CommitAsync();
                 }
-
-                return changed;
             }
             catch
             {
                 await RollbackAsync();
+
+                // Whatever was waiting for this commit (e-mails, ...) must not happen now
+                afterCommit.Clear();
                 throw;
             }
             finally
@@ -83,6 +90,10 @@ namespace Infrastructure.Implementation
                     transaction = null;
                 }
             }
+
+            await afterCommit.RunAsync();
+
+            return changed;
         }
 
         private async Task RollbackAsync()

@@ -10,6 +10,7 @@ using Domain.AcademicManagement.Entity;
 using Domain.CourseManagement.Aggregate;
 using Domain.CourseManagement.Enum;
 using FluentAssertions;
+using Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Moq;
 using System;
@@ -88,28 +89,48 @@ namespace UnitTests.Application.Features.Courses.Queries.GetLandingPage
             result.TotalItems.Should().Be(1);
         }
 
-        [Fact]
-        public async Task Handle_QueryWithFilters_ShouldReturnFilteredPublishedCourses()
+        /// <summary>
+        /// The title search uses SQL LIKE, which the LINQ-to-objects mock cannot run, so these tests use the
+        /// EF Core in-memory provider (it implements EF.Functions.Like).
+        /// </summary>
+        private async Task<(EducationPlatformDBContext Db, GetLandingPageQueryHandler Handler, Course Match, Course Other)> CreateDatabaseAsync(
+            string matchTitle, string otherTitle)
         {
-            // Arrange
+            var options = new DbContextOptionsBuilder<EducationPlatformDBContext>()
+                .UseInMemoryDatabase(Guid.NewGuid().ToString())
+                .Options;
+            var db = new EducationPlatformDBContext(options);
+
             var grade1 = new Grade(Guid.NewGuid(), "Grade 11");
             var grade2 = new Grade(Guid.NewGuid(), "Grade 12");
             var subject1 = new Subject(Guid.NewGuid(), "PHY11", "Physics 11", grade1.GradeID);
             var subject2 = new Subject(Guid.NewGuid(), "CHEM12", "Chemistry 12", grade2.GradeID);
 
-            var courseMatch = CreateCourseInstance(Guid.NewGuid(), Guid.NewGuid(), CourseStatus.Published, "Target Physics Course");
+            // The projection joins the teacher, so a course without one would silently drop out of the results
+            var teacher = new Domain.IdentityManagement.Aggregate.User(
+                Guid.NewGuid(), "teacher@example.com", "Password123", "0900000000", "Teacher", null,
+                Domain.IdentityManagement.Enum.Role.Teacher, DateTime.UtcNow, true);
+            db.Users.Add(teacher);
+
+            var courseMatch = CreateCourseInstance(Guid.NewGuid(), teacher.UserID, CourseStatus.Published, matchTitle);
             SetPrivateProperty(courseMatch, nameof(Course.Grade), grade1);
             SetPrivateProperty(courseMatch, nameof(Course.Subject), subject1);
 
-            var courseNoMatch = CreateCourseInstance(Guid.NewGuid(), Guid.NewGuid(), CourseStatus.Published, "Other Chemistry Course");
+            var courseNoMatch = CreateCourseInstance(Guid.NewGuid(), teacher.UserID, CourseStatus.Published, otherTitle);
             SetPrivateProperty(courseNoMatch, nameof(Course.Grade), grade2);
             SetPrivateProperty(courseNoMatch, nameof(Course.Subject), subject2);
 
-            var coursesList = new List<Course> { courseMatch, courseNoMatch };
+            db.Courses.AddRange(courseMatch, courseNoMatch);
+            await db.SaveChangesAsync();
 
-            var mockCoursesDbSet = DbSetMockHelper.CreateMockDbSet(coursesList);
+            return (db, new GetLandingPageQueryHandler(db, _mapper), courseMatch, courseNoMatch);
+        }
 
-            _mockContext.Setup(c => c.Courses).Returns(mockCoursesDbSet.Object);
+        [Fact]
+        public async Task Handle_QueryWithFilters_ShouldReturnFilteredPublishedCourses()
+        {
+            var (db, handler, courseMatch, _) = await CreateDatabaseAsync("Target Physics Course", "Other Chemistry Course");
+            await using var _db = db;
 
             // Truy vấn lọc theo Title và GradeName
             var query = new GetLandingPageQuery
@@ -118,15 +139,42 @@ namespace UnitTests.Application.Features.Courses.Queries.GetLandingPage
                 GradeName = "Grade 11"
             };
 
-            // Act
-            var result = await _handler.Handle(query, CancellationToken.None);
+            var result = await handler.Handle(query, CancellationToken.None);
 
-            // Assert
             result.Should().NotBeNull();
             result.Items.Should().HaveCount(1);
             result.Items.First().CourseID.Should().Be(courseMatch.CourseID);
             result.Items.First().Title.Should().Be("Target Physics Course");
             result.TotalItems.Should().Be(1);
+        }
+
+        [Theory]
+        [InlineData("PHYSICS")]
+        [InlineData("physics")]
+        [InlineData("  sics Cou ")]
+        public async Task Handle_TitleSearch_ShouldIgnoreCaseAndMatchAnywhereInTheTitle(string term)
+        {
+            var (db, handler, courseMatch, _) = await CreateDatabaseAsync("Target Physics Course", "Other Chemistry Course");
+            await using var _db = db;
+
+            var result = await handler.Handle(new GetLandingPageQuery { Title = term }, CancellationToken.None);
+
+            result.Items.Should().ContainSingle().Which.CourseID.Should().Be(courseMatch.CourseID);
+        }
+
+        [Theory]
+        [InlineData("%")]
+        [InlineData("_")]
+        [InlineData("100%")]
+        public async Task Handle_TitleSearch_ShouldTreatWildcardCharactersAsPlainText(string term)
+        {
+            var (db, handler, _, _) = await CreateDatabaseAsync("Target Physics Course", "Other Chemistry Course");
+            await using var _db = db;
+
+            var result = await handler.Handle(new GetLandingPageQuery { Title = term }, CancellationToken.None);
+
+            // Without escaping "%" would match every course
+            result.Items.Should().BeEmpty();
         }
 
         private void SetPrivateProperty(object target, string propertyName, object value)

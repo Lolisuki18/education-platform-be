@@ -50,6 +50,7 @@ namespace API.Controllers
             this.currentUser = currentUser;
         }
 
+        [AllowAnonymous]
         [HttpGet]
         public async Task<ActionResult<ApiResponse<PagedResult<CourseDTO>>>> ListCourses([FromQuery] GetLandingPageQuery query, [FromQuery] string? status = null)
         {
@@ -70,6 +71,7 @@ namespace API.Controllers
             return Ok(ApiResponse<PagedResult<CourseDTO>>.Success(result));
         }
 
+        [AllowAnonymous]
         [HttpGet("{id:guid}")]
         public async Task<ActionResult<ApiResponse<CourseDetailDTO>>> GetCourseDetail(Guid id)
         {
@@ -175,6 +177,7 @@ namespace API.Controllers
             }, "Upload completed successfully."));
         }
 
+        [AllowAnonymous]
         [HttpGet("default-lessons")]
         public async Task<ActionResult<ApiResponse<IEnumerable<object>>>> GetDefaultLessons([FromQuery] Guid subjectId, [FromQuery] Guid gradeId)
         {

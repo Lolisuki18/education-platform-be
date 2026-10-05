@@ -54,17 +54,12 @@ namespace IntegrationTests
             });
             registerResponse.EnsureSuccessStatusCode();
 
-            // 2. Fetch OTP from DB
+            // 2. The code only exists in the e-mail that was "sent"
+            var otp = TestEmailCapture.GetOtp(email);
+
             using var scope = Factory.Services.CreateScope();
             var db = scope.ServiceProvider.GetRequiredService<EducationPlatformDBContext>();
-            var user = await db.Set<User>().FirstOrDefaultAsync(u => u.Email == email);
-            if (user == null || string.IsNullOrEmpty(user.EmailOtp))
-            {
-                throw new Exception("User registration failed or OTP was not generated.");
-            }
-
-            var otp = user.EmailOtp;
-            var userId = user.UserID;
+            var userId = (await db.Set<User>().FirstAsync(u => u.Email == email)).UserID;
 
             // 3. Verify Email
             var verifyResponse = await Client.PostAsJsonAsync("/api/auth/verify-email", new VerifyEmailRequestDto

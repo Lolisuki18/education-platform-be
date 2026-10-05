@@ -8,7 +8,6 @@ using Domain.CourseManagement.Aggregate;
 using Domain.OrderManagement.Aggregate;
 using Application.Options;
 using Microsoft.Extensions.Options;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 namespace Application.Features.Orders.EventHandlers
@@ -18,7 +17,7 @@ namespace Application.Features.Orders.EventHandlers
         private readonly IUnitOfWork _unitOfWork;
         private readonly IEmailService _emailService;
         private readonly PayOSOptions _payOSOptions;
-        private readonly IServiceScopeFactory? _scopeFactory;
+        private readonly IAfterCommitQueue _afterCommit;
         private readonly ILogger<OrderPaidEventHandler> _logger;
 
         public OrderPaidEventHandler(
@@ -26,13 +25,13 @@ namespace Application.Features.Orders.EventHandlers
             IEmailService emailService,
             IOptions<PayOSOptions> payOSOptions,
             ILogger<OrderPaidEventHandler> logger,
-            IServiceScopeFactory? scopeFactory = null)
+            IAfterCommitQueue afterCommit)
         {
             _unitOfWork = unitOfWork;
             _emailService = emailService;
             _payOSOptions = payOSOptions.Value;
             _logger = logger;
-            _scopeFactory = scopeFactory;
+            _afterCommit = afterCommit;
         }
 
         public async Task Handle(OrderPaidEvent notification, CancellationToken cancellationToken)
@@ -53,7 +52,8 @@ namespace Application.Features.Orders.EventHandlers
 
             enrollmentRepo.Add(enrollment);
 
-            // Send payment confirmation email
+            // Payment confirmation e-mail. This handler runs before the order is saved, so the mail is only
+            // handed over once the commit succeeded: a failed save must not tell the student they have paid.
             try
             {
                 var student = await _unitOfWork.GetRepository<IUserRepository>().GetByIdAsync(notification.StudentID);
@@ -66,46 +66,16 @@ namespace Application.Features.Orders.EventHandlers
                     string subject = "Payment Confirmation - " + course.Title;
                     string amountStr = (course.Price?.Amount ?? 0).ToString("N0") + " VND";
                     string body = BuildPaymentSuccessEmailBody(student.Name, course.Title, order.OrderCode.ToString(), amountStr, frontendUrl);
+                    var studentEmail = student.Email;
 
-                    // Fire-and-forget email sending so it does not block the HTTP redirect response
-                    _ = Task.Run(async () =>
-                    {
-                        if (_scopeFactory != null)
-                        {
-                            using (var scope = _scopeFactory.CreateScope())
-                            {
-                                try
-                                {
-                                    var emailService = scope.ServiceProvider.GetRequiredService<IEmailService>();
-                                    await emailService.SendEmailAsync(student.Email, subject, body);
-                                }
-                                catch (Exception ex)
-                                {
-                                    _logger.LogError(ex, "Failed to send payment confirmation email for order {OrderCode} to {StudentEmail}.", order.OrderCode, student.Email);
-                                }
-                            }
-                        }
-                        else
-                        {
-                            try
-                            {
-                                await _emailService.SendEmailAsync(student.Email, subject, body);
-                            }
-                            catch (Exception ex)
-                            {
-                                _logger.LogError(ex, "Failed to send payment confirmation email for order {OrderCode} to {StudentEmail}.", order.OrderCode, student.Email);
-                            }
-                        }
-                    });
+                    _afterCommit.Enqueue(() => _emailService.SendEmailAsync(studentEmail, subject, body));
                 }
             }
             catch (Exception ex)
             {
-                // Prevent email sending failures from reverting order completion, but don't lose the signal.
+                // Preparing the mail must never stop the enrollment, but do not lose the signal.
                 _logger.LogError(ex, "Failed to prepare payment confirmation email for order {OrderId}.", notification.OrderID);
             }
-
-            await Task.CompletedTask;
         }
 
         private static string BuildPaymentSuccessEmailBody(string studentName, string courseTitle, string orderCode, string amount, string frontendUrl)

@@ -35,7 +35,7 @@ namespace Infrastructure.Persistence.Seeds
             {
                 var isRejected = random.Next(0, 14) == 0;
 
-                DateTime reviewDate = DateTime.Now.AddDays(-random.Next(0, 10));
+                DateTime reviewDate = DateTime.UtcNow.AddDays(-random.Next(0, 10));
 
                 var teacherId = teacherIds[random.Next(teacherIds.Count)];
 
@@ -195,7 +195,7 @@ namespace Infrastructure.Persistence.Seeds
 
         private static DateTime RandomDate(Random random)
         {
-            var endDate = DateTime.Now;
+            var endDate = DateTime.UtcNow;
             var startDate = endDate.AddYears(-3);
 
             var range = (endDate - startDate).TotalSeconds;

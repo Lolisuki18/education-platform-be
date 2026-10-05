@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging;
 namespace Infrastructure.Persistence.Seeds
 {
     public class UserSeedResult
@@ -21,25 +22,29 @@ namespace Infrastructure.Persistence.Seeds
 
     public static class Seeder
     {
-        public static async Task SeedAsync(EducationPlatformDBContext context)
+        public static async Task SeedAsync(EducationPlatformDBContext context, SeedOptions options, ILogger logger)
         {
-            // Academic management
+            // Reference data every installation needs
             var gradeIds = await GradeSeeder.SeedAsync(context);
             var subjectIds = await SubjectSeeder.SeedAsync(context);
             await DefaultLessonSeeder.SeedAsync(context, gradeIds, subjectIds);
-
-            // Identity management
-            var userResults = await UserSeeder.SeedAsync(context);
-
-            // Course management
-            var courseResults = await CourseSeeder.SeedAsync(context, userResults.TeacherIds, gradeIds, subjectIds);
             await PolicySeeder.SeedAsync(context);
 
-            // Enrollment management / Payment management
-            var enrollmentResult = await EnrollmentSeeder.SeedAsync(context, userResults.StudentIds, courseResults.CoursePrices);
+            // The first administrator comes from configuration, never from a password written in the source
+            await AdminSeeder.SeedAsync(context, options.Admin, logger);
+
+            if (options.DemoData)
+            {
+                logger.LogWarning("Seeding demo data (fake users, courses and orders). Do not enable this in production.");
+
+                var userResults = await UserSeeder.SeedAsync(context, options.DemoPassword);
+                var courseResults = await CourseSeeder.SeedAsync(context, userResults.TeacherIds, gradeIds, subjectIds);
+                await EnrollmentSeeder.SeedAsync(context, userResults.StudentIds, courseResults.CoursePrices);
+            }
 
             await context.SaveChangesAsync();
+
+            await AdminSeeder.WarnAboutLegacyPasswordsAsync(context, logger);
         }
     }
 }
-

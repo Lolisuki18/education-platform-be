@@ -100,6 +100,7 @@ namespace UnitTests.Application.Features.Users.Commands
             // Assert
             user.IsActive.Should().BeFalse();
             _mockUnitOfWork.Verify(u => u.CommitAsync(currentUserId.ToString()), Times.Once);
+            _mockActivityCache.Verify(c => c.Invalidate(targetUserId), Times.Once);
         }
     }
 }

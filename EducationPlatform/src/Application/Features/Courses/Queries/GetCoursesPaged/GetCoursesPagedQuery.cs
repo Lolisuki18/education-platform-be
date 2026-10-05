@@ -62,7 +62,8 @@ namespace Application.Features.Courses.Queries.GetCoursesPaged
             // Filter by Title
             if (!string.IsNullOrWhiteSpace(request.Title))
             {
-                query = query.Where(c => c.Title.Contains(request.Title));
+                var pattern = Application.Common.SearchPattern.Contains(request.Title);
+                query = query.Where(c => EF.Functions.Like(c.Title.ToLower(), pattern, Application.Common.SearchPattern.EscapeCharacter));
             }
 
             // Filter by Status (with mapping for frontend status labels)

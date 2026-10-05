@@ -20,11 +20,13 @@ namespace Application.Features.Users.Commands
     {
         private readonly IUnitOfWork _unitOfWork;
         private readonly ICurrentUser _currentUser;
+        private readonly IUserActivityCache _activityCache;
 
-        public UpdateUserRoleCommandHandler(IUnitOfWork unitOfWork, ICurrentUser currentUser)
+        public UpdateUserRoleCommandHandler(IUnitOfWork unitOfWork, ICurrentUser currentUser, IUserActivityCache activityCache)
         {
             _unitOfWork = unitOfWork;
             _currentUser = currentUser;
+            _activityCache = activityCache;
         }
 
         public async Task Handle(UpdateUserRoleCommand request, CancellationToken cancellationToken)
@@ -44,6 +46,10 @@ namespace Application.Features.Users.Commands
             user.ChangeRole(request.Role);
 
             await _unitOfWork.CommitAsync(_currentUser.Id.Value.ToString());
+
+            // The user's current access token still carries the old role; dropping the cached status makes the
+            // API notice the mismatch on their next request and ask the client to refresh its session.
+            _activityCache.Invalidate(request.UserId);
         }
     }
 }

@@ -1,6 +1,7 @@
 using Application.Interface;
+using Application.Options;
 using Domain.IdentityManagement.Aggregate;
-using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
@@ -11,36 +12,22 @@ namespace Infrastructure.Services
 {
     public class JwtTokenService : ITokenService
     {
-        private readonly IConfiguration _configuration;
+        private readonly JwtOptions _options;
+        private readonly SigningCredentials _credentials;
 
-        public JwtTokenService(IConfiguration configuration)
+        public JwtTokenService(IOptions<JwtOptions> options)
         {
-            _configuration = configuration;
+            _options = options.Value;
+
+            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_options.SecretKey));
+            _credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
         }
 
         public string GenerateToken(User user)
         {
-            var jwtSettings = _configuration.GetSection("JwtSettings");
-
-            var secretKey = jwtSettings["SecretKey"] ?? throw new InvalidOperationException("Missing JwtSettings:SecretKey");
-            var issuer = jwtSettings["Issuer"];
-            var audience = jwtSettings["Audience"];
-
-            var expiryMinutesStr = jwtSettings["ExpiryMinutes"] ?? "60";
-            var expiryMinutes = double.Parse(expiryMinutesStr);
-            var expires = DateTime.UtcNow.AddMinutes(expiryMinutes);
-
-            var expirySecondsStr = jwtSettings["ExpirySeconds"];
-            if (!string.IsNullOrEmpty(expirySecondsStr) && double.TryParse(expirySecondsStr, out var expirySeconds))
-            {
-                expires = DateTime.UtcNow.AddSeconds(expirySeconds);
-            }
-
-            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey));
-            var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
-
             var claims = new List<Claim>
             {
+                new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
                 new Claim(ClaimTypes.NameIdentifier, user.UserID.ToString()),
                 new Claim(ClaimTypes.Email, user.Email),
                 new Claim(ClaimTypes.Name, user.Name),
@@ -48,11 +35,11 @@ namespace Infrastructure.Services
             };
 
             var token = new JwtSecurityToken(
-                issuer: issuer,
-                audience: audience,
+                issuer: _options.Issuer,
+                audience: _options.Audience,
                 claims: claims,
-                expires: expires,
-                signingCredentials: creds
+                expires: DateTime.UtcNow.AddMinutes(_options.ExpiryMinutes),
+                signingCredentials: _credentials
             );
 
             return new JwtSecurityTokenHandler().WriteToken(token);
@@ -60,12 +47,7 @@ namespace Infrastructure.Services
 
         public string GenerateRefreshToken()
         {
-            var randomBytes = new byte[64];
-
-            using var rng = RandomNumberGenerator.Create();
-            rng.GetBytes(randomBytes);
-
-            return Convert.ToBase64String(randomBytes);
+            return Convert.ToBase64String(RandomNumberGenerator.GetBytes(64));
         }
     }
 }

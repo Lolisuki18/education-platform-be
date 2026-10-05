@@ -109,8 +109,7 @@ namespace UnitTests.Application.Features.Identity.Commands.VerifyEmail
                 isVerified: false
             );
 
-            user.GenerateEmailOtp(TimeSpan.FromMinutes(-5));
-            var expiredOtp = user.EmailOtp!;
+            var expiredOtp = user.GenerateEmailOtp(TimeSpan.FromMinutes(-5));
 
             _mockUserRepository
                 .Setup(r => r.GetUserByEmail(email))
@@ -143,8 +142,7 @@ namespace UnitTests.Application.Features.Identity.Commands.VerifyEmail
                 isVerified: false
             );
 
-            user.GenerateEmailOtp(TimeSpan.FromMinutes(5));
-            var validOtp = user.EmailOtp!;
+            var validOtp = user.GenerateEmailOtp(TimeSpan.FromMinutes(5));
 
             _mockUserRepository
                 .Setup(r => r.GetUserByEmail(email))

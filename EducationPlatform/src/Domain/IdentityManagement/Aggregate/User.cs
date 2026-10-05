@@ -81,10 +81,31 @@ namespace Domain.IdentityManagement.Aggregate
 
 
         #region Methods
-        public void GenerateEmailOtp(TimeSpan lifetime)
+        /// <summary>
+        /// Creates a new one-time code and returns it so it can be e-mailed. Only a hash is stored, so a
+        /// leaked database does not reveal codes that are still valid.
+        /// </summary>
+        public string GenerateEmailOtp(TimeSpan lifetime)
         {
-            EmailOtp = System.Security.Cryptography.RandomNumberGenerator.GetInt32(100000, 999999).ToString();
+            var otp = System.Security.Cryptography.RandomNumberGenerator.GetInt32(100000, 999999).ToString();
+
+            EmailOtp = HashOtp(otp);
             EmailOtpExpiresAt = DateTime.UtcNow.Add(lifetime);
+
+            return otp;
+        }
+
+        /// <summary>
+        /// False while the last code is still younger than <paramref name="cooldown"/>, so a client cannot
+        /// make the platform send an unlimited number of e-mails to one address.
+        /// </summary>
+        public bool CanRequestNewOtp(TimeSpan lifetime, TimeSpan cooldown)
+        {
+            if (EmailOtpExpiresAt == null)
+                return true;
+
+            var generatedAt = EmailOtpExpiresAt.Value - lifetime;
+            return DateTime.UtcNow - generatedAt >= cooldown;
         }
 
         public void VerifyEmail(string otp)
@@ -98,12 +119,48 @@ namespace Domain.IdentityManagement.Aggregate
             if (DateTime.UtcNow > EmailOtpExpiresAt)
                 throw new DomainException("OTP has expired.");
 
-            if (EmailOtp != otp)
+            var expected = System.Text.Encoding.UTF8.GetBytes(EmailOtp);
+            var actual = System.Text.Encoding.UTF8.GetBytes(HashOtp(otp ?? string.Empty));
+            if (!System.Security.Cryptography.CryptographicOperations.FixedTimeEquals(expected, actual))
                 throw new DomainException("Invalid OTP.");
 
             IsVerified = true;
             EmailOtp = null;
             EmailOtpExpiresAt = null;
+        }
+
+        /// <summary>
+        /// Somebody registers again with an e-mail address that was never verified. The new details replace the
+        /// old ones: otherwise whoever registered first (not necessarily the owner of the mailbox) would keep
+        /// control of the password once the real owner verifies the address.
+        /// </summary>
+        public void ReissueRegistration(string plainPassword, string phone, string name, string? bio, Role role)
+        {
+            if (IsVerified)
+                throw new DomainException("Email already verified.");
+
+            if (string.IsNullOrWhiteSpace(phone))
+                throw new DomainException("Phone is required");
+
+            if (string.IsNullOrWhiteSpace(name))
+                throw new DomainException("Name is required");
+
+            if (!System.Enum.IsDefined(typeof(Role), role))
+                throw new DomainException("Invalid role");
+
+            Password = Password.Create(plainPassword);
+            Phone = phone;
+            Name = name;
+            Bio = bio;
+            Role = role;
+        }
+
+        private string HashOtp(string otp)
+        {
+            // Bound to the user so identical codes of different users do not share a hash
+            var bytes = System.Security.Cryptography.SHA256.HashData(
+                System.Text.Encoding.UTF8.GetBytes($"{UserID:N}:{otp}"));
+            return Convert.ToHexString(bytes);
         }
 
         public bool VerifyLogin(string plainPassword)

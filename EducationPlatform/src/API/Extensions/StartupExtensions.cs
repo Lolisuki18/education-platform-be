@@ -1,4 +1,5 @@
 using System.Text;
+using Application.Options;
 using Asp.Versioning;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Mvc;
@@ -55,20 +56,11 @@ namespace API.Extensions
             })
             .AddJwtBearer(options =>
             {
-                var jwtSettings = configuration.GetSection("JwtSettings");
-                var secretKey = jwtSettings["SecretKey"];
-                var issuer = jwtSettings["Issuer"];
-                var audience = jwtSettings["Audience"];
+                var jwt = configuration.GetSection(JwtOptions.SectionName).Get<JwtOptions>() ?? new JwtOptions();
 
-                if (string.IsNullOrWhiteSpace(secretKey))
-                    throw new InvalidOperationException("Missing configuration: JwtSettings:SecretKey");
-                if (Encoding.UTF8.GetByteCount(secretKey) < 32)
-                    throw new InvalidOperationException(
-                        "JwtSettings:SecretKey must be at least 32 bytes (256 bits) long for HS256 signing.");
-                if (string.IsNullOrWhiteSpace(issuer))
-                    throw new InvalidOperationException("Missing configuration: JwtSettings:Issuer");
-                if (string.IsNullOrWhiteSpace(audience))
-                    throw new InvalidOperationException("Missing configuration: JwtSettings:Audience");
+                var problems = jwt.Validate().ToList();
+                if (problems.Count > 0)
+                    throw new InvalidOperationException(string.Join(" ", problems));
 
                 options.TokenValidationParameters = new TokenValidationParameters
                 {
@@ -76,9 +68,9 @@ namespace API.Extensions
                     ValidateAudience = true,
                     ValidateLifetime = true,
                     ValidateIssuerSigningKey = true,
-                    ValidIssuer = issuer,
-                    ValidAudience = audience,
-                    IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey)),
+                    ValidIssuer = jwt.Issuer,
+                    ValidAudience = jwt.Audience,
+                    IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwt.SecretKey)),
                     ClockSkew = TimeSpan.Zero
                 };
 

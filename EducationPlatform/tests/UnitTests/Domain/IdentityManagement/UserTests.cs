@@ -173,11 +173,14 @@ namespace UnitTests.DomainTests.IdentityManagement
             var user = CreateTestUser(isVerified: false);
             var lifetime = TimeSpan.FromMinutes(5);
 
-            user.GenerateEmailOtp(lifetime);
+            var otp = user.GenerateEmailOtp(lifetime);
 
-            user.EmailOtp.Should().NotBeNull();
-            user.EmailOtp!.Length.Should().Be(6);
-            int.TryParse(user.EmailOtp, out _).Should().BeTrue();
+            otp.Length.Should().Be(6);
+            int.TryParse(otp, out _).Should().BeTrue();
+
+            // The database never sees the code itself, only a hash of it
+            user.EmailOtp.Should().NotBeNullOrEmpty();
+            user.EmailOtp.Should().NotBe(otp);
             user.EmailOtpExpiresAt.Should().NotBeNull();
             user.EmailOtpExpiresAt!.Value.Should().BeCloseTo(DateTime.UtcNow.Add(lifetime), TimeSpan.FromSeconds(5));
         }
@@ -206,9 +209,9 @@ namespace UnitTests.DomainTests.IdentityManagement
         public void VerifyEmail_OtpExpired_ShouldThrowDomainException()
         {
             var user = CreateTestUser(isVerified: false);
-            user.GenerateEmailOtp(TimeSpan.FromMinutes(-5)); // expired
+            var otp = user.GenerateEmailOtp(TimeSpan.FromMinutes(-5)); // expired
 
-            Action act = () => user.VerifyEmail(user.EmailOtp!);
+            Action act = () => user.VerifyEmail(otp);
 
             act.Should().Throw<DomainException>()
                 .WithMessage("OTP has expired.");
@@ -230,8 +233,7 @@ namespace UnitTests.DomainTests.IdentityManagement
         public void VerifyEmail_CorrectOtp_ShouldVerifyUserAndResetOtpProperties()
         {
             var user = CreateTestUser(isVerified: false);
-            user.GenerateEmailOtp(TimeSpan.FromMinutes(5));
-            var otp = user.EmailOtp!;
+            var otp = user.GenerateEmailOtp(TimeSpan.FromMinutes(5));
 
             user.VerifyEmail(otp);
 
@@ -383,6 +385,92 @@ namespace UnitTests.DomainTests.IdentityManagement
                 DateTime.UtcNow,
                 isVerified
             );
+        }
+
+        [Fact]
+        public void GenerateEmailOtp_ShouldProduceDifferentHashesForTheSameCodeOfDifferentUsers()
+        {
+            var a = CreateTestUser(isVerified: false);
+            var b = CreateTestUser(isVerified: false);
+
+            a.GenerateEmailOtp(TimeSpan.FromMinutes(5));
+            b.GenerateEmailOtp(TimeSpan.FromMinutes(5));
+
+            // A user can only verify with a code issued to them
+            Action act = () => b.VerifyEmail("123456");
+            act.Should().Throw<DomainException>();
+        }
+
+        [Fact]
+        public void CanRequestNewOtp_ShouldBeFalseDuringTheCooldownAndTrueAfterwards()
+        {
+            var lifetime = TimeSpan.FromMinutes(5);
+            var cooldown = TimeSpan.FromSeconds(60);
+            var user = CreateTestUser(isVerified: false);
+
+            user.CanRequestNewOtp(lifetime, cooldown).Should().BeTrue(); // nothing sent yet
+
+            user.GenerateEmailOtp(lifetime);
+            user.CanRequestNewOtp(lifetime, cooldown).Should().BeFalse(); // just sent
+
+            user.GenerateEmailOtp(lifetime - TimeSpan.FromSeconds(90)); // pretend it was sent 90 seconds ago
+            user.CanRequestNewOtp(lifetime, cooldown).Should().BeTrue();
+        }
+
+        [Fact]
+        public void ReissueRegistration_ShouldReplacePasswordAndProfileOfAnUnverifiedUser()
+        {
+            var user = CreateTestUser(isVerified: false);
+
+            user.ReissueRegistration("NewPassword1", "0911111111", "Real Owner", "bio", Role.Teacher);
+
+            user.Password.Verify("NewPassword1").Should().BeTrue();
+            user.Password.Verify("password123").Should().BeFalse();
+            user.Phone.Should().Be("0911111111");
+            user.Name.Should().Be("Real Owner");
+            user.Role.Should().Be(Role.Teacher);
+        }
+
+        [Fact]
+        public void ReissueRegistration_ForAVerifiedUser_ShouldThrow()
+        {
+            var user = CreateTestUser(isVerified: true);
+
+            Action act = () => user.ReissueRegistration("NewPassword1", "0911111111", "Name", null, Role.Student);
+
+            act.Should().Throw<DomainException>().WithMessage("Email already verified.");
+        }
+
+        [Theory]
+        [InlineData("short1", "at least 8 characters")]
+        [InlineData("onlyletters", "letter and one digit")]
+        [InlineData("12345678", "letter and one digit")]
+        public void Password_Create_ShouldEnforceThePolicy(string password, string expectedMessagePart)
+        {
+            Action act = () => Domain.IdentityManagement.ValueObject.Password.Create(password);
+
+            act.Should().Throw<DomainException>().WithMessage($"*{expectedMessagePart}*");
+        }
+
+        [Fact]
+        public void Password_Create_ShouldRejectPasswordsLongerThanBCryptCanUse()
+        {
+            var tooLong = new string('a', 70) + "12345"; // 75 bytes
+
+            Action act = () => Domain.IdentityManagement.ValueObject.Password.Create(tooLong);
+
+            act.Should().Throw<DomainException>().WithMessage("*72 bytes*");
+        }
+
+        [Fact]
+        public void Password_Create_ShouldCountBytesNotCharacters()
+        {
+            // 40 x 2-byte characters + digits = 84 bytes although only 43 characters
+            var multiByte = new string('é', 40) + "123";
+
+            Action act = () => Domain.IdentityManagement.ValueObject.Password.Create(multiByte);
+
+            act.Should().Throw<DomainException>().WithMessage("*72 bytes*");
         }
     }
 }

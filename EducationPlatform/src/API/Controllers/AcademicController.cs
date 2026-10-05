@@ -33,6 +33,7 @@ namespace API.Controllers
             this.mediator = mediator;
         }
 
+        [AllowAnonymous]
         [HttpGet("grades")]
         public async Task<ActionResult<ApiResponse<IEnumerable<GradeDTO>>>> GetGrades([FromQuery] bool includeInactive = false)
         {
@@ -45,6 +46,7 @@ namespace API.Controllers
             return Ok(ApiResponse<IEnumerable<GradeDTO>>.Success(result));
         }
 
+        [AllowAnonymous]
         [HttpGet("subjects")]
         public async Task<ActionResult<ApiResponse<IEnumerable<SubjectDTO>>>> GetSubjects([FromQuery] bool includeInactive = false)
         {

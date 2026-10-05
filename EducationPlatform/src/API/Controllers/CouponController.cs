@@ -32,6 +32,7 @@ namespace API.Controllers
             this.mediator = mediator;
         }
 
+        [AllowAnonymous]
         [HttpGet("coupons/available")]
         public async Task<ActionResult<ApiResponse<IEnumerable<CouponDTO>>>> GetAvailableCoupons()
         {
