@@ -1,5 +1,5 @@
 using Domain.CourseManagement.Enum;
-using Domain.DomainExceptions;
+using Domain.Exceptions;
 using Domain.IdentityManagement.Aggregate;
 using Domain.Common;
 using Domain.CourseManagement.Events;

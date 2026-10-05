@@ -2,7 +2,7 @@ using Domain.AcademicManagement.Aggregate;
 using Domain.CourseManagement.Entity;
 using Domain.CourseManagement.Enum;
 using Domain.CourseManagement.ValueObject;
-using Domain.DomainExceptions;
+using Domain.Exceptions;
 using Domain.IdentityManagement.Aggregate;
 using Domain.Common;
 

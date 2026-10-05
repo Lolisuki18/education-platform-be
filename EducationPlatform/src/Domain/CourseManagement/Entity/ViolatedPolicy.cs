@@ -1,5 +1,5 @@
 using Domain.CourseManagement.Aggregate;
-using Domain.DomainExceptions;
+using Domain.Exceptions;
 
 namespace Domain.CourseManagement.Entity
 {

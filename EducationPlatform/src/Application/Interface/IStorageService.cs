@@ -7,16 +7,22 @@ namespace Application.Interface
             string fileExtension,
             CancellationToken ct);
 
+        /// <summary>
+        /// Stores one chunk of a resumable upload. The first chunk binds the upload to <paramref name="ownerId"/>;
+        /// chunks from anybody else are rejected.
+        /// </summary>
         Task SaveChunkAsync(
             Stream chunk,
             string uploadId,
             int chunkIndex,
+            Guid ownerId,
             CancellationToken ct
         );
 
         Task<string> CompleteUploadAsync(
             string uploadId,
             string extension,
+            Guid ownerId,
             CancellationToken ct
         );
 

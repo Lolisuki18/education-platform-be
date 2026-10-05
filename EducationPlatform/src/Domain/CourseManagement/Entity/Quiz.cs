@@ -1,6 +1,6 @@
 using Domain.CourseManagement.Enum;
 using Domain.CourseManagement.ValueObject;
-using Domain.DomainExceptions;
+using Domain.Exceptions;
 
 namespace Domain.CourseManagement.Entity
 {

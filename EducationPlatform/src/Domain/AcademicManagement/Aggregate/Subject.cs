@@ -1,5 +1,5 @@
 using Domain.AcademicManagement.Entity;
-using Domain.DomainExceptions;
+using Domain.Exceptions;
 
 namespace Domain.AcademicManagement.Aggregate
 {

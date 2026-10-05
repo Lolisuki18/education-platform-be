@@ -1,5 +1,5 @@
 using Domain.CourseManagement.Enum;
-using Domain.DomainExceptions;
+using Domain.Exceptions;
 
 namespace Domain.CourseManagement.Entity
 {
