@@ -11,6 +11,9 @@ namespace Application.Options
 
         public int AuditLogDays { get; set; } = 365;
 
+        /// <summary>In-app notifications are deleted this many days after they were created.</summary>
+        public int NotificationDays { get; set; } = 90;
+
         /// <summary>Accounts that never verified their e-mail are removed after this many days.</summary>
         public int UnverifiedUserDays { get; set; } = 7;
     }

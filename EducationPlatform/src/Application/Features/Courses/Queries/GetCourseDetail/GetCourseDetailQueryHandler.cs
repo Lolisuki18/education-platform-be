@@ -1,3 +1,4 @@
+using Application.Common;
 using Application.Exceptions;
 using Application.Results;
 using AutoMapper;
@@ -15,15 +16,18 @@ namespace Application.Features.Courses.Queries.GetCourseDetail
         private readonly IUnitOfWork _unitOfWork;
         private readonly IMapper _mapper;
         private readonly ICurrentUser _currentUser;
+        private readonly IMediaUrlSigner _mediaUrlSigner;
 
         public GetCourseDetailQueryHandler(
             IUnitOfWork unitOfWork,
             IMapper mapper,
-            ICurrentUser currentUser)
+            ICurrentUser currentUser,
+            IMediaUrlSigner mediaUrlSigner)
         {
             _unitOfWork = unitOfWork;
             _mapper = mapper;
             _currentUser = currentUser;
+            _mediaUrlSigner = mediaUrlSigner;
         }
 
         public async Task<CourseDetailDTO> Handle(
@@ -90,6 +94,12 @@ namespace Application.Features.Courses.Queries.GetCourseDetail
             if (isTeacher && _currentUser.Id.HasValue && course.TeacherID != _currentUser.Id.Value)
             {
                 dto.Chapters = new List<ChapterDTO>();
+            }
+
+            // Only reached with chapters for an admin or the owning teacher: let them play the videos
+            if (canViewChapters && dto.Chapters.Count > 0)
+            {
+                dto.ProtectVideos(_mediaUrlSigner);
             }
 
             return dto;

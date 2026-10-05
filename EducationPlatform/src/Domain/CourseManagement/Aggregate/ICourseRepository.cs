@@ -20,6 +20,11 @@ namespace Domain.CourseManagement.Aggregate
             Guid? teacherId,
             Role? callerRole);
 
+        /// <summary>Whether a course already uses this slug (slugs are unique).</summary>
+        Task<bool> SlugExistsAsync(
+            string slug,
+            CancellationToken cancellationToken = default);
+
         Task<Course?> GetCourseMetadataByID(
             Guid courseId);
 

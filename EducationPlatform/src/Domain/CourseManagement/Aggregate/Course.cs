@@ -89,7 +89,7 @@ namespace Domain.CourseManagement.Aggregate
             Status = CourseStatus.InReview;
             Price = price.HasValue ? CoursePrice.Paid(price.Value) : CoursePrice.Free();
             ThumbnailName = thumbnailName;
-            Slug = slug ?? "Default";
+            Slug = Domain.Common.Slugs.Create(slug, title);
             Prerequisites = prerequisites?.Trim();
             LearningOutcomes = learningOutcomes?.Trim();
             TeacherID = teacherId;

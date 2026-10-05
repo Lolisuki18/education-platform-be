@@ -23,6 +23,7 @@ namespace UnitTests.Application.Features.Complaints.EventHandlers
         private readonly Mock<IComplaintRepository> _mockComplaintRepository;
         private readonly Mock<IEnrollmentRepository> _mockEnrollmentRepository;
         private readonly Mock<IOrderRepository> _mockOrderRepository;
+        private readonly Mock<INotificationService> _mockNotifications = new();
         private readonly ComplaintApprovedEventHandler _handler;
 
         public ComplaintApprovedEventHandlerTests()
@@ -49,7 +50,7 @@ namespace UnitTests.Application.Features.Complaints.EventHandlers
                 .Setup(u => u.GetRepository<IOrderRepository>())
                 .Returns(_mockOrderRepository.Object);
 
-            _handler = new ComplaintApprovedEventHandler(_mockUnitOfWork.Object);
+            _handler = new ComplaintApprovedEventHandler(_mockUnitOfWork.Object, _mockNotifications.Object);
         }
 
         [Fact]

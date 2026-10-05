@@ -14,6 +14,9 @@ namespace Domain.IdentityManagement.Aggregate
 
         /// <summary>Finds the user that owns a refresh token, whether the session is still active or not.</summary>
         Task<User?> GetByRefreshToken(string refreshToken, CancellationToken cancellationToken = default);
+        /// <summary>Ids of the active users with this role (e.g. every admin that should hear about a new course).</summary>
+        Task<List<Guid>> GetUserIdsByRoleAsync(Role role, CancellationToken cancellationToken = default);
+
         Task<User?> GetByIdWithSessions(Guid userId, CancellationToken cancellationToken = default);
 
         Task<(int TotalUsers, int TotalTeachers, int TotalStudents)> Summary(

@@ -40,6 +40,15 @@ namespace Infrastructure.Implementation
                 .FirstOrDefaultAsync(u => u.RefreshSessions.Any(s => s.Hash == hash), cancellationToken);
         }
 
+        public async Task<List<Guid>> GetUserIdsByRoleAsync(Role role, CancellationToken cancellationToken = default)
+        {
+            return await context.Users
+                .AsNoTracking()
+                .Where(u => u.Role == role && u.IsActive)
+                .Select(u => u.UserID)
+                .ToListAsync(cancellationToken);
+        }
+
         public async Task<User?> GetByIdWithSessions(Guid userId, CancellationToken cancellationToken = default)
         {
             return await context.Users

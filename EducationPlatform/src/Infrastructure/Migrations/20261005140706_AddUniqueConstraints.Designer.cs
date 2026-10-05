@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -12,9 +13,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Infrastructure.Migrations
 {
     [DbContext(typeof(EducationPlatformDBContext))]
-    partial class EducationPlatformDBContextModelSnapshot : ModelSnapshot
+    [Migration("20261005140706_AddUniqueConstraints")]
+    partial class AddUniqueConstraints
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -785,39 +788,6 @@ namespace Infrastructure.Migrations
                     b.ToTable("RefreshSessions");
                 });
 
-            modelBuilder.Entity("Domain.NotificationManagement.Aggregate.Notification", b =>
-                {
-                    b.Property<Guid>("NotificationID")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("Message")
-                        .IsRequired()
-                        .HasMaxLength(2000)
-                        .HasColumnType("character varying(2000)");
-
-                    b.Property<DateTime?>("ReadAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("Title")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)");
-
-                    b.Property<Guid>("UserID")
-                        .HasColumnType("uuid");
-
-                    b.HasKey("NotificationID");
-
-                    b.HasIndex("UserID", "CreatedAt");
-
-                    b.HasIndex("UserID", "ReadAt");
-
-                    b.ToTable("Notifications");
-                });
-
             modelBuilder.Entity("Domain.OrderManagement.Aggregate.Coupon", b =>
                 {
                     b.Property<Guid>("CouponID")
@@ -1285,15 +1255,6 @@ namespace Infrastructure.Migrations
                 {
                     b.HasOne("Domain.IdentityManagement.Aggregate.User", null)
                         .WithMany("RefreshSessions")
-                        .HasForeignKey("UserID")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-                });
-
-            modelBuilder.Entity("Domain.NotificationManagement.Aggregate.Notification", b =>
-                {
-                    b.HasOne("Domain.IdentityManagement.Aggregate.User", null)
-                        .WithMany()
                         .HasForeignKey("UserID")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();

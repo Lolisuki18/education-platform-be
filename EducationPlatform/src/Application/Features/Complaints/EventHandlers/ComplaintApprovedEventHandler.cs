@@ -10,10 +10,12 @@ namespace Application.Features.Complaints.EventHandlers
     public class ComplaintApprovedEventHandler : INotificationHandler<ComplaintApprovedEvent>
     {
         private readonly IUnitOfWork _unitOfWork;
+        private readonly INotificationService _notificationService;
 
-        public ComplaintApprovedEventHandler(IUnitOfWork unitOfWork)
+        public ComplaintApprovedEventHandler(IUnitOfWork unitOfWork, INotificationService notificationService)
         {
             _unitOfWork = unitOfWork;
+            _notificationService = notificationService;
         }
 
         public async Task Handle(ComplaintApprovedEvent notification, CancellationToken cancellationToken)
@@ -75,6 +77,21 @@ namespace Application.Features.Complaints.EventHandlers
                     if (currentComplaint != null) allToRemove.Add(currentComplaint);
 
                     complaintRepo.RemoveComplaints(allToRemove);
+
+                    await _notificationService.SendAsync(
+                        course.TeacherID.ToString(),
+                        "Course removed",
+                        $"Your course \"{course.Title}\" was removed after several complaints were upheld.",
+                        cancellationToken);
+
+                    foreach (var studentId in studentIds)
+                    {
+                        await _notificationService.SendAsync(
+                            studentId.ToString(),
+                            "Compensation coupon",
+                            $"The course \"{course.Title}\" was removed. A compensation coupon was added to your account.",
+                            cancellationToken);
+                    }
                 }
             }
             else
@@ -84,6 +101,12 @@ namespace Application.Features.Complaints.EventHandlers
                 {
                     course.MarkAsRejected(DateTime.UtcNow, "Rejected due to approved complaint.");
                     await courseRepo.UpdateAsync(course.CourseID, course, cancellationToken);
+
+                    await _notificationService.SendAsync(
+                        course.TeacherID.ToString(),
+                        "Course rejected after a complaint",
+                        $"A complaint about your course \"{course.Title}\" was upheld, so it was taken down. Please revise it and submit it again.",
+                        cancellationToken);
                 }
             }
         }

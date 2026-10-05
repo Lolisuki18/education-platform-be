@@ -25,6 +25,7 @@ namespace UnitTests.Application.Features.Courses.Queries.GetCourseDetail
         private readonly Mock<ICourseRepository> _mockCourseRepository;
         private readonly Mock<IMapper> _mockMapper;
         private readonly Mock<ICurrentUser> _mockCurrentUser;
+        private readonly Mock<IMediaUrlSigner> _mockSigner;
         private readonly GetCourseDetailQueryHandler _handler;
 
         public GetCourseDetailQueryHandlerTests()
@@ -33,6 +34,8 @@ namespace UnitTests.Application.Features.Courses.Queries.GetCourseDetail
             _mockCourseRepository = new Mock<ICourseRepository>();
             _mockMapper = new Mock<IMapper>();
             _mockCurrentUser = new Mock<ICurrentUser>();
+            _mockSigner = new Mock<IMediaUrlSigner>();
+            _mockSigner.Setup(x => x.Protect(It.IsAny<string>())).Returns((string url) => "signed:" + url);
 
             _mockUnitOfWork
                 .Setup(u => u.GetRepository<ICourseRepository>())
@@ -41,7 +44,8 @@ namespace UnitTests.Application.Features.Courses.Queries.GetCourseDetail
             _handler = new GetCourseDetailQueryHandler(
                 _mockUnitOfWork.Object,
                 _mockMapper.Object,
-                _mockCurrentUser.Object);
+                _mockCurrentUser.Object,
+                _mockSigner.Object);
         }
 
         [Fact]
@@ -253,6 +257,54 @@ namespace UnitTests.Application.Features.Courses.Queries.GetCourseDetail
             result.Chapters.Should().NotBeEmpty();
 
             _mockCourseRepository.Verify(r => r.GetCourseDetailByID(courseId), Times.Once);
+        }
+
+        [Fact]
+        public async Task Handle_TeacherOwner_ShouldReceiveSignedVideoLinks()
+        {
+            var courseId = Guid.NewGuid();
+            var teacherId = Guid.NewGuid();
+            _mockCurrentUser.Setup(u => u.IsAuthenticated).Returns(true);
+            _mockCurrentUser.Setup(u => u.Role).Returns(Role.Teacher.ToString());
+            _mockCurrentUser.Setup(u => u.Id).Returns(teacherId);
+
+            var course = CreateCourseInstance(courseId, teacherId, CourseStatus.InReview);
+            _mockCourseRepository.Setup(r => r.GetCourseMetadataByID(courseId)).ReturnsAsync(course);
+            _mockCourseRepository.Setup(r => r.GetCourseDetailByID(courseId)).ReturnsAsync(course);
+            _mockMapper.Setup(m => m.Map<CourseDetailDTO>(course)).Returns(new CourseDetailDTO
+            {
+                CourseID = courseId,
+                Chapters = new List<ChapterDTO>
+                {
+                    new() { Lessons = new List<LessonDTO> { new() { VideoUrl = "videos/a.mp4" } } }
+                }
+            });
+
+            var result = await _handler.Handle(new GetCourseDetailQuery { CourseID = courseId }, CancellationToken.None);
+
+            result.Chapters[0].Lessons[0].VideoUrl.Should().Be("signed:videos/a.mp4");
+        }
+
+        [Fact]
+        public async Task Handle_Student_ShouldNeverGetVideoLinksOfACourseHeHasNotEntered()
+        {
+            var courseId = Guid.NewGuid();
+            _mockCurrentUser.Setup(u => u.IsAuthenticated).Returns(true);
+            _mockCurrentUser.Setup(u => u.Role).Returns(Role.Student.ToString());
+            _mockCurrentUser.Setup(u => u.Id).Returns(Guid.NewGuid());
+
+            var course = CreateCourseInstance(courseId, Guid.NewGuid(), CourseStatus.Published);
+            _mockCourseRepository.Setup(r => r.GetCourseMetadataByID(courseId)).ReturnsAsync(course);
+            _mockMapper.Setup(m => m.Map<CourseDetailDTO>(course)).Returns(new CourseDetailDTO
+            {
+                CourseID = courseId,
+                Chapters = new List<ChapterDTO> { new() { Lessons = new List<LessonDTO> { new() { VideoUrl = "videos/a.mp4" } } } }
+            });
+
+            var result = await _handler.Handle(new GetCourseDetailQuery { CourseID = courseId }, CancellationToken.None);
+
+            result.Chapters.Should().BeEmpty();
+            _mockSigner.Verify(x => x.Protect(It.IsAny<string>()), Times.Never);
         }
 
         private Course CreateCourseInstance(Guid courseId, Guid teacherId, CourseStatus status)

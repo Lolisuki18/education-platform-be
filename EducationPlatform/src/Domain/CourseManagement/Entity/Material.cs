@@ -27,10 +27,14 @@ namespace Domain.CourseManagement.Entity
             MaterialType type,
             Guid lessonId)
         {
+            if (!Domain.Common.SafeUrl.IsSafe(url))
+                throw new Domain.Exceptions.DomainException(
+                    "Material URL must be a storage path or an https URL");
+
             MaterialID = materialId;
             Name = name;
             Description = description;
-            Url = url;
+            Url = url.Trim();
             Type = type;
             LessonID = lessonId;
         }

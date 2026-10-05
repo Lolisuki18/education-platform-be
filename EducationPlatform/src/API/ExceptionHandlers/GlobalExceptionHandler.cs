@@ -20,7 +20,6 @@ namespace API.ExceptionHandlers
             Exception exception,
             CancellationToken cancellationToken)
         {
-            _logger.LogError(exception, "An unhandled exception occurred: {Message}", exception.Message);
 
             var problemDetails = new ProblemDetails
             {
@@ -61,11 +60,30 @@ namespace API.ExceptionHandlers
                 problemDetails.Status = (int)HttpStatusCode.TooManyRequests;
                 problemDetails.Title = "Too Many Requests";
             }
+            else if (exception is DbUpdateException { InnerException: Npgsql.PostgresException { SqlState: Npgsql.PostgresErrorCodes.UniqueViolation } })
+            {
+                // Two requests raced to create the same thing (enrollment, review, slug...) and the database let only one win
+                problemDetails.Status = (int)HttpStatusCode.Conflict;
+                problemDetails.Title = "Conflict";
+                problemDetails.Detail = "This record already exists.";
+            }
             else if (exception is DbUpdateConcurrencyException)
             {
                 problemDetails.Status = (int)HttpStatusCode.Conflict;
                 problemDetails.Title = "Concurrent Update";
                 problemDetails.Detail = "This resource was updated by another request. Please retry.";
+            }
+
+            // Expected business outcomes (not found, conflict, ...) are not errors and need no stack trace;
+            // anything else is. Messages can hold e-mail addresses, so they are masked before they reach the log.
+            if (problemDetails.Status >= (int)HttpStatusCode.InternalServerError)
+            {
+                _logger.LogError(exception, "An unhandled exception occurred: {Message}", Application.Common.LogMask.Scrub(exception.Message));
+            }
+            else
+            {
+                _logger.LogInformation("Request rejected with {Status} {Title}: {Message}",
+                    problemDetails.Status, problemDetails.Title, Application.Common.LogMask.Scrub(exception.Message));
             }
 
             if (problemDetails.Status == (int)HttpStatusCode.InternalServerError)

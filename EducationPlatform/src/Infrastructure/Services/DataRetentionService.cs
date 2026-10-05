@@ -32,6 +32,9 @@ namespace Infrastructure.Services
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
+            if (!_options.Enabled)
+                return;
+
             // Let the startup migration finish and the instance warm up first
             await Task.Delay(TimeSpan.FromMinutes(2), stoppingToken);
 
@@ -68,16 +71,21 @@ namespace Infrastructure.Services
                 .Where(a => a.Timestamp < auditCutoff)
                 .ExecuteDeleteAsync(cancellationToken);
 
+            var notificationCutoff = now.AddDays(-_options.NotificationDays);
+            var notifications = await db.Notifications
+                .Where(n => n.CreatedAt < notificationCutoff)
+                .ExecuteDeleteAsync(cancellationToken);
+
             var unverifiedCutoff = now.AddDays(-_options.UnverifiedUserDays);
             var users = await db.Users
                 .Where(u => !u.IsVerified && u.CreatedAt < unverifiedCutoff)
                 .ExecuteDeleteAsync(cancellationToken);
 
-            if (sessions + auditLogs + users > 0)
+            if (sessions + auditLogs + users + notifications > 0)
             {
                 _logger.LogInformation(
-                    "Data retention removed {Sessions} refresh sessions, {AuditLogs} audit log rows and {Users} unverified users.",
-                    sessions, auditLogs, users);
+                    "Data retention removed {Sessions} refresh sessions, {AuditLogs} audit log rows, {Notifications} notifications and {Users} unverified users.",
+                    sessions, auditLogs, notifications, users);
             }
         }
     }

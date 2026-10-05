@@ -3,6 +3,7 @@ using MediatR;
 using Domain.Common.Interfaces;
 using AutoMapper;
 using Application.Exceptions;
+using Application.Common;
 using Application.Interface;
 using Domain.EnrollmentManagement.Aggregate;
 
@@ -18,12 +19,18 @@ namespace Application.Features.Enrollments.Queries.GetEnrollmentDetail
         private readonly IUnitOfWork _unitOfWork;
         private readonly IMapper _mapper;
         private readonly ICurrentUser _currentUser;
+        private readonly IMediaUrlSigner _mediaUrlSigner;
 
-        public GetEnrollmentDetailQueryHandler(IUnitOfWork unitOfWork, IMapper mapper, ICurrentUser currentUser)
+        public GetEnrollmentDetailQueryHandler(
+            IUnitOfWork unitOfWork,
+            IMapper mapper,
+            ICurrentUser currentUser,
+            IMediaUrlSigner mediaUrlSigner)
         {
             _unitOfWork = unitOfWork;
             _mapper = mapper;
             _currentUser = currentUser;
+            _mediaUrlSigner = mediaUrlSigner;
         }
 
         public async Task<EnrollmentDetailDTO> Handle(GetEnrollmentDetailQuery request, CancellationToken cancellationToken)
@@ -68,7 +75,8 @@ namespace Application.Features.Enrollments.Queries.GetEnrollmentDetail
                 }
             }
 
-            return dto;
+            // The caller owns this enrollment (or is an admin), so they may watch: hand out expiring video links
+            return dto.ProtectVideos(_mediaUrlSigner);
         }
     }
 }

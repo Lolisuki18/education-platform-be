@@ -8,6 +8,7 @@ using Domain.EnrollmentManagement.Aggregate;
 using Domain.EnrollmentManagement.Entity;
 using Domain.IdentityManagement.Aggregate;
 using Domain.IdentityManagement.Entity;
+using Domain.NotificationManagement.Aggregate;
 using Domain.OrderManagement.Aggregate;
 using Microsoft.EntityFrameworkCore;
 
@@ -68,6 +69,7 @@ namespace Infrastructure.Persistence
         // Audit Management
         // ====================
         public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
+        public DbSet<Notification> Notifications => Set<Notification>();
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -284,7 +286,10 @@ namespace Infrastructure.Persistence
 
                 entity.Property(c => c.Slug)
                       .IsRequired()
-                      .HasMaxLength(4000);
+                      .HasMaxLength(Domain.Common.Slugs.MaxLength);
+
+                entity.HasIndex(c => c.Slug)
+                      .IsUnique();
 
                 entity.Property(c => c.Prerequisites)
                       .IsRequired()
@@ -783,6 +788,10 @@ namespace Infrastructure.Persistence
 
                 entity.HasIndex(e => e.StudentID);
                 entity.HasIndex(e => e.Status);
+
+                // One enrollment per student and course, however many requests race to create it
+                entity.HasIndex(e => new { e.StudentID, e.CourseID })
+                      .IsUnique();
             });
 
             // ====================
@@ -915,8 +924,44 @@ namespace Infrastructure.Persistence
                       .WithMany()
                       .HasForeignKey(r => r.StudentID)
                       .OnDelete(DeleteBehavior.Restrict);
+
+                // A student reviews a course once; the handler checks it, this makes it hold under concurrency
+                entity.HasIndex(r => new { r.StudentID, r.CourseID })
+                      .IsUnique();
             });
 
+
+            // ====================
+            // Notification (Aggregate Root)
+            // ====================
+            modelBuilder.Entity<Notification>(entity =>
+            {
+                entity.HasKey(n => n.NotificationID);
+
+                entity.Property(n => n.NotificationID).ValueGeneratedNever();
+
+                entity.Property(n => n.Title)
+                      .IsRequired()
+                      .HasMaxLength(Notification.MaxTitleLength);
+
+                entity.Property(n => n.Message)
+                      .IsRequired()
+                      .HasMaxLength(Notification.MaxMessageLength);
+
+                entity.Property(n => n.CreatedAt).IsRequired();
+                entity.Property(n => n.ReadAt);
+
+                entity.Ignore(n => n.IsRead);
+
+                entity.HasOne<User>()
+                      .WithMany()
+                      .HasForeignKey(n => n.UserID)
+                      .OnDelete(DeleteBehavior.Cascade);
+
+                // "my notifications, newest first" and the unread badge
+                entity.HasIndex(n => new { n.UserID, n.CreatedAt });
+                entity.HasIndex(n => new { n.UserID, n.ReadAt });
+            });
 
             // ====================
             // AuditLog (Aggregate Root)

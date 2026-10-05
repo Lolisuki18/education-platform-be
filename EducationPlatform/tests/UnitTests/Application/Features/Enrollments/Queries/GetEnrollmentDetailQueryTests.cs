@@ -22,6 +22,7 @@ namespace UnitTests.Application.Features.Enrollments.Queries.GetEnrollmentDetail
         private readonly Mock<IEnrollmentRepository> _mockEnrollmentRepository;
         private readonly Mock<IMapper> _mockMapper;
         private readonly Mock<ICurrentUser> _mockCurrentUser;
+        private readonly Mock<IMediaUrlSigner> _mockSigner;
         private readonly GetEnrollmentDetailQueryHandler _handler;
 
         public GetEnrollmentDetailQueryTests()
@@ -30,6 +31,8 @@ namespace UnitTests.Application.Features.Enrollments.Queries.GetEnrollmentDetail
             _mockEnrollmentRepository = new Mock<IEnrollmentRepository>();
             _mockMapper = new Mock<IMapper>();
             _mockCurrentUser = new Mock<ICurrentUser>();
+            _mockSigner = new Mock<IMediaUrlSigner>();
+            _mockSigner.Setup(x => x.Protect(It.IsAny<string>())).Returns((string url) => "signed:" + url);
 
             _mockUnitOfWork
                 .Setup(u => u.GetRepository<IEnrollmentRepository>())
@@ -38,7 +41,8 @@ namespace UnitTests.Application.Features.Enrollments.Queries.GetEnrollmentDetail
             _handler = new GetEnrollmentDetailQueryHandler(
                 _mockUnitOfWork.Object,
                 _mockMapper.Object,
-                _mockCurrentUser.Object);
+                _mockCurrentUser.Object,
+                _mockSigner.Object);
         }
 
         [Fact]
@@ -135,6 +139,45 @@ namespace UnitTests.Application.Features.Enrollments.Queries.GetEnrollmentDetail
             // Xác thực rằng câu trả lời trắc nghiệm (CorrectAnswers) đã bị ẩn (xóa đi)
             var quizProgress = result.CourseProgress.ChapterProgresses.First().LessonProgresses.First().QuizProgresses.First();
             quizProgress.Quiz.Answer.CorrectAnswers.Should().BeEmpty();
+        }
+
+        [Fact]
+        public async Task Handle_ValidOwnerRequest_ShouldHandOutSignedVideoLinks()
+        {
+            var studentId = Guid.NewGuid();
+            var enrollmentId = Guid.NewGuid();
+            _mockCurrentUser.Setup(u => u.Id).Returns(studentId);
+            _mockCurrentUser.Setup(u => u.Role).Returns("Student");
+
+            var enrollment = new Enrollment(enrollmentId, studentId, Guid.NewGuid(), DateTime.UtcNow);
+            _mockEnrollmentRepository.Setup(r => r.GetEnrollmentDetailByID(enrollmentId)).ReturnsAsync(enrollment);
+
+            var dto = new EnrollmentDetailDTO
+            {
+                EnrollmentID = enrollmentId,
+                Course = new CourseDetailDTO
+                {
+                    Chapters = new List<ChapterDTO> { new() { Lessons = new List<LessonDTO> { new() { VideoUrl = "videos/a.mp4" } } } }
+                },
+                CourseProgress = new CourseProgressDTO
+                {
+                    ChapterProgresses = new List<ChapterProgressDTO>
+                    {
+                        new()
+                        {
+                            Chapter = new ChapterDTO { Lessons = new List<LessonDTO> { new() { VideoUrl = "videos/a.mp4" } } },
+                            LessonProgresses = new List<LessonProgressDTO> { new() { Lesson = new LessonDTO { VideoUrl = "videos/a.mp4" } } }
+                        }
+                    }
+                }
+            };
+            _mockMapper.Setup(m => m.Map<EnrollmentDetailDTO>(enrollment)).Returns(dto);
+
+            var result = await _handler.Handle(new GetEnrollmentDetailQuery { EnrollmentID = enrollmentId }, CancellationToken.None);
+
+            result.Course.Chapters[0].Lessons[0].VideoUrl.Should().Be("signed:videos/a.mp4");
+            result.CourseProgress.ChapterProgresses[0].Chapter.Lessons[0].VideoUrl.Should().Be("signed:videos/a.mp4");
+            result.CourseProgress.ChapterProgresses[0].LessonProgresses[0].Lesson.VideoUrl.Should().Be("signed:videos/a.mp4");
         }
 
         [Fact]

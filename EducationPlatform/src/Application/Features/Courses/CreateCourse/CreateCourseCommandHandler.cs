@@ -49,6 +49,13 @@ namespace Application.Features.Courses.CreateCourse
                     cancellationToken);
             }
 
+            // Slugs identify a course in public URLs, so they must be unique: a taken one gets a short suffix
+            var slug = Domain.Common.Slugs.Create(request.Slug, request.Title);
+            if (await _courseRepository.SlugExistsAsync(slug, cancellationToken))
+            {
+                slug = Domain.Common.Slugs.WithSuffix(slug);
+            }
+
             // Apply domain logic: create the Course aggregate
             var course = new Domain.CourseManagement.Aggregate.Course(
                 Guid.NewGuid(),
@@ -56,7 +63,7 @@ namespace Application.Features.Courses.CreateCourse
                 request.Description,
                 request.Price,
                 thumbnailName,
-                request.Slug,
+                slug,
                 request.Prerequisites,
                 request.LearningOutcomes,
                 _currentUser.Id.Value,

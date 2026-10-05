@@ -108,12 +108,26 @@ namespace Infrastructure.Implementation
         #endregion
 
         #region Audit Logging
+        /// <summary>
+        /// Entities that never belong in the audit trail: credentials (the owned Password type is tracked as its
+        /// own entity, so a name filter on properties alone would write password hashes here), session
+        /// tokens, and high-volume records that are not business changes.
+        /// </summary>
+        private static readonly HashSet<string> UnauditedEntities = new(StringComparer.Ordinal)
+        {
+            "Password",
+            "RefreshSession",
+            "Notification",
+            "AuditLog"
+        };
+
         private async Task AddAuditLogsAsync(string? performedBy)
         {
             var entries = context.ChangeTracker.Entries()
-                .Where(e => e.State == EntityState.Added ||
-                            e.State == EntityState.Modified ||
-                            e.State == EntityState.Deleted)
+                .Where(e => (e.State == EntityState.Added ||
+                             e.State == EntityState.Modified ||
+                             e.State == EntityState.Deleted) &&
+                            !UnauditedEntities.Contains(e.Entity.GetType().Name))
                 .ToList();
 
             foreach (var entry in entries)

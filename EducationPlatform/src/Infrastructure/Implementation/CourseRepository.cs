@@ -90,6 +90,15 @@ namespace Infrastructure.Implementation
         }
 
 
+        public async Task<bool> SlugExistsAsync(
+            string slug,
+            CancellationToken cancellationToken = default)
+        {
+            return await context.Courses
+                .AsNoTracking()
+                .AnyAsync(c => c.Slug == slug, cancellationToken);
+        }
+
         public async Task<Course?> GetCourseMetadataByID(Guid courseId)
         {
             return await context.Courses

@@ -68,6 +68,10 @@ namespace Domain.CourseManagement.Entity
                 throw new DomainException(
                     "Lesson video URL is required");
 
+            if (!Domain.Common.SafeUrl.IsSafe(videoUrl))
+                throw new DomainException(
+                    "Lesson video URL must be a storage path or an https URL");
+
             if (order <= 0)
                 throw new DomainException(
                     "Lesson order must be greater than zero");

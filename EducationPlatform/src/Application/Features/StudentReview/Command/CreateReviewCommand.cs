@@ -77,8 +77,15 @@ namespace Application.Features.StudentReview.Command
             //6. Add to the repository and save changes
             await _unitOfWork.GetRepository<ICourseReviewRepository>().AddAsync(review);
 
-            //save in database
-            await _unitOfWork.CommitAsync(_currentUser.Id.Value.ToString());
+            //save in database. The check above can lose a race with a second request; the unique index decides.
+            try
+            {
+                await _unitOfWork.CommitAsync(_currentUser.Id.Value.ToString());
+            }
+            catch (Microsoft.EntityFrameworkCore.DbUpdateException)
+            {
+                throw new ConflictException("You have already reviewed this course.");
+            }
 
             //7. Map the created review to CourseReviewDTO and return it
             var result = _mapper.Map<CourseReviewDTO>(review);
