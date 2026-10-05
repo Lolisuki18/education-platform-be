@@ -25,6 +25,11 @@ namespace Domain.CourseManagement.Aggregate
             string slug,
             CancellationToken cancellationToken = default);
 
+        /// <summary>Whether the teacher still has a course that students can buy.</summary>
+        Task<bool> HasPublishedCourseAsync(
+            Guid teacherId,
+            CancellationToken cancellationToken = default);
+
         Task<Course?> GetCourseMetadataByID(
             Guid courseId);
 

@@ -197,6 +197,8 @@ namespace Infrastructure.Persistence
 
                 entity.Property(u => u.CreatedAt);
 
+                entity.Property(u => u.DeletedAt);
+
                 entity.Property(u => u.IsActive)
                       .HasDefaultValue(true);
 

@@ -9,6 +9,7 @@ namespace Domain.IdentityManagement.Aggregate
     {
         #region Attributes
         public const int MaxActiveSessions = 10;
+        public const string DeletedName = "Deleted user";
 
         private readonly List<RefreshSession> _refreshSessions = new();
         #endregion
@@ -26,6 +27,9 @@ namespace Domain.IdentityManagement.Aggregate
         public DateTime? EmailOtpExpiresAt { get; private set; }
         public bool IsActive { get; private set; }
         public DateTime CreatedAt { get; private set; }
+        /// <summary>When the account was erased. The row stays (orders and enrollments point to it) but holds no personal data.</summary>
+        public DateTime? DeletedAt { get; private set; }
+        public bool IsDeleted => DeletedAt.HasValue;
         public IReadOnlyCollection<RefreshSession> RefreshSessions => _refreshSessions.AsReadOnly();
         #endregion
 
@@ -242,12 +246,42 @@ namespace Domain.IdentityManagement.Aggregate
 
         public void Activate()
         {
+            if (IsDeleted)
+                throw new DomainException("A deleted account cannot be activated.");
+
             IsActive = true;
         }
 
         public void Deactivate()
         {
             IsActive = false;
+        }
+
+        /// <summary>
+        /// Right to erasure: removes everything that identifies the person but keeps the row, because orders,
+        /// enrollments and reviews must still point to a user. The e-mail address and phone number are released
+        /// (the placeholders are unique per user), so the person can register again, and nobody can log in.
+        /// </summary>
+        public void Erase(DateTime now)
+        {
+            if (IsDeleted)
+                throw new DomainException("This account is already deleted.");
+
+            var token = UserID.ToString("N");
+
+            Email = $"deleted-{token}@deleted.invalid";
+            Phone = $"x{token[..18]}";
+            Name = DeletedName;
+            Bio = null;
+            EmailOtp = null;
+            EmailOtpExpiresAt = null;
+
+            // Nobody knows this password, so the credentials of the old account are gone for good
+            Password = Password.Create($"{Guid.NewGuid():N}Aa1");
+
+            RevokeAllRefreshTokens();
+            IsActive = false;
+            DeletedAt = now;
         }
 
         public void ChangeRole(Role role)
