@@ -1,7 +1,7 @@
 using MediatR;
 using Domain.Common.Interfaces;
-using Application.BusinessException;
-using Application.Helper;
+using Application.Exceptions;
+using Application.Helpers;
 using Domain.IdentityManagement.Aggregate;
 using Domain.IdentityManagement.Enum;
 
@@ -41,12 +41,12 @@ namespace Application.Features.Identity.Commands.Register
             if (userByPhone != null &&
                 (userByEmail == null || userByPhone.UserID != userByEmail.UserID))
             {
-                throw new Conflict($"User with phone {request.Phone} already exists.");
+                throw new ConflictException($"User with phone {request.Phone} already exists.");
             }
 
             // Cannot self-register admin
             if (request.Role == (int)Role.Admin)
-                throw new Conflict("Cannot register as Admin.");
+                throw new ConflictException("Cannot register as Admin.");
 
             await _unitOfWork.BeginTransactionAsync();
 
@@ -55,7 +55,7 @@ namespace Application.Features.Identity.Commands.Register
             if (userByEmail != null)
             {
                 if (userByEmail.IsVerified)
-                    throw new Conflict($"User with email {request.Email} already exists.");
+                    throw new ConflictException($"User with email {request.Email} already exists.");
 
                 // Reuse unverified user
                 user = userByEmail;

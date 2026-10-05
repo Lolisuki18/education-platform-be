@@ -1,11 +1,9 @@
 using MediatR;
 using Application.Results;
 using Domain.Common.Interfaces;
-using Application.BusinessException;
+using Application.Exceptions;
 using Domain.IdentityManagement.Aggregate;
-using Application.Helper;
-
-using Microsoft.Extensions.Configuration;
+using Application.Interface;
 
 namespace Application.Features.Identity.Commands.Login
 {
@@ -19,28 +17,38 @@ namespace Application.Features.Identity.Commands.Login
     {
         private static readonly TimeSpan RefreshTokenLifetime = TimeSpan.FromDays(7);
 
-        private readonly Application.Interface.ITokenService _tokenService;
+        private readonly ITokenService _tokenService;
         private readonly IUnitOfWork _unitOfWork;
+        private readonly ILoginAttemptTracker _attemptTracker;
 
-        public LoginCommandHandler(IUnitOfWork unitOfWork, Application.Interface.ITokenService tokenService)
+        public LoginCommandHandler(
+            IUnitOfWork unitOfWork,
+            ITokenService tokenService,
+            ILoginAttemptTracker attemptTracker)
         {
             _unitOfWork = unitOfWork;
             _tokenService = tokenService;
+            _attemptTracker = attemptTracker;
         }
 
         public async Task<TokenDTO> Handle(LoginCommand request, CancellationToken cancellationToken)
         {
+            if (_attemptTracker.IsLockedOut(request.Email))
+                throw new TooManyRequestsException("Too many failed login attempts. Please try again later.");
+
             // Validate user existence
             var user = await _unitOfWork
                 .GetRepository<IUserRepository>()
                 .GetUserByEmail(request.Email, cancellationToken);
 
-            if (user == null)
-                throw new AuthenticateException("Invalid credentials.");
-
             // Validate password and email verification
-            if (!user.VerifyLogin(request.Password))
+            if (user == null || !user.VerifyLogin(request.Password))
+            {
+                _attemptTracker.RegisterFailure(request.Email);
                 throw new AuthenticateException("Invalid credentials.");
+            }
+
+            _attemptTracker.Reset(request.Email);
 
             // Generate token
             var token = _tokenService.GenerateToken(user);
@@ -48,12 +56,11 @@ namespace Application.Features.Identity.Commands.Login
             // Generate refresh token
             var refreshToken = _tokenService.GenerateRefreshToken();
 
-            // Apply domain
+            // Apply domain: every login starts its own session, other devices stay signed in
             user.IssueRefreshToken(refreshToken, RefreshTokenLifetime);
 
             // Apply persistence
             await _unitOfWork.BeginTransactionAsync();
-            await _unitOfWork.GetRepository<IUserRepository>().UpdateAsync(user.UserID, user, cancellationToken);
             await _unitOfWork.CommitAsync();
 
             return new TokenDTO

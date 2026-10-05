@@ -1,4 +1,4 @@
-using Application.BusinessException;
+using Application.Exceptions;
 using Domain.CourseManagement.Aggregate;
 using Domain.Common.Interfaces;
 using MediatR;
@@ -29,7 +29,7 @@ namespace Application.Features.Courses.ReviewCourse
                 .GetCourseDetailByID(request.CourseID);
 
             if (course == null)
-                throw new NotFound($"Course with ID: {request.CourseID} is not found");
+                throw new NotFoundException($"Course with ID: {request.CourseID} is not found");
 
             // ---------- 2. Convert DTO tuples for domain method ----------
             var violatedChapters = request.ViolatedChapters?

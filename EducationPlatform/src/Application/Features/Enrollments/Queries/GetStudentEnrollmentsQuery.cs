@@ -3,15 +3,25 @@ using MediatR;
 using Domain.Common.Interfaces;
 using AutoMapper;
 using Application.Interface;
-using Application.BusinessException;
+using Application.Exceptions;
 using Domain.EnrollmentManagement.Aggregate;
 
 namespace Application.Features.Enrollments.Queries
 {
     public class GetStudentEnrollmentsQuery : IRequest<IEnumerable<EnrollmentDTO>>
     {
-        public int PageIndex { get; set; } = 1;
-        public int PageSize { get; set; } = 10;
+        private int _pageIndex = 1;
+        public int PageIndex
+        {
+            get => _pageIndex;
+            set => _pageIndex = Application.Common.Paging.NormalizePageIndex(value);
+        }
+        private int _pageSize = Application.Common.Paging.DefaultPageSize;
+        public int PageSize
+        {
+            get => _pageSize;
+            set => _pageSize = Application.Common.Paging.NormalizePageSize(value);
+        }
     }
 
     public class GetStudentEnrollmentsQueryHandler : IRequestHandler<GetStudentEnrollmentsQuery, IEnumerable<EnrollmentDTO>>

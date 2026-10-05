@@ -2,7 +2,7 @@ using Application.Results;
 using MediatR;
 using Domain.Common.Interfaces;
 using AutoMapper;
-using Application.BusinessException;
+using Application.Exceptions;
 using Application.Interface;
 using Domain.EnrollmentManagement.Aggregate;
 
@@ -36,7 +36,7 @@ namespace Application.Features.Enrollments.Queries.GetEnrollmentDetail
                 .GetEnrollmentDetailByID(request.EnrollmentID);
 
             if (enrollment == null)
-                throw new NotFound("Enrollment detail not found");
+                throw new NotFoundException("Enrollment detail not found");
 
             // Basic authorization check
             if (enrollment.StudentID != _currentUser.Id.Value && _currentUser.Role != "Admin")

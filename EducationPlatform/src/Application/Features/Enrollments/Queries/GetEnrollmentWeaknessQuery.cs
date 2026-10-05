@@ -1,7 +1,7 @@
 using Application.Results;
 using MediatR;
 using Domain.Common.Interfaces;
-using Application.BusinessException;
+using Application.Exceptions;
 using Domain.EnrollmentManagement.Aggregate;
 
 namespace Application.Features.Enrollments.Queries
@@ -27,7 +27,7 @@ namespace Application.Features.Enrollments.Queries
                 .GetEnrollmentStatistic(request.EnrollmentID);
 
             if (enrollment == null)
-                throw new NotFound("Student statistic not found");
+                throw new NotFoundException("Student statistic not found");
 
             var weakness = new List<StudentWeaknessDTO>();
 

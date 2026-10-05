@@ -1,11 +1,10 @@
 using MediatR;
 using Application.Results;
 using Domain.Common.Interfaces;
-using Application.BusinessException;
+using Application.Exceptions;
 using Domain.IdentityManagement.Aggregate;
-using Application.Helper;
-
-using Microsoft.Extensions.Configuration;
+using Domain.IdentityManagement.Enum;
+using Application.Interface;
 
 namespace Application.Features.Identity.Commands.RefreshToken
 {
@@ -18,10 +17,10 @@ namespace Application.Features.Identity.Commands.RefreshToken
     {
         private static readonly TimeSpan RefreshTokenLifetime = TimeSpan.FromDays(7);
 
-        private readonly Application.Interface.ITokenService _tokenService;
+        private readonly ITokenService _tokenService;
         private readonly IUnitOfWork _unitOfWork;
 
-        public RefreshTokenCommandHandler(IUnitOfWork unitOfWork, Application.Interface.ITokenService tokenService)
+        public RefreshTokenCommandHandler(IUnitOfWork unitOfWork, ITokenService tokenService)
         {
             _unitOfWork = unitOfWork;
             _tokenService = tokenService;
@@ -32,34 +31,43 @@ namespace Application.Features.Identity.Commands.RefreshToken
             // Find user by refresh token
             var user = await _unitOfWork
                 .GetRepository<IUserRepository>()
-                .GetByRefreshToken(request.RefreshToken);
+                .GetByRefreshToken(request.RefreshToken, cancellationToken);
 
             if (user == null)
                 throw new AuthenticateException("Invalid refresh token.");
 
-            // Validate refresh token
-            if (!user.CanRefresh(request.RefreshToken))
-            {
-                user.RevokeRefreshToken();
-                await _unitOfWork.BeginTransactionAsync();
-                await _unitOfWork.GetRepository<IUserRepository>().UpdateAsync(user.UserID, user, cancellationToken);
-                await _unitOfWork.CommitAsync();
+            if (!user.IsActive)
+                throw new ForbiddenException("Your account is inactive or has been locked.");
 
-                throw new AuthenticateException("Refresh token has expired.");
-            }
-
-            // Generate new token
-            var token = _tokenService.GenerateToken(user);
-
-            // Generate new refresh token
+            // Generate the replacement first so the domain can rotate in a single step
             var newRefreshToken = _tokenService.GenerateRefreshToken();
 
             // Apply domain
-            user.IssueRefreshToken(newRefreshToken, RefreshTokenLifetime);
+            var outcome = user.RotateRefreshToken(request.RefreshToken, newRefreshToken, RefreshTokenLifetime);
+
+            switch (outcome)
+            {
+                case RefreshResult.Rotated:
+                    break;
+
+                case RefreshResult.ReuseDetected:
+                    // A rotated token was replayed: every session of the user has been revoked, persist that.
+                    await _unitOfWork.BeginTransactionAsync();
+                    await _unitOfWork.CommitAsync();
+                    throw new AuthenticateException("Refresh token was already used. Please log in again.");
+
+                case RefreshResult.Expired:
+                    throw new AuthenticateException("Refresh token has expired.");
+
+                default:
+                    throw new AuthenticateException("Invalid refresh token.");
+            }
+
+            // Generate new access token
+            var token = _tokenService.GenerateToken(user);
 
             // Apply persistence
             await _unitOfWork.BeginTransactionAsync();
-            await _unitOfWork.GetRepository<IUserRepository>().UpdateAsync(user.UserID, user, cancellationToken);
             await _unitOfWork.CommitAsync();
 
             return new TokenDTO

@@ -1,6 +1,6 @@
 using MediatR;
 using Domain.Common.Interfaces;
-using Application.BusinessException;
+using Application.Exceptions;
 using Application.Interface;
 using Domain.EnrollmentManagement.Aggregate;
 
@@ -38,7 +38,7 @@ namespace Application.Features.Enrollments.Commands
                 .GetEnrollmentForUpdate(request.EnrollmentID);
 
             if (enrollment == null)
-                throw new NotFound("Enrollment not found");
+                throw new NotFoundException("Enrollment not found");
 
             if (enrollment.StudentID != _currentUser.Id.Value)
                 throw new ForbiddenException("You are not the owner of this enrollment");

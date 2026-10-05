@@ -1,7 +1,7 @@
 using MediatR;
 using Domain.Common.Interfaces;
 using Application.Interface;
-using Application.BusinessException;
+using Application.Exceptions;
 using Domain.EnrollmentManagement.Aggregate;
 
 namespace Application.Features.Enrollments.Commands

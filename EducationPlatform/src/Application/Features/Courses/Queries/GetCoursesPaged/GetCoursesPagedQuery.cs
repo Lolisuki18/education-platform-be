@@ -17,8 +17,18 @@ namespace Application.Features.Courses.Queries.GetCoursesPaged
     {
         public string? Title { get; set; }
         public string? Status { get; set; }
-        public int PageIndex { get; set; } = 1;
-        public int PageSize { get; set; } = 10;
+        private int _pageIndex = 1;
+        public int PageIndex
+        {
+            get => _pageIndex;
+            set => _pageIndex = Application.Common.Paging.NormalizePageIndex(value);
+        }
+        private int _pageSize = Application.Common.Paging.DefaultPageSize;
+        public int PageSize
+        {
+            get => _pageSize;
+            set => _pageSize = Application.Common.Paging.NormalizePageSize(value);
+        }
     }
 
     public class GetCoursesPagedQueryHandler : IRequestHandler<GetCoursesPagedQuery, PagedResult<CourseDTO>>
