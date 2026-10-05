@@ -9,7 +9,8 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Xunit;
-using Microsoft.Extensions.Configuration;
+using Application.Options;
+using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Logging;
 
 namespace UnitTests.Application.Features.Orders.EventHandlers
@@ -19,7 +20,6 @@ namespace UnitTests.Application.Features.Orders.EventHandlers
         private readonly Mock<IUnitOfWork> _mockUnitOfWork;
         private readonly Mock<IEnrollmentRepository> _mockEnrollmentRepository;
         private readonly Mock<IEmailService> _mockEmailService;
-        private readonly Mock<IConfiguration> _mockConfig;
         private readonly Mock<ILogger<OrderPaidEventHandler>> _mockLogger;
         private readonly OrderPaidEventHandler _handler;
 
@@ -28,7 +28,6 @@ namespace UnitTests.Application.Features.Orders.EventHandlers
             _mockUnitOfWork = new Mock<IUnitOfWork>();
             _mockEnrollmentRepository = new Mock<IEnrollmentRepository>();
             _mockEmailService = new Mock<IEmailService>();
-            _mockConfig = new Mock<IConfiguration>();
             _mockLogger = new Mock<ILogger<OrderPaidEventHandler>>();
 
             _mockUnitOfWork
@@ -36,10 +35,10 @@ namespace UnitTests.Application.Features.Orders.EventHandlers
                 .Returns(_mockEnrollmentRepository.Object);
 
             _mockEnrollmentRepository
-                .Setup(r => r.GetStudentEnrollments(It.IsAny<Guid>()))
-                .ReturnsAsync(System.Array.Empty<Enrollment>());
+                .Setup(r => r.IsStudentEnrolled(It.IsAny<Guid>(), It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync(false);
 
-            _handler = new OrderPaidEventHandler(_mockUnitOfWork.Object, _mockEmailService.Object, _mockConfig.Object, _mockLogger.Object);
+            _handler = new OrderPaidEventHandler(_mockUnitOfWork.Object, _mockEmailService.Object, Options.Create(new PayOSOptions { FrontendUrl = "http://localhost:3000" }), _mockLogger.Object);
         }
 
         [Fact]

@@ -1,7 +1,7 @@
-using Application.BusinessException;
+using Application.Exceptions;
 using Application.Features.Identity.Commands.VerifyEmail;
 using Domain.Common.Interfaces;
-using Domain.DomainExceptions;
+using Domain.Exceptions;
 using Domain.IdentityManagement.Aggregate;
 using Domain.IdentityManagement.Enum;
 using Domain.IdentityManagement.ValueObject;
@@ -20,6 +20,7 @@ namespace UnitTests.Application.Features.Identity.Commands.VerifyEmail
     {
         private readonly Mock<IUnitOfWork> _mockUnitOfWork;
         private readonly Mock<IUserRepository> _mockUserRepository;
+        private readonly Mock<global::Application.Interface.ILoginAttemptTracker> _mockAttemptTracker;
         private readonly VerifyEmailCommandHandler _handler;
 
         public VerifyEmailCommandHandlerTests()
@@ -31,7 +32,9 @@ namespace UnitTests.Application.Features.Identity.Commands.VerifyEmail
                 .Setup(u => u.GetRepository<IUserRepository>())
                 .Returns(_mockUserRepository.Object);
 
-            _handler = new VerifyEmailCommandHandler(_mockUnitOfWork.Object);
+            _mockAttemptTracker = new Mock<global::Application.Interface.ILoginAttemptTracker>();
+
+            _handler = new VerifyEmailCommandHandler(_mockUnitOfWork.Object, _mockAttemptTracker.Object);
         }
 
         [Fact]
@@ -50,7 +53,7 @@ namespace UnitTests.Application.Features.Identity.Commands.VerifyEmail
             Func<Task> act = async () => await _handler.Handle(command, CancellationToken.None);
 
             // Assert
-            await act.Should().ThrowAsync<NotFound>()
+            await act.Should().ThrowAsync<NotFoundException>()
                 .WithMessage("User not found.");
         }
 
@@ -167,5 +170,31 @@ namespace UnitTests.Application.Features.Identity.Commands.VerifyEmail
             var prop = target.GetType().GetProperty(propertyName, BindingFlags.Public | BindingFlags.Instance);
             prop?.SetValue(target, value);
         }
+        [Fact]
+        public async Task Handle_WrongOtp_ShouldRegisterFailureForTheAccount()
+        {
+            var email = "pending@gmail.com";
+            var user = new User(Guid.NewGuid(), email, "password123", "0123456789", "Test User", null, Role.Student, DateTime.UtcNow);
+            user.GenerateEmailOtp(TimeSpan.FromMinutes(5));
+            _mockUserRepository.Setup(r => r.GetUserByEmail(email)).ReturnsAsync(user);
+
+            Func<Task> act = async () => await _handler.Handle(new VerifyEmailCommand { Email = email, Otp = "000000" }, CancellationToken.None);
+
+            await act.Should().ThrowAsync<DomainException>();
+            _mockAttemptTracker.Verify(t => t.RegisterFailure($"otp:{email}"), Times.Once);
+        }
+
+        [Fact]
+        public async Task Handle_TooManyWrongOtps_ShouldBeLockedOutBeforeLookingTheUserUp()
+        {
+            var email = "pending@gmail.com";
+            _mockAttemptTracker.Setup(t => t.IsLockedOut($"otp:{email}")).Returns(true);
+
+            Func<Task> act = async () => await _handler.Handle(new VerifyEmailCommand { Email = email, Otp = "123456" }, CancellationToken.None);
+
+            await act.Should().ThrowAsync<TooManyRequestsException>();
+            _mockUserRepository.Verify(r => r.GetUserByEmail(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+        }
+
     }
 }

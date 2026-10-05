@@ -1,5 +1,6 @@
-using Domain.DomainExceptions;
+using Domain.Exceptions;
 using Domain.IdentityManagement.Aggregate;
+using Domain.IdentityManagement.Entity;
 using Domain.IdentityManagement.Enum;
 using Domain.IdentityManagement.ValueObject;
 using FluentAssertions;
@@ -255,44 +256,100 @@ namespace UnitTests.DomainTests.IdentityManagement
         }
 
         [Fact]
-        public void IssueRefreshToken_ShouldSetRefreshTokenProperty()
+        public void IssueRefreshToken_ShouldAddAnActiveSession()
         {
             var user = CreateTestUser(isVerified: true);
             var token = "raw_refresh_token";
 
             user.IssueRefreshToken(token, TimeSpan.FromMinutes(10));
 
-            user.RefreshToken.Should().NotBeNull();
+            user.RefreshSessions.Should().ContainSingle();
             user.CanRefresh(token).Should().BeTrue();
+        }
+
+        [Fact]
+        public void IssueRefreshToken_ForSeveralDevices_ShouldKeepEverySessionActive()
+        {
+            var user = CreateTestUser(isVerified: true);
+
+            user.IssueRefreshToken("phone", TimeSpan.FromMinutes(10));
+            user.IssueRefreshToken("laptop", TimeSpan.FromMinutes(10));
+
+            user.CanRefresh("phone").Should().BeTrue();
+            user.CanRefresh("laptop").Should().BeTrue();
+        }
+
+        [Fact]
+        public void IssueRefreshToken_BeyondTheLimit_ShouldRevokeTheOldestSessions()
+        {
+            var user = CreateTestUser(isVerified: true);
+
+            for (var i = 0; i < User.MaxActiveSessions + 2; i++)
+                user.IssueRefreshToken($"token-{i}", TimeSpan.FromMinutes(10));
+
+            user.RefreshSessions.Count(s => s.IsActive).Should().Be(User.MaxActiveSessions);
+            user.CanRefresh("token-0").Should().BeFalse();
+            user.CanRefresh($"token-{User.MaxActiveSessions + 1}").Should().BeTrue();
         }
 
         [Fact]
         public void CanRefresh_ExpiredToken_ShouldReturnFalse()
         {
             var user = CreateTestUser(isVerified: true);
-            user.IssueRefreshToken("token_string", TimeSpan.FromMinutes(10));
+            var session = user.IssueRefreshToken("token_string", TimeSpan.FromMinutes(10));
 
             // Set ExpiresAt to past via reflection
-            var refreshTokenField = typeof(RefreshToken)
-                .GetField("<ExpiresAt>k__BackingField", BindingFlags.Instance | BindingFlags.NonPublic);
-            if (refreshTokenField != null && user.RefreshToken != null)
-            {
-                refreshTokenField.SetValue(user.RefreshToken, DateTime.UtcNow.AddMinutes(-5));
-            }
+            typeof(RefreshSession)
+                .GetField("<ExpiresAt>k__BackingField", BindingFlags.Instance | BindingFlags.NonPublic)!
+                .SetValue(session, DateTime.UtcNow.AddMinutes(-5));
 
             user.CanRefresh("token_string").Should().BeFalse();
         }
 
         [Fact]
-        public void RevokeRefreshToken_ShouldSetRefreshTokenToNull()
+        public void RotateRefreshToken_ShouldReplaceTheOldTokenWithTheNewOne()
         {
             var user = CreateTestUser(isVerified: true);
-            user.IssueRefreshToken("token_string", TimeSpan.FromMinutes(10));
-            user.RefreshToken.Should().NotBeNull();
+            user.IssueRefreshToken("old", TimeSpan.FromMinutes(10));
 
-            user.RevokeRefreshToken();
+            var result = user.RotateRefreshToken("old", "new", TimeSpan.FromMinutes(10));
 
-            user.RefreshToken.Should().BeNull();
+            result.Should().Be(RefreshResult.Rotated);
+            user.CanRefresh("old").Should().BeFalse();
+            user.CanRefresh("new").Should().BeTrue();
+        }
+
+        [Fact]
+        public void RotateRefreshToken_UnknownToken_ShouldReturnInvalid()
+        {
+            var user = CreateTestUser(isVerified: true);
+
+            user.RotateRefreshToken("nope", "new", TimeSpan.FromMinutes(10)).Should().Be(RefreshResult.Invalid);
+        }
+
+        [Fact]
+        public void RevokeRefreshToken_ShouldOnlyRevokeThatDevice()
+        {
+            var user = CreateTestUser(isVerified: true);
+            user.IssueRefreshToken("phone", TimeSpan.FromMinutes(10));
+            user.IssueRefreshToken("laptop", TimeSpan.FromMinutes(10));
+
+            user.RevokeRefreshToken("phone").Should().BeTrue();
+
+            user.CanRefresh("phone").Should().BeFalse();
+            user.CanRefresh("laptop").Should().BeTrue();
+        }
+
+        [Fact]
+        public void RevokeAllRefreshTokens_ShouldSignEveryDeviceOut()
+        {
+            var user = CreateTestUser(isVerified: true);
+            user.IssueRefreshToken("phone", TimeSpan.FromMinutes(10));
+            user.IssueRefreshToken("laptop", TimeSpan.FromMinutes(10));
+
+            user.RevokeAllRefreshTokens();
+
+            user.RefreshSessions.Should().OnlyContain(s => s.IsRevoked);
         }
 
         [Fact]

@@ -1,25 +1,27 @@
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.Json;
 using Application.Interface;
-using Microsoft.Extensions.Configuration;
-using Newtonsoft.Json;
+using Application.Options;
+using Microsoft.Extensions.Options;
 
 namespace Infrastructure.Services
 {
     public class PayOSPaymentService : IPaymentService
     {
-        private readonly HttpClient _httpClient;
-        private readonly IConfiguration _config;
+        private const string PaymentRequestsUrl = "https://api-merchant.payos.vn/v2/payment-requests";
 
-        public PayOSPaymentService(IHttpClientFactory factory, IConfiguration config)
+        private readonly HttpClient _httpClient;
+        private readonly PayOSOptions _options;
+
+        public PayOSPaymentService(IHttpClientFactory factory, IOptions<PayOSOptions> options)
         {
             _httpClient = factory.CreateClient("PayOSClient");
-            _config = config;
+            _options = options.Value;
         }
 
         public async Task<string> CreatePaymentLinkAsync(long orderCode, decimal amount, string description)
         {
-            var payos = _config.GetSection("PayOS");
             int intAmount = (int)amount;
 
             // PayOS requires description to be max 25 characters, alphanumeric/spaces, and ASCII only.
@@ -33,13 +35,13 @@ namespace Infrastructure.Services
                 orderCode,
                 intAmount,
                 safeDescription,
-                payos["ReturnUrl"]!,
-                payos["CancelUrl"]!,
-                payos["ChecksumKey"]!
+                _options.ReturnUrl,
+                _options.CancelUrl,
+                _options.ChecksumKey
             );
 
             long expiredAt = DateTimeOffset.UtcNow
-                .AddMinutes(15)
+                .Add(Domain.OrderManagement.Aggregate.Order.PaymentWindow)
                 .ToUnixTimeSeconds();
 
             var payload = new
@@ -47,36 +49,40 @@ namespace Infrastructure.Services
                 orderCode,
                 amount = intAmount,
                 description = safeDescription,
-                cancelUrl = payos["CancelUrl"],
-                returnUrl = payos["ReturnUrl"],
+                cancelUrl = _options.CancelUrl,
+                returnUrl = _options.ReturnUrl,
                 expiredAt,
                 signature
             };
 
-            var json = JsonConvert.SerializeObject(payload);
-
-            var requestMessage = new HttpRequestMessage(
-                HttpMethod.Post,
-                "https://api-merchant.payos.vn/v2/payment-requests")
+            var requestMessage = new HttpRequestMessage(HttpMethod.Post, PaymentRequestsUrl)
             {
-                Content = new StringContent(json, Encoding.UTF8, "application/json")
+                Content = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json")
             };
 
-            requestMessage.Headers.Add("x-client-id", payos["ClientId"]);
-            requestMessage.Headers.Add("x-api-key", payos["ApiKey"]);
+            requestMessage.Headers.Add("x-client-id", _options.ClientId);
+            requestMessage.Headers.Add("x-api-key", _options.ApiKey);
             requestMessage.Headers.Add("accept", "application/json");
 
             var response = await _httpClient.SendAsync(requestMessage);
+            var responseJson = await response.Content.ReadAsStringAsync();
+
             if (!response.IsSuccessStatusCode)
             {
-                var errorDetails = await response.Content.ReadAsStringAsync();
-                throw new Exception($"PayOS Error: {response.StatusCode} - {errorDetails}");
+                throw new Exception($"PayOS Error: {response.StatusCode} - {responseJson}");
             }
 
-            var responseJson = await response.Content.ReadAsStringAsync();
-            var result = JsonConvert.DeserializeObject<dynamic>(responseJson);
+            using var document = JsonDocument.Parse(responseJson);
+            if (document.RootElement.TryGetProperty("data", out var data)
+                && data.ValueKind == JsonValueKind.Object
+                && data.TryGetProperty("checkoutUrl", out var checkoutUrl)
+                && checkoutUrl.ValueKind == JsonValueKind.String
+                && !string.IsNullOrWhiteSpace(checkoutUrl.GetString()))
+            {
+                return checkoutUrl.GetString()!;
+            }
 
-            return result?.data?.checkoutUrl ?? throw new Exception("Failed to get checkout URL from PayOS");
+            throw new Exception("Failed to get checkout URL from PayOS");
         }
 
         private static string GenerateSignature(

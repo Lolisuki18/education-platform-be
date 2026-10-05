@@ -1,4 +1,4 @@
-using Application.BusinessException;
+using Application.Exceptions;
 using Application.Features.Identity.Commands.Register;
 using Application.Interface;
 using Domain.Common.Interfaces;
@@ -76,7 +76,7 @@ namespace UnitTests.Application.Features.Identity.Commands.Register
             Func<Task> act = async () => await _handler.Handle(command, CancellationToken.None);
 
             // Assert
-            await act.Should().ThrowAsync<Conflict>()
+            await act.Should().ThrowAsync<ConflictException>()
                 .WithMessage($"User with phone {phone} already exists.");
         }
 
@@ -105,7 +105,7 @@ namespace UnitTests.Application.Features.Identity.Commands.Register
             Func<Task> act = async () => await _handler.Handle(command, CancellationToken.None);
 
             // Assert
-            await act.Should().ThrowAsync<Conflict>()
+            await act.Should().ThrowAsync<ConflictException>()
                 .WithMessage("Cannot register as Admin.");
         }
 
@@ -149,7 +149,7 @@ namespace UnitTests.Application.Features.Identity.Commands.Register
             Func<Task> act = async () => await _handler.Handle(command, CancellationToken.None);
 
             // Assert
-            await act.Should().ThrowAsync<Conflict>()
+            await act.Should().ThrowAsync<ConflictException>()
                 .WithMessage($"User with email {email} already exists.");
         }
 

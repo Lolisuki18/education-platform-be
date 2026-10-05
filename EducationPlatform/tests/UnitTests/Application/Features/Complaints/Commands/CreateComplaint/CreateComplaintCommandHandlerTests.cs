@@ -1,4 +1,4 @@
-using Application.BusinessException;
+using Application.Exceptions;
 using Application.Features.Complaints.Commands.CreateComplaint;
 using Application.Interface;
 using Domain.Common.Interfaces;
@@ -84,7 +84,7 @@ namespace UnitTests.Application.Features.Complaints.Commands.CreateComplaint
             Func<Task> act = async () => await _handler.Handle(command, CancellationToken.None);
 
             // Assert
-            await act.Should().ThrowAsync<Conflict>()
+            await act.Should().ThrowAsync<ConflictException>()
                 .WithMessage("You can only submit complaints for courses you have enrolled in.");
         }
 

@@ -8,7 +8,10 @@ using System.Threading;
 using System.Threading.Tasks;
 using CloudinaryDotNet;
 using CloudinaryDotNet.Actions;
+using Application.Exceptions;
+using Application.Options;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace Infrastructure.Services
 {
@@ -18,6 +21,9 @@ namespace Infrastructure.Services
         private readonly string root;
         private readonly Cloudinary? _cloudinary;
         private readonly ILogger<StorageService> _logger;
+        private readonly UploadOptions _uploadOptions;
+
+        private const string OwnerMarkerFileName = "owner";
 
         private static readonly HashSet<string> AllowedCompleteUploadExtensions =
             new(StringComparer.OrdinalIgnoreCase) { "mp4", "mov", "webm", "mkv" };
@@ -26,9 +32,10 @@ namespace Infrastructure.Services
         #region Properties
         #endregion
 
-        public StorageService(IConfiguration configuration, ILogger<StorageService> logger)
+        public StorageService(IConfiguration configuration, ILogger<StorageService> logger, IOptions<UploadOptions> uploadOptions)
         {
             _logger = logger;
+            _uploadOptions = uploadOptions.Value;
             root = configuration["Storage:RootPath"]
                    ?? throw new InvalidOperationException("Storage:RootPath is not configured");
 
@@ -106,15 +113,32 @@ namespace Infrastructure.Services
             Stream chunk,
             string uploadId,
             int chunkIndex,
+            Guid ownerId,
             CancellationToken ct)
         {
             if (!Guid.TryParse(uploadId, out _))
-                throw new ArgumentException("Invalid uploadId format");
+                throw new BadRequestException("Invalid uploadId format");
+
+            if (chunkIndex < 0 || chunkIndex >= _uploadOptions.MaxChunksPerUpload)
+                throw new BadRequestException($"Chunk index must be between 0 and {_uploadOptions.MaxChunksPerUpload - 1}.");
+
+            var chunkLength = chunk.CanSeek ? chunk.Length : 0;
+            if (chunkLength > _uploadOptions.MaxChunkBytes)
+                throw new BadRequestException($"A chunk cannot be larger than {_uploadOptions.MaxChunkBytes / 1024 / 1024}MB.");
 
             var tempDir = Path.Combine(root, "temp", uploadId);
             Directory.CreateDirectory(tempDir);
 
+            await EnsureOwnerAsync(tempDir, ownerId, ct);
+
             var chunkPath = Path.Combine(tempDir, chunkIndex.ToString());
+
+            // Re-sending a chunk replaces it, so it must not count twice
+            var storedBytes = Directory.EnumerateFiles(tempDir)
+                .Where(f => !string.Equals(f, chunkPath, StringComparison.Ordinal))
+                .Sum(f => new FileInfo(f).Length);
+            if (storedBytes + chunkLength > _uploadOptions.MaxTotalBytesPerUpload)
+                throw new BadRequestException($"An upload cannot be larger than {_uploadOptions.MaxTotalBytesPerUpload / 1024 / 1024}MB.");
 
             await using var output = new FileStream(
                 chunkPath,
@@ -128,22 +152,60 @@ namespace Infrastructure.Services
             await chunk.CopyToAsync(output, ct);
         }
 
+        /// <summary>The first chunk claims the upload; every later request must come from the same user.</summary>
+        private static async Task EnsureOwnerAsync(string tempDir, Guid ownerId, CancellationToken ct)
+        {
+            var markerPath = Path.Combine(tempDir, OwnerMarkerFileName);
+
+            if (!File.Exists(markerPath))
+            {
+                try
+                {
+                    await using var marker = new FileStream(markerPath, FileMode.CreateNew, FileAccess.Write, FileShare.Read);
+                    await marker.WriteAsync(System.Text.Encoding.UTF8.GetBytes(ownerId.ToString()), ct);
+                    return;
+                }
+                catch (IOException)
+                {
+                    // Another request claimed the upload first: fall through and compare owners
+                }
+            }
+
+            await AssertOwnerAsync(tempDir, ownerId, ct);
+        }
+
+        private static async Task AssertOwnerAsync(string tempDir, Guid ownerId, CancellationToken ct)
+        {
+            var markerPath = Path.Combine(tempDir, OwnerMarkerFileName);
+
+            // Uploads started before owners were recorded have no marker and stay usable
+            if (!File.Exists(markerPath))
+                return;
+
+            var owner = (await File.ReadAllTextAsync(markerPath, ct)).Trim();
+            if (!string.Equals(owner, ownerId.ToString(), StringComparison.OrdinalIgnoreCase))
+                throw new ForbiddenException("This upload belongs to another user.");
+        }
+
         public async Task<string> CompleteUploadAsync(
             string uploadId,
             string extension,
+            Guid ownerId,
             CancellationToken ct)
         {
             if (!Guid.TryParse(uploadId, out _))
-                throw new ArgumentException("Invalid uploadId format");
+                throw new BadRequestException("Invalid uploadId format");
 
             var normalizedExtension = extension.TrimStart('.');
             if (!AllowedCompleteUploadExtensions.Contains(normalizedExtension))
-                throw new ArgumentException("Invalid or unsupported file extension.");
+                throw new BadRequestException("Invalid or unsupported file extension.");
 
             var tempDir = Path.Combine(root, "temp", uploadId);
 
             if (!Directory.Exists(tempDir))
-                throw new InvalidOperationException("Upload not found");
+                throw new NotFoundException("Upload not found");
+
+            await AssertOwnerAsync(tempDir, ownerId, ct);
 
             var finalRelativePath = Path.Combine(
                 "videos",

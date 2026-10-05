@@ -7,6 +7,7 @@ using Domain.CourseManagement.Entity;
 using Domain.EnrollmentManagement.Aggregate;
 using Domain.EnrollmentManagement.Entity;
 using Domain.IdentityManagement.Aggregate;
+using Domain.IdentityManagement.Entity;
 using Domain.OrderManagement.Aggregate;
 using Microsoft.EntityFrameworkCore;
 
@@ -29,6 +30,7 @@ namespace Infrastructure.Persistence
         // Identity Management
         // ====================
         public DbSet<User> Users => Set<User>();
+        public DbSet<RefreshSession> RefreshSessions => Set<RefreshSession>();
 
         // ====================
         // Course Management
@@ -205,16 +207,14 @@ namespace Infrastructure.Persistence
                       .HasMaxLength(500);
                 });
 
-                // ---------- RefreshToken (Value Object)
-                entity.OwnsOne(u => u.RefreshToken, rt =>
-                {
-                    rt.Property(r => r.Hash)
-                      .HasColumnName("RefreshTokenHash")
-                      .HasMaxLength(500);
+                // ---------- Refresh sessions (one per device)
+                entity.HasMany(u => u.RefreshSessions)
+                      .WithOne()
+                      .HasForeignKey(s => s.UserID)
+                      .OnDelete(DeleteBehavior.Cascade);
 
-                    rt.Property(r => r.ExpiresAt)
-                      .HasColumnName("RefreshTokenExpiresAt");
-                });
+                entity.Navigation(u => u.RefreshSessions)
+                      .UsePropertyAccessMode(PropertyAccessMode.Field);
 
                 entity.HasIndex(u => u.Email)
                       .IsUnique();
@@ -223,6 +223,34 @@ namespace Infrastructure.Persistence
                       .IsUnique();
 
                 entity.HasIndex(u => u.EmailOtp);
+            });
+
+            // ====================
+            // RefreshSession
+            // ====================
+            modelBuilder.Entity<RefreshSession>(entity =>
+            {
+                entity.HasKey(s => s.SessionID);
+
+                // Keys are assigned by the domain; without this EF would treat a session added to a tracked user as existing.
+                entity.Property(s => s.SessionID)
+                      .ValueGeneratedNever();
+
+                entity.Property(s => s.Hash)
+                      .IsRequired()
+                      .HasMaxLength(500);
+
+                entity.Property(s => s.CreatedAt).IsRequired();
+                entity.Property(s => s.ExpiresAt).IsRequired();
+
+                // Two concurrent refreshes with the same token must not both succeed.
+                entity.Property(s => s.RevokedAt)
+                      .IsConcurrencyToken();
+
+                entity.HasIndex(s => s.Hash)
+                      .IsUnique();
+
+                entity.HasIndex(s => s.UserID);
             });
 
             // ====================
@@ -662,6 +690,12 @@ namespace Infrastructure.Persistence
 
                 entity.Property(p => p.PaidAt);
 
+                entity.Property(p => p.CheckoutUrl)
+                      .HasMaxLength(2000);
+
+                entity.Property(p => p.CouponIds)
+                      .HasColumnType("uuid[]");
+
                 // Relationship with Teacher (User)
                 entity.HasOne(p => p.User)
                       .WithMany()
@@ -676,6 +710,13 @@ namespace Infrastructure.Persistence
 
                 entity.HasIndex(p => p.Status);
                 entity.HasIndex(p => p.StudentID);
+
+                // OrderStatus.Created = 1: a student can only have one order awaiting payment per course
+                entity.HasIndex(p => new { p.StudentID, p.CourseID })
+                      .HasFilter("\"Status\" = 1")
+                      .IsUnique();
+
+                entity.HasIndex(p => p.OrderCode);
             });
 
             // ====================

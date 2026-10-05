@@ -1,4 +1,4 @@
-using Application.BusinessException;
+using Application.Exceptions;
 using Application.Features.Courses.Queries.GetCourseDetail;
 using Application.Interface;
 using Application.Results;
@@ -75,7 +75,7 @@ namespace UnitTests.Application.Features.Courses.Queries.GetCourseDetail
             Func<Task> act = async () => await _handler.Handle(query, CancellationToken.None);
 
             // Assert
-            await act.Should().ThrowAsync<NotFound>().WithMessage($"Course with ID: {courseId} is not found");
+            await act.Should().ThrowAsync<NotFoundException>().WithMessage($"Course with ID: {courseId} is not found");
         }
 
         [Fact]
@@ -97,7 +97,7 @@ namespace UnitTests.Application.Features.Courses.Queries.GetCourseDetail
             Func<Task> act = async () => await _handler.Handle(query, CancellationToken.None);
 
             // Assert
-            await act.Should().ThrowAsync<NotFound>().WithMessage($"Course with ID: {courseId} is not found");
+            await act.Should().ThrowAsync<NotFoundException>().WithMessage($"Course with ID: {courseId} is not found");
         }
 
         [Fact]

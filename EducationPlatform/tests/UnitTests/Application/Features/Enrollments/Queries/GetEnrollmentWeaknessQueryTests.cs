@@ -1,4 +1,4 @@
-using Application.BusinessException;
+using Application.Exceptions;
 using Application.Features.Enrollments.Queries;
 using Application.Results;
 using Domain.Common.Interfaces;
@@ -51,7 +51,7 @@ namespace UnitTests.Application.Features.Enrollments.Queries
             Func<Task> act = async () => await _handler.Handle(query, CancellationToken.None);
 
             // Assert
-            await act.Should().ThrowAsync<NotFound>()
+            await act.Should().ThrowAsync<NotFoundException>()
                 .WithMessage("Student statistic not found");
         }
 

@@ -82,14 +82,11 @@ namespace IntegrationTests.Controllers
             dbOrder!.Status.Should().Be(OrderStatus.Created);
 
             // Act: Return Payment Success
-            var returnResponse = await Client.GetAsync($"/api/orders/return?status=PAID&orderCode={dbOrder.OrderCode}");
+            var returnResponse = await ReturnFromPayOsAsync(dbOrder.OrderCode);
 
-            // Assert: Return Payment Success
-            returnResponse.StatusCode.Should().Be(HttpStatusCode.OK);
-            var returnResult = await returnResponse.Content.ReadFromJsonAsync<API.Models.Common.ApiResponse<ReturnOrderResponseDto>>();
-            returnResult.Should().NotBeNull();
-            returnResult!.IsSuccess.Should().BeTrue();
-            returnResult.Data.IsSuccess.Should().BeTrue();
+            // Assert: the browser is sent back to the frontend with a success flag
+            returnResponse.StatusCode.Should().Be(HttpStatusCode.Redirect);
+            returnResponse.Headers.Location!.ToString().Should().Contain("payment=success");
 
             // Assert: Order updated to Pending (Paid in business flow) and Coupon marked as used
             await ExecuteDbContextAsync(async db =>
@@ -134,8 +131,8 @@ namespace IntegrationTests.Controllers
             dbOrder.Should().NotBeNull();
 
             // Finish the order so the student is enrolled
-            var returnResponse = await Client.GetAsync($"/api/orders/return?status=PAID&orderCode={dbOrder!.OrderCode}");
-            returnResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+            var returnResponse = await ReturnFromPayOsAsync(dbOrder!.OrderCode);
+            returnResponse.StatusCode.Should().Be(HttpStatusCode.Redirect);
 
             // Act: Attempt to purchase the SAME course again
             var duplicateResponse = await Client.PostAsJsonAsync("/api/orders", request);
@@ -181,6 +178,175 @@ namespace IntegrationTests.Controllers
             });
             dbOrder.Should().NotBeNull();
             dbOrder!.PlatformAmount.Should().Be(7500); // 15% platform fee on 50000 course price = 7500
+        }
+
+        [Fact]
+        public async Task CreateOrder_Twice_ReusesTheOrderAwaitingPayment()
+        {
+            await LoginExistingUserAsync("student@example.com", "Password123!");
+
+            Course? course = null;
+            await ExecuteDbContextAsync(async db =>
+            {
+                course = await db.Set<Course>().FirstOrDefaultAsync(c => c.Title == "Math algebra");
+            });
+
+            var request = new CreateOrderRequestDto { CourseId = course!.CourseID, SelectedCouponIds = new List<Guid>() };
+
+            var first = await Client.PostAsJsonAsync("/api/orders", request);
+            var second = await Client.PostAsJsonAsync("/api/orders", request);
+
+            first.StatusCode.Should().Be(HttpStatusCode.OK);
+            second.StatusCode.Should().Be(HttpStatusCode.OK);
+
+            var orders = await ExecuteDbContextAsync(db => db.Set<Order>().Where(o => o.CourseID == course.CourseID).ToListAsync());
+            orders.Should().ContainSingle();
+            orders[0].CheckoutUrl.Should().Be("https://mock-payment-url.com");
+        }
+
+        [Fact]
+        public async Task ReturnFromPayOs_WhenCancelled_RedirectsToCancelledAndLeavesOrderUnpaid()
+        {
+            await LoginExistingUserAsync("student@example.com", "Password123!");
+
+            Course? course = null;
+            await ExecuteDbContextAsync(async db =>
+            {
+                course = await db.Set<Course>().FirstOrDefaultAsync(c => c.Title == "Math algebra");
+            });
+
+            await Client.PostAsJsonAsync("/api/orders", new CreateOrderRequestDto { CourseId = course!.CourseID, SelectedCouponIds = new List<Guid>() });
+            var order = await ExecuteDbContextAsync(db => db.Set<Order>().FirstAsync(o => o.CourseID == course.CourseID));
+
+            var response = await ReturnFromPayOsAsync(order.OrderCode, status: "CANCELLED", cancelled: true);
+
+            response.StatusCode.Should().Be(HttpStatusCode.Redirect);
+            response.Headers.Location!.ToString().Should().Contain("payment=cancelled");
+
+            var after = await ExecuteDbContextAsync(db => db.Set<Order>().FirstAsync(o => o.OrderID == order.OrderID));
+            after.Status.Should().Be(OrderStatus.Created);
+        }
+
+        [Fact]
+        public async Task Webhook_WithPaidPayload_FinishesTheOrderAndIsIdempotent()
+        {
+            await LoginExistingUserAsync("student@example.com", "Password123!");
+
+            Course? course = null;
+            await ExecuteDbContextAsync(async db =>
+            {
+                course = await db.Set<Course>().FirstOrDefaultAsync(c => c.Title == "Math algebra");
+            });
+
+            await Client.PostAsJsonAsync("/api/orders", new CreateOrderRequestDto { CourseId = course!.CourseID, SelectedCouponIds = new List<Guid>() });
+            var order = await ExecuteDbContextAsync(db => db.Set<Order>().FirstAsync(o => o.CourseID == course.CourseID));
+
+            var payload = new
+            {
+                code = "00",
+                desc = "success",
+                success = true,
+                data = new { orderCode = order.OrderCode, amount = 50000, description = "Thanh toan" },
+                signature = "any-signature"
+            };
+
+            // PayOS may deliver the same webhook more than once
+            var first = await Client.PostAsJsonAsync("/api/orders/webhook", payload);
+            var second = await Client.PostAsJsonAsync("/api/orders/webhook", payload);
+
+            first.StatusCode.Should().Be(HttpStatusCode.OK);
+            second.StatusCode.Should().Be(HttpStatusCode.OK);
+
+            var after = await ExecuteDbContextAsync(db => db.Set<Order>().FirstAsync(o => o.OrderID == order.OrderID));
+            after.Status.Should().Be(OrderStatus.Pending);
+
+            var enrollments = await ExecuteDbContextAsync(db => db.Set<Domain.EnrollmentManagement.Aggregate.Enrollment>()
+                .Where(e => e.CourseID == course.CourseID).ToListAsync());
+            enrollments.Should().ContainSingle();
+        }
+
+        [Fact]
+        public async Task Webhook_WithWrongAmount_DoesNotFinishTheOrder()
+        {
+            await LoginExistingUserAsync("student@example.com", "Password123!");
+
+            Course? course = null;
+            await ExecuteDbContextAsync(async db =>
+            {
+                course = await db.Set<Course>().FirstOrDefaultAsync(c => c.Title == "Math algebra");
+            });
+
+            await Client.PostAsJsonAsync("/api/orders", new CreateOrderRequestDto { CourseId = course!.CourseID, SelectedCouponIds = new List<Guid>() });
+            var order = await ExecuteDbContextAsync(db => db.Set<Order>().FirstAsync(o => o.CourseID == course.CourseID));
+
+            var response = await Client.PostAsJsonAsync("/api/orders/webhook", new
+            {
+                code = "00",
+                data = new { orderCode = order.OrderCode, amount = 1000 },
+                signature = "any-signature"
+            });
+
+            // Acknowledged (nothing to retry) but the order stays unpaid
+            response.StatusCode.Should().Be(HttpStatusCode.OK);
+            var after = await ExecuteDbContextAsync(db => db.Set<Order>().FirstAsync(o => o.OrderID == order.OrderID));
+            after.Status.Should().Be(OrderStatus.Created);
+        }
+
+        [Fact]
+        public async Task Webhook_WithMalformedBody_ReturnsBadRequest()
+        {
+            var response = await Client.PostAsync("/api/orders/webhook",
+                new System.Net.Http.StringContent("this is not json", System.Text.Encoding.UTF8, "application/json"));
+
+            response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        }
+
+        [Fact]
+        public async Task Webhook_ForUnknownOrder_IsAcknowledged()
+        {
+            // PayOS sends such a payload when the webhook URL is registered
+            var response = await Client.PostAsJsonAsync("/api/orders/webhook", new
+            {
+                code = "00",
+                data = new { orderCode = 123, amount = 3000 },
+                signature = "any-signature"
+            });
+
+            response.StatusCode.Should().Be(HttpStatusCode.OK);
+        }
+
+        [Fact]
+        public async Task CreateOrder_WhenCouponCoversThePrice_EnrollsWithoutPayment()
+        {
+            await LoginExistingUserAsync("student@example.com", "Password123!");
+
+            Course? course = null;
+            Guid couponId = Guid.Empty;
+            await ExecuteDbContextAsync(async db =>
+            {
+                course = await db.Set<Course>().FirstOrDefaultAsync(c => c.Title == "Math algebra");
+
+                var coupon = new Coupon(Guid.NewGuid(), "FREEALL", "Covers the whole course", 1_000_000m,
+                    DateTime.UtcNow.AddDays(-1), DateTime.UtcNow.AddDays(10), 5);
+                db.Set<Coupon>().Add(coupon);
+                await db.SaveChangesAsync();
+                couponId = coupon.CouponID;
+            });
+
+            var response = await Client.PostAsJsonAsync("/api/orders",
+                new CreateOrderRequestDto { CourseId = course!.CourseID, SelectedCouponIds = new List<Guid> { couponId } });
+
+            response.StatusCode.Should().Be(HttpStatusCode.OK);
+            var result = await response.Content.ReadFromJsonAsync<API.Models.Common.ApiResponse<CreateOrderResponseDto>>();
+            result!.Data!.RequiresPayment.Should().BeFalse();
+            result.Data.CheckoutUrl.Should().Contain("payment=success");
+
+            var order = await ExecuteDbContextAsync(db => db.Set<Order>().FirstAsync(o => o.CourseID == course.CourseID));
+            order.Status.Should().Be(OrderStatus.Pending);
+
+            var enrolled = await ExecuteDbContextAsync(db => db.Set<Domain.EnrollmentManagement.Aggregate.Enrollment>()
+                .AnyAsync(e => e.CourseID == course.CourseID));
+            enrolled.Should().BeTrue();
         }
     }
 }

@@ -1,7 +1,7 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
-using Application.BusinessException;
+using Application.Exceptions;
 using Application.Features.Coupons.Commands.CreateCoupon;
 using Application.Features.Coupons.Commands.UpdateCoupon;
 using Application.Features.Coupons.Commands.UpdateCouponStatus;
@@ -83,7 +83,7 @@ namespace UnitTests.Application.Features.Coupons
             Func<Task> act = async () => await handler.Handle(command, CancellationToken.None);
 
             // Assert
-            await act.Should().ThrowAsync<Conflict>().WithMessage("*already exists*");
+            await act.Should().ThrowAsync<ConflictException>().WithMessage("*already exists*");
             _mockUnitOfWork.Verify(u => u.CommitAsync(It.IsAny<string>()), Times.Never);
         }
 
@@ -145,7 +145,7 @@ namespace UnitTests.Application.Features.Coupons
             Func<Task> act = async () => await handler.Handle(command, CancellationToken.None);
 
             // Assert
-            await act.Should().ThrowAsync<NotFound>().WithMessage("Coupon not found.");
+            await act.Should().ThrowAsync<NotFoundException>().WithMessage("Coupon not found.");
             _mockUnitOfWork.Verify(u => u.CommitAsync(It.IsAny<string>()), Times.Never);
         }
 
@@ -197,7 +197,7 @@ namespace UnitTests.Application.Features.Coupons
             Func<Task> act = async () => await handler.Handle(command, CancellationToken.None);
 
             // Assert
-            await act.Should().ThrowAsync<NotFound>().WithMessage("Coupon not found.");
+            await act.Should().ThrowAsync<NotFoundException>().WithMessage("Coupon not found.");
         }
 
         [Fact]
@@ -225,7 +225,7 @@ namespace UnitTests.Application.Features.Coupons
             Func<Task> act = async () => await handler.Handle(command, CancellationToken.None);
 
             // Assert
-            await act.Should().ThrowAsync<Conflict>().WithMessage("Expired coupons cannot be reactivated.");
+            await act.Should().ThrowAsync<ConflictException>().WithMessage("Expired coupons cannot be reactivated.");
             _mockUnitOfWork.Verify(u => u.CommitAsync(It.IsAny<string>()), Times.Never);
         }
     }

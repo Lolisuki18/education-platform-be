@@ -1,4 +1,4 @@
-using Domain.DomainExceptions;
+using Domain.Exceptions;
 using Domain.OrderManagement.Aggregate;
 using Domain.OrderManagement.Enum;
 using Domain.OrderManagement.Events;
@@ -95,13 +95,20 @@ namespace UnitTests.DomainTests.OrderManagement
             act.Should().Throw<DomainException>().WithMessage("Invalid commission rate");
         }
 
-        [Theory]
-        [InlineData(0)]
-        [InlineData(-100)]
-        public void CommissionCreate_InvalidTotal_ShouldThrowDomainException(decimal total)
+        [Fact]
+        public void CommissionCreate_NegativeTotal_ShouldThrowDomainException()
         {
-            Action act = () => Commission.Create(0.15m, total);
-            act.Should().Throw<DomainException>().WithMessage("Total amount must be greater than zero");
+            Action act = () => Commission.Create(0.15m, -100m);
+            act.Should().Throw<DomainException>().WithMessage("Total amount cannot be negative");
+        }
+
+        [Fact]
+        public void CommissionCreate_ZeroTotal_ShouldBeAllowedForFullyDiscountedOrders()
+        {
+            var commission = Commission.Create(0.15m, 0m);
+
+            commission.PlatformAmount.Should().Be(0m);
+            commission.TeacherAmount.Should().Be(0m);
         }
 
         [Fact]
@@ -151,7 +158,7 @@ namespace UnitTests.DomainTests.OrderManagement
             var order = new Order(orderId, commission, studentId, courseId, createdAt);
 
             order.OrderID.Should().Be(orderId);
-            order.OrderCode.Should().BeCloseTo(DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(), 1000);
+            (order.OrderCode / 1000).Should().BeCloseTo(DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(), 1000);
             order.PlatformAmount.Should().Be(15m);
             order.TeacherAmount.Should().Be(85m);
             order.Method.Should().Be(OrderMethod.PayOS);
@@ -184,6 +191,93 @@ namespace UnitTests.DomainTests.OrderManagement
             orderPaidEvent.StudentID.Should().Be(order.StudentID);
             orderPaidEvent.CourseID.Should().Be(order.CourseID);
             orderPaidEvent.PaidAt.Should().Be(paidAt);
+        }
+
+        [Fact]
+        public void Order_StudentPaid_Twice_ShouldRaiseTheEventOnlyOnce()
+        {
+            var order = new Order(Guid.NewGuid(), Commission.Create(0.15m, 100m), Guid.NewGuid(), Guid.NewGuid(), DateTime.UtcNow);
+
+            order.StudentPaid(null);
+            order.StudentPaid(null);
+
+            order.DomainEvents.Should().ContainSingle();
+        }
+
+        [Fact]
+        public void Order_Cancel_ShouldOnlyWorkWhileAwaitingPayment()
+        {
+            var order = new Order(Guid.NewGuid(), Commission.Create(0.15m, 100m), Guid.NewGuid(), Guid.NewGuid(), DateTime.UtcNow);
+
+            order.Cancel();
+            order.Status.Should().Be(OrderStatus.Cancelled);
+
+            Action again = () => order.Cancel();
+            again.Should().Throw<DomainException>();
+        }
+
+        [Fact]
+        public void Order_Cancel_WhenPaid_ShouldThrow()
+        {
+            var order = new Order(Guid.NewGuid(), Commission.Create(0.15m, 100m), Guid.NewGuid(), Guid.NewGuid(), DateTime.UtcNow);
+            order.StudentPaid(null);
+
+            Action act = () => order.Cancel();
+
+            act.Should().Throw<DomainException>();
+        }
+
+        [Fact]
+        public void Order_StudentPaid_AfterCancel_ShouldStillBeAccepted()
+        {
+            var order = new Order(Guid.NewGuid(), Commission.Create(0.15m, 100m), Guid.NewGuid(), Guid.NewGuid(), DateTime.UtcNow);
+            order.Cancel();
+
+            order.StudentPaid(null);
+
+            order.IsPaid.Should().BeTrue();
+        }
+
+        [Fact]
+        public void Order_IsAwaitingPayment_ShouldExpireAfterThePaymentWindow()
+        {
+            var created = DateTime.UtcNow;
+            var order = new Order(Guid.NewGuid(), Commission.Create(0.15m, 100m), Guid.NewGuid(), Guid.NewGuid(), created);
+
+            order.IsAwaitingPayment(created.AddMinutes(1)).Should().BeTrue();
+            order.IsAwaitingPayment(created.Add(Order.PaymentWindow).AddSeconds(1)).Should().BeFalse();
+        }
+
+        [Fact]
+        public void Order_Constructor_ShouldRememberDistinctCoupons()
+        {
+            var coupon = Guid.NewGuid();
+
+            var order = new Order(Guid.NewGuid(), Commission.Create(0.15m, 100m), Guid.NewGuid(), Guid.NewGuid(), null, new[] { coupon, coupon });
+
+            order.CouponIds.Should().ContainSingle().Which.Should().Be(coupon);
+        }
+
+        [Fact]
+        public void Order_AttachCheckoutUrl_EmptyValue_ShouldThrow()
+        {
+            var order = new Order(Guid.NewGuid(), Commission.Create(0.15m, 100m), Guid.NewGuid(), Guid.NewGuid(), null);
+
+            Action act = () => order.AttachCheckoutUrl(" ");
+
+            act.Should().Throw<DomainException>();
+        }
+
+        [Fact]
+        public void Order_OrderCodes_ShouldNotCollideWhenCreatedInTheSameInstant()
+        {
+            var codes = Enumerable.Range(0, 200)
+                .Select(_ => new Order(Guid.NewGuid(), Commission.Create(0.15m, 100m), Guid.NewGuid(), Guid.NewGuid(), null).OrderCode)
+                .ToList();
+
+            // Not a hard guarantee (3 random digits), but collisions must be far rarer than with millisecond codes alone
+            codes.Distinct().Count().Should().BeGreaterThan(150);
+            codes.Should().OnlyContain(c => c < 9_007_199_254_740_991L);
         }
     }
 }

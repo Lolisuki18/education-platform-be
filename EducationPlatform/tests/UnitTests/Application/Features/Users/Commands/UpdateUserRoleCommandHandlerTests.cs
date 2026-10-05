@@ -1,7 +1,7 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
-using Application.BusinessException;
+using Application.Exceptions;
 using Application.Features.Users.Commands;
 using Application.Interface;
 using Domain.Common.Interfaces;
@@ -48,7 +48,7 @@ namespace UnitTests.Application.Features.Users.Commands
             Func<Task> act = async () => await _handler.Handle(command, CancellationToken.None);
 
             // Assert
-            await act.Should().ThrowAsync<BadRequest>()
+            await act.Should().ThrowAsync<BadRequestException>()
                 .WithMessage("Cannot change your own role.");
         }
 

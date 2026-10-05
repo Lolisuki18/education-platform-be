@@ -1,4 +1,4 @@
-using Application.BusinessException;
+using Application.Exceptions;
 using Application.Features.Enrollments.Commands;
 using Application.Interface;
 using Domain.Common.Interfaces;
@@ -68,7 +68,7 @@ namespace UnitTests.Application.Features.Enrollments.Commands
             Func<Task> act = async () => await _handler.Handle(command, CancellationToken.None);
 
             // Assert
-            await act.Should().ThrowAsync<NotFound>()
+            await act.Should().ThrowAsync<NotFoundException>()
                 .WithMessage("Enrollment not found");
         }
 

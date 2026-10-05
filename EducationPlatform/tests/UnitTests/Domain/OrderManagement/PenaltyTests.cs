@@ -1,4 +1,4 @@
-using Domain.DomainExceptions;
+using Domain.Exceptions;
 using Domain.OrderManagement.Aggregate;
 using FluentAssertions;
 using System;

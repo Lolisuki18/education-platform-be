@@ -1,4 +1,4 @@
-using Application.BusinessException;
+using Application.Exceptions;
 using Application.Features.Academic.Queries.GetDefaultLessons;
 using Application.Features.Complaints.Queries.GetComplaintDetail;
 using Application.Results;
@@ -54,7 +54,7 @@ namespace UnitTests.Application.Features.Academic.Queries.GetDefaultLessons
             Func<Task> act = async () => await _mockHandler.Handle(query, CancellationToken.None);
 
             // 3. Assert: verify that the handler throws a NotFoundException when the list of default lessons is empty
-            await act.Should().ThrowAsync<NotFound>().WithMessage("Default lessons list is empty or was not found");
+            await act.Should().ThrowAsync<NotFoundException>().WithMessage("Default lessons list is empty or was not found");
         }
 
         [Fact]

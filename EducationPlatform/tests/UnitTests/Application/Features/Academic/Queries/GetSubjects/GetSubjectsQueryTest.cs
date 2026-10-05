@@ -1,4 +1,4 @@
-using Application.BusinessException;
+using Application.Exceptions;
 using Application.Features.Academic.Queries.GetSubjects;
 using Application.Results;
 using AutoMapper;
@@ -48,7 +48,7 @@ namespace UnitTests.Application.Features.Academic.Queries.GetSubjects
             Func<Task> act = async () => await _mockHandler.Handle(query, CancellationToken.None);
 
             // 3. Assert
-            await act.Should().ThrowAsync<NotFound>().WithMessage("Subject list is empty or was not found");
+            await act.Should().ThrowAsync<NotFoundException>().WithMessage("Subject list is empty or was not found");
         }
 
         [Fact]

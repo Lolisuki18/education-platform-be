@@ -1,5 +1,5 @@
-using Application.BusinessException;
-using Application.Features.Orders.Queries.GetCoupons;
+using Application.Exceptions;
+using Application.Features.Orders.Queries.GetMyCoupons;
 using Application.Interface;
 using Application.Results;
 using AutoMapper;
@@ -15,17 +15,17 @@ using System.Threading;
 using System.Threading.Tasks;
 using Xunit;
 
-namespace UnitTests.Application.Features.Orders.Queries.GetCoupons
+namespace UnitTests.Application.Features.Orders.Queries.GetMyCoupons
 {
-    public class GetCouponsQueryHandlerTests
+    public class GetMyCouponsQueryHandlerTests
     {
         private readonly Mock<IUnitOfWork> _mockUnitOfWork;
         private readonly Mock<IOrderRepository> _mockOrderRepository;
         private readonly Mock<IMapper> _mockMapper;
         private readonly Mock<ICurrentUser> _mockCurrentUser;
-        private readonly GetCouponsQueryHandler _handler;
+        private readonly GetMyCouponsQueryHandler _handler;
 
-        public GetCouponsQueryHandlerTests()
+        public GetMyCouponsQueryHandlerTests()
         {
             _mockUnitOfWork = new Mock<IUnitOfWork>();
             _mockOrderRepository = new Mock<IOrderRepository>();
@@ -36,7 +36,7 @@ namespace UnitTests.Application.Features.Orders.Queries.GetCoupons
                 .Setup(u => u.GetRepository<IOrderRepository>())
                 .Returns(_mockOrderRepository.Object);
 
-            _handler = new GetCouponsQueryHandler(
+            _handler = new GetMyCouponsQueryHandler(
                 _mockUnitOfWork.Object,
                 _mockMapper.Object,
                 _mockCurrentUser.Object);
@@ -48,7 +48,7 @@ namespace UnitTests.Application.Features.Orders.Queries.GetCoupons
             // Arrange
             _mockCurrentUser.Setup(u => u.Id).Returns((Guid?)null);
             _mockCurrentUser.Setup(u => u.Role).Returns((string?)null);
-            var query = new GetCouponsQuery();
+            var query = new GetMyCouponsQuery();
 
             // Act
             Func<Task> act = async () => await _handler.Handle(query, CancellationToken.None);
@@ -64,7 +64,7 @@ namespace UnitTests.Application.Features.Orders.Queries.GetCoupons
             // Arrange
             _mockCurrentUser.Setup(u => u.Id).Returns(Guid.NewGuid());
             _mockCurrentUser.Setup(u => u.Role).Returns("InvalidRole");
-            var query = new GetCouponsQuery();
+            var query = new GetMyCouponsQuery();
 
             // Act
             Func<Task> act = async () => await _handler.Handle(query, CancellationToken.None);
@@ -100,7 +100,7 @@ namespace UnitTests.Application.Features.Orders.Queries.GetCoupons
                 .Setup(m => m.Map<IEnumerable<CouponDTO>>(coupons))
                 .Returns(expectedDtos);
 
-            var query = new GetCouponsQuery();
+            var query = new GetMyCouponsQuery();
 
             // Act
             var result = await _handler.Handle(query, CancellationToken.None);
@@ -138,7 +138,7 @@ namespace UnitTests.Application.Features.Orders.Queries.GetCoupons
                 .Setup(m => m.Map<IEnumerable<CouponDTO>>(coupons))
                 .Returns(expectedDtos);
 
-            var query = new GetCouponsQuery();
+            var query = new GetMyCouponsQuery();
 
             // Act
             var result = await _handler.Handle(query, CancellationToken.None);

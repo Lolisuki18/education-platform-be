@@ -1,4 +1,4 @@
-using Application.BusinessException;
+using Application.Exceptions;
 using Application.Features.Courses.Queries.GetCourses;
 using Application.Interface;
 using Application.Results;
@@ -87,7 +87,7 @@ namespace UnitTests.Application.Features.Courses.Queries.GetCourses
             Func<Task> act = async () => await _handler.Handle(query, CancellationToken.None);
 
             // Assert
-            await act.Should().ThrowAsync<NotFound>().WithMessage("Course list is not found or empty");
+            await act.Should().ThrowAsync<NotFoundException>().WithMessage("Course list is not found or empty");
         }
 
         [Fact]

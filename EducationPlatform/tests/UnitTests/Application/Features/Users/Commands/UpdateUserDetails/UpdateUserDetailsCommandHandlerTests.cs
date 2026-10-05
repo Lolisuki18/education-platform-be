@@ -1,4 +1,4 @@
-using Application.BusinessException;
+using Application.Exceptions;
 using Application.Features.Users.Commands;
 using Application.Interface;
 using Application.Results;
@@ -73,7 +73,7 @@ namespace UnitTests.Application.Features.Users.Commands
             Func<Task> act = async () => await _handler.Handle(command, CancellationToken.None);
 
             // Assert
-            await act.Should().ThrowAsync<NotFound>()
+            await act.Should().ThrowAsync<NotFoundException>()
                 .WithMessage($"User with ID: {currentUserId} not found.");
         }
 

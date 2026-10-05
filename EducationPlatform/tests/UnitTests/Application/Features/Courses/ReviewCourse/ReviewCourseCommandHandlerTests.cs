@@ -1,4 +1,4 @@
-using Application.BusinessException;
+using Application.Exceptions;
 using Application.Features.Courses.ReviewCourse;
 using Application.Interface;
 using Domain.Common.Interfaces;
@@ -71,7 +71,7 @@ namespace UnitTests.Application.Features.Courses.ReviewCourse
             Func<Task> act = async () => await _handler.Handle(command, CancellationToken.None);
 
             // Assert
-            await act.Should().ThrowAsync<NotFound>()
+            await act.Should().ThrowAsync<NotFoundException>()
                 .WithMessage($"Course with ID: {courseId} is not found");
         }
 

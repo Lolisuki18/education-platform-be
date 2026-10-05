@@ -1,4 +1,4 @@
-using Domain.DomainExceptions;
+using Domain.Exceptions;
 using Domain.OrderManagement.Aggregate;
 using Domain.OrderManagement.Enum;
 using FluentAssertions;
@@ -155,8 +155,48 @@ namespace UnitTests.DomainTests.OrderManagement
             coupon.MarkAsUsed();
 
             coupon.CurrentUsage.Should().Be(1);
-            coupon.IsUsed.Should().BeTrue();
+            coupon.IsUsed.Should().BeFalse(); // 9 uses are still left
             coupon.Version.Should().Be(2);
+        }
+
+        [Fact]
+        public void Coupon_MarkAsUsed_ReachingMaxUsage_ShouldBeFullyUsed()
+        {
+            var coupon = new Coupon(Guid.NewGuid(), "CODE", "Desc", 10m, DateTime.UtcNow.AddDays(-1), DateTime.UtcNow.AddDays(5), 2);
+
+            coupon.MarkAsUsed();
+            coupon.CanBeApplied().Should().BeTrue();
+            coupon.MarkAsUsed();
+
+            coupon.IsUsed.Should().BeTrue();
+            coupon.CanBeApplied().Should().BeFalse();
+            Action act = () => coupon.MarkAsUsed();
+            act.Should().Throw<DomainException>();
+        }
+
+        [Fact]
+        public void Coupon_Release_ShouldGiveBackOneUse()
+        {
+            var coupon = new Coupon(Guid.NewGuid(), "CODE", "Desc", 10m, DateTime.UtcNow.AddDays(-1), DateTime.UtcNow.AddDays(5), 1);
+            coupon.MarkAsUsed();
+            coupon.IsUsed.Should().BeTrue();
+
+            coupon.Release();
+
+            coupon.CurrentUsage.Should().Be(0);
+            coupon.IsUsed.Should().BeFalse();
+            coupon.CanBeApplied().Should().BeTrue();
+        }
+
+        [Fact]
+        public void Coupon_Release_WhenNeverUsed_ShouldDoNothing()
+        {
+            var coupon = new Coupon(Guid.NewGuid(), "CODE", "Desc", 10m, DateTime.UtcNow.AddDays(-1), DateTime.UtcNow.AddDays(5), 1);
+
+            coupon.Release();
+
+            coupon.CurrentUsage.Should().Be(0);
+            coupon.Version.Should().Be(1);
         }
     }
 }

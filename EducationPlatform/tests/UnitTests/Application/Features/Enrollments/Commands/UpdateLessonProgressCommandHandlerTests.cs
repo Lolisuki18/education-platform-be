@@ -1,4 +1,4 @@
-using Application.BusinessException;
+using Application.Exceptions;
 using Application.Features.Enrollments.Commands;
 using Application.Interface;
 using Domain.Common.Interfaces;

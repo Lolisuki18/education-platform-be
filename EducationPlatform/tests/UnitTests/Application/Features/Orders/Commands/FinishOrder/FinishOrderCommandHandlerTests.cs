@@ -1,4 +1,4 @@
-using Application.BusinessException;
+using Application.Exceptions;
 using Application.Features.Orders.Commands.FinishOrder;
 using Application.Results;
 using AutoMapper;
@@ -12,6 +12,7 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Xunit;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace UnitTests.Application.Features.Orders.Commands.FinishOrder
 {
@@ -34,7 +35,8 @@ namespace UnitTests.Application.Features.Orders.Commands.FinishOrder
 
             _handler = new FinishOrderCommandHandler(
                 _mockUnitOfWork.Object,
-                _mockMapper.Object);
+                _mockMapper.Object,
+                NullLogger<FinishOrderCommandHandler>.Instance);
         }
 
         [Fact]
@@ -52,7 +54,7 @@ namespace UnitTests.Application.Features.Orders.Commands.FinishOrder
             Func<Task> act = async () => await _handler.Handle(command, CancellationToken.None);
 
             // Assert
-            await act.Should().ThrowAsync<NotFound>()
+            await act.Should().ThrowAsync<NotFoundException>()
                 .WithMessage($"Order with code: {orderCode} not found.");
         }
 
@@ -92,6 +94,48 @@ namespace UnitTests.Application.Features.Orders.Commands.FinishOrder
             _mockUnitOfWork.Verify(u => u.BeginTransactionAsync(), Times.Once);
             _mockOrderRepository.Verify(r => r.UpdateAsync(orderId, order, It.IsAny<CancellationToken>()), Times.Once);
             _mockUnitOfWork.Verify(u => u.CommitAsync(studentId.ToString()), Times.Once);
+        }
+
+        [Fact]
+        public async Task Handle_OrderAlreadyPaid_ShouldBeIdempotent()
+        {
+            var order = new Order(Guid.NewGuid(), Commission.Create(0.15m, 100m), Guid.NewGuid(), Guid.NewGuid(), DateTime.UtcNow);
+            order.StudentPaid(null);
+            order.ClearDomainEvents();
+
+            _mockOrderRepository.Setup(r => r.GetOrderByOrderCode(order.OrderCode)).ReturnsAsync(order);
+            _mockMapper.Setup(m => m.Map<OrderDTO>(order)).Returns(new OrderDTO { OrderID = order.OrderID });
+
+            await _handler.Handle(new FinishOrderCommand { OrderCode = order.OrderCode }, CancellationToken.None);
+
+            _mockUnitOfWork.Verify(u => u.CommitAsync(It.IsAny<string?>()), Times.Never);
+            order.DomainEvents.Should().BeEmpty();
+        }
+
+        [Fact]
+        public async Task Handle_AmountDoesNotMatch_ShouldThrowAndLeaveOrderUnpaid()
+        {
+            var order = new Order(Guid.NewGuid(), Commission.Create(0.15m, 100m), Guid.NewGuid(), Guid.NewGuid(), DateTime.UtcNow);
+            _mockOrderRepository.Setup(r => r.GetOrderByOrderCode(order.OrderCode)).ReturnsAsync(order);
+
+            Func<Task> act = async () => await _handler.Handle(
+                new FinishOrderCommand { OrderCode = order.OrderCode, PaidAmount = 1 }, CancellationToken.None);
+
+            await act.Should().ThrowAsync<BadRequestException>();
+            order.Status.Should().Be(OrderStatus.Created);
+        }
+
+        [Fact]
+        public async Task Handle_CancelledOrderPaidLate_ShouldStillBeActivated()
+        {
+            var order = new Order(Guid.NewGuid(), Commission.Create(0.15m, 100m), Guid.NewGuid(), Guid.NewGuid(), DateTime.UtcNow);
+            order.Cancel();
+            _mockOrderRepository.Setup(r => r.GetOrderByOrderCode(order.OrderCode)).ReturnsAsync(order);
+            _mockMapper.Setup(m => m.Map<OrderDTO>(order)).Returns(new OrderDTO { OrderID = order.OrderID });
+
+            await _handler.Handle(new FinishOrderCommand { OrderCode = order.OrderCode, PaidAmount = 100 }, CancellationToken.None);
+
+            order.Status.Should().Be(OrderStatus.Pending);
         }
     }
 }

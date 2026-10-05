@@ -1,5 +1,5 @@
 using Domain.AcademicManagement.Aggregate;
-using Domain.DomainExceptions;
+using Domain.Exceptions;
 using FluentAssertions;
 using System;
 using Xunit;

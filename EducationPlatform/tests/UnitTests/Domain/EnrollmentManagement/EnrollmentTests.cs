@@ -1,4 +1,4 @@
-using Domain.DomainExceptions;
+using Domain.Exceptions;
 using Domain.EnrollmentManagement.Aggregate;
 using Domain.EnrollmentManagement.Entity;
 using Domain.EnrollmentManagement.Enum;

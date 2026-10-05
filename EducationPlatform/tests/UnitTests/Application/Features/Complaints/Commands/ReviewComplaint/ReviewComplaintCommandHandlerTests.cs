@@ -1,4 +1,4 @@
-using Application.BusinessException;
+using Application.Exceptions;
 using Application.Features.Complaints.Commands.ReviewComplaint;
 using Application.Interface;
 using Domain.Common.Interfaces;
@@ -79,7 +79,7 @@ namespace UnitTests.Application.Features.Complaints.Commands.ReviewComplaint
             Func<Task> act = async () => await _handler.Handle(command, CancellationToken.None);
 
             // Assert
-            await act.Should().ThrowAsync<NotFound>()
+            await act.Should().ThrowAsync<NotFoundException>()
                 .WithMessage($"Complaint with ID: {complaintId} is not found");
         }
 

@@ -1,4 +1,4 @@
-using Application.BusinessException;
+using Application.Exceptions;
 using Application.Features.Identity.Commands.Login;
 using Application.Interface;
 using Domain.Common.Interfaces;
@@ -22,6 +22,7 @@ namespace UnitTests.Application.Features.Identity.Commands.Login
         private readonly Mock<IUnitOfWork> _mockUnitOfWork;
         private readonly Mock<IUserRepository> _mockUserRepository;
         private readonly Mock<ITokenService> _mockTokenService;
+        private readonly Mock<ILoginAttemptTracker> _mockAttemptTracker;
         private readonly LoginCommandHandler _handler;
 
         public LoginCommandTests()
@@ -43,7 +44,9 @@ namespace UnitTests.Application.Features.Identity.Commands.Login
                 .Setup(t => t.GenerateRefreshToken())
                 .Returns("mocked-refresh-token");
 
-            _handler = new LoginCommandHandler(_mockUnitOfWork.Object, _mockTokenService.Object);
+            _mockAttemptTracker = new Mock<ILoginAttemptTracker>();
+
+            _handler = new LoginCommandHandler(_mockUnitOfWork.Object, _mockTokenService.Object, _mockAttemptTracker.Object);
         }
 
         [Fact]
@@ -84,7 +87,8 @@ namespace UnitTests.Application.Features.Identity.Commands.Login
             result.RefreshToken.Should().NotBeNullOrEmpty();
 
             _mockUnitOfWork.Verify(u => u.BeginTransactionAsync(), Times.Once);
-            _mockUserRepository.Verify(r => r.UpdateAsync(user.UserID, user, It.IsAny<CancellationToken>()), Times.Once);
+            user.RefreshSessions.Should().ContainSingle(x => x.IsActive);
+            _mockAttemptTracker.Verify(t => t.Reset(email), Times.Once);
             _mockUnitOfWork.Verify(u => u.CommitAsync(), Times.Once);
         }
 
@@ -180,6 +184,50 @@ namespace UnitTests.Application.Features.Identity.Commands.Login
             // Assert
             await act.Should().ThrowAsync<AuthenticateException>()
                 .WithMessage("Invalid credentials.");
+        }
+
+        [Fact]
+        public async Task Handle_SecondLogin_ShouldKeepTheFirstDeviceSignedIn()
+        {
+            var email = "test@gmail.com";
+            var user = new User(Guid.NewGuid(), email, "password123", "0123456789", "Test User", null, Role.Student, DateTime.UtcNow, isVerified: true);
+            _mockUserRepository.Setup(r => r.GetUserByEmail(email)).ReturnsAsync(user);
+
+            var refreshTokens = new Queue<string>(new[] { "token-device-1", "token-device-2" });
+            _mockTokenService.Setup(t => t.GenerateRefreshToken()).Returns(() => refreshTokens.Dequeue());
+
+            var command = new LoginCommand { Email = email, Password = "password123" };
+            await _handler.Handle(command, CancellationToken.None);
+            await _handler.Handle(command, CancellationToken.None);
+
+            user.CanRefresh("token-device-1").Should().BeTrue();
+            user.CanRefresh("token-device-2").Should().BeTrue();
+        }
+
+        [Fact]
+        public async Task Handle_WrongPassword_ShouldRegisterFailure()
+        {
+            var email = "test@gmail.com";
+            var user = new User(Guid.NewGuid(), email, "password123", "0123456789", "Test User", null, Role.Student, DateTime.UtcNow, isVerified: true);
+            _mockUserRepository.Setup(r => r.GetUserByEmail(email)).ReturnsAsync(user);
+
+            Func<Task> act = async () => await _handler.Handle(new LoginCommand { Email = email, Password = "wrong" }, CancellationToken.None);
+
+            await act.Should().ThrowAsync<AuthenticateException>();
+            _mockAttemptTracker.Verify(t => t.RegisterFailure(email), Times.Once);
+            _mockAttemptTracker.Verify(t => t.Reset(It.IsAny<string>()), Times.Never);
+        }
+
+        [Fact]
+        public async Task Handle_LockedOutAccount_ShouldThrowTooManyRequestsWithoutHittingTheDatabase()
+        {
+            var email = "test@gmail.com";
+            _mockAttemptTracker.Setup(t => t.IsLockedOut(email)).Returns(true);
+
+            Func<Task> act = async () => await _handler.Handle(new LoginCommand { Email = email, Password = "password123" }, CancellationToken.None);
+
+            await act.Should().ThrowAsync<TooManyRequestsException>();
+            _mockUserRepository.Verify(r => r.GetUserByEmail(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
         }
     }
 }

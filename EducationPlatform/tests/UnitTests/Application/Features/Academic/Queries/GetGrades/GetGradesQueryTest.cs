@@ -1,4 +1,4 @@
-﻿using Application.BusinessException;
+﻿using Application.Exceptions;
 using Application.Features.Academic.Queries.GetGrades;
 using Application.Results;
 using AutoMapper;
@@ -42,7 +42,7 @@ namespace UnitTests.Application.Features.Academic.Queries.GetGrades
             //2.Act: call the handler to handle the query
             Func<Task> act = async () => await _mockHandler.Handle(query, CancellationToken.None);
             // 3. Assert: verify that the handler throws a NotFoundException when the list of grades is empty
-            await act.Should().ThrowAsync<NotFound>().WithMessage("Grade list is empty or was not found");
+            await act.Should().ThrowAsync<NotFoundException>().WithMessage("Grade list is empty or was not found");
         }
 
         [Fact]

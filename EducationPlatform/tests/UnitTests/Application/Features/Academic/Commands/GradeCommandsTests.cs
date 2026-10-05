@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Application.BusinessException;
+using Application.Exceptions;
 using Application.Features.Academic.Commands.CreateGrade;
 using Application.Features.Academic.Commands.UpdateGrade;
 using Application.Features.Academic.Commands.DeactivateGrade;
@@ -50,7 +50,7 @@ namespace UnitTests.Application.Features.Academic.Commands
             Func<Task> act = async () => await handler.Handle(command, CancellationToken.None);
 
             // Assert
-            await act.Should().ThrowAsync<Conflict>().WithMessage("Grade with name 'Grade 10' already exists.");
+            await act.Should().ThrowAsync<ConflictException>().WithMessage("Grade with name 'Grade 10' already exists.");
         }
 
         [Fact]
@@ -86,7 +86,7 @@ namespace UnitTests.Application.Features.Academic.Commands
             Func<Task> act = async () => await handler.Handle(command, CancellationToken.None);
 
             // Assert
-            await act.Should().ThrowAsync<Conflict>().WithMessage("Cannot deactivate grade because it is currently in use by courses or lessons.");
+            await act.Should().ThrowAsync<ConflictException>().WithMessage("Cannot deactivate grade because it is currently in use by courses or lessons.");
         }
 
         [Fact]

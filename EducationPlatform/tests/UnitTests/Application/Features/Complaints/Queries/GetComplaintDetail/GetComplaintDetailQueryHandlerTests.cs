@@ -1,4 +1,4 @@
-using Application.BusinessException;
+using Application.Exceptions;
 using Application.Features.Complaints.Queries.GetComplaintDetail;
 using Application.Interface;
 using Application.Results;
@@ -56,7 +56,7 @@ namespace UnitTests.Application.Features.Complaints.Queries.GetComplaintDetail
             Func<Task> act = async () => await _handler.Handle(query, CancellationToken.None);
 
             // Assert
-            await act.Should().ThrowAsync<NotFound>()
+            await act.Should().ThrowAsync<NotFoundException>()
                 .WithMessage($"Complaint with ID: {query.ComplaintID} is not found");
         }
 

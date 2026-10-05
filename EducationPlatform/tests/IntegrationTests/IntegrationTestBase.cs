@@ -137,6 +137,22 @@ namespace IntegrationTests
             return client;
         }
 
+        /// <summary>
+        /// Plays the browser redirect PayOS performs after payment. The redirect is not followed, so the
+        /// test can assert where the API sends the user.
+        /// </summary>
+        protected async Task<HttpResponseMessage> ReturnFromPayOsAsync(long orderCode, string status = "PAID", bool cancelled = false)
+        {
+            var client = Factory.CreateClient(new Microsoft.AspNetCore.Mvc.Testing.WebApplicationFactoryClientOptions
+            {
+                AllowAutoRedirect = false
+            });
+
+            // The signature is checked by a fake verifier in the test host, but it must be present
+            return await client.GetAsync(
+                $"/api/orders/return?status={status}&orderCode={orderCode}&cancel={(cancelled ? "true" : "false")}&signature=test-signature");
+        }
+
         protected async Task ExecuteDbContextAsync(Func<EducationPlatformDBContext, Task> action)
         {
             using var scope = Factory.Services.CreateScope();

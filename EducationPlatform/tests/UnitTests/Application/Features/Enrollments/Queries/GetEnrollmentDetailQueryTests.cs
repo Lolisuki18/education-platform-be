@@ -1,4 +1,4 @@
-using Application.BusinessException;
+using Application.Exceptions;
 using Application.Features.Enrollments.Queries.GetEnrollmentDetail;
 using Application.Interface;
 using Application.Results;
@@ -74,7 +74,7 @@ namespace UnitTests.Application.Features.Enrollments.Queries.GetEnrollmentDetail
             Func<Task> act = async () => await _handler.Handle(query, CancellationToken.None);
 
             // Assert
-            await act.Should().ThrowAsync<NotFound>()
+            await act.Should().ThrowAsync<NotFoundException>()
                 .WithMessage("Enrollment detail not found");
         }
 

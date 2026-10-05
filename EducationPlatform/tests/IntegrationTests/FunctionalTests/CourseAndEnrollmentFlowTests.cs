@@ -122,8 +122,8 @@ namespace FunctionalTests
             });
 
             // 6. Complete payment by simulating the callback
-            var paymentReturnResponse = await studentClient.GetAsync($"/api/orders/return?status=PAID&orderCode={orderCode}");
-            paymentReturnResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+            var paymentReturnResponse = await ReturnFromPayOsAsync(orderCode);
+            paymentReturnResponse.StatusCode.Should().Be(HttpStatusCode.Redirect);
 
             // Verify enrollment is created
             await ExecuteDbContextAsync(async db =>
@@ -179,8 +179,8 @@ namespace FunctionalTests
             });
 
             // 3. Complete payment by simulating the callback
-            var paymentReturnResponse = await studentClient.GetAsync($"/api/orders/return?status=PAID&orderCode={orderCode}");
-            paymentReturnResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+            var paymentReturnResponse = await ReturnFromPayOsAsync(orderCode);
+            paymentReturnResponse.StatusCode.Should().Be(HttpStatusCode.Redirect);
 
             // 4. Assert Order is Completed and Enrollment is automatically created
             await ExecuteDbContextAsync(async db =>

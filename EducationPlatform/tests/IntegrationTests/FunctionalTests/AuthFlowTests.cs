@@ -186,5 +186,72 @@ namespace FunctionalTests
             var postLogoutRefreshResponse2 = await shortClient.PostAsJsonAsync("/api/auth/refresh-token", finalRefreshToken);
             postLogoutRefreshResponse2.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
         }
+
+        [Fact]
+        public async Task RefreshToken_AcceptsObjectBodyAndLegacyStringBody()
+        {
+            var first = await LoginAsync("student@example.com", "Password123!");
+
+            var asObject = await Client.PostAsJsonAsync("/api/auth/refresh-token", new { refreshToken = first.RefreshToken });
+            asObject.StatusCode.Should().Be(HttpStatusCode.OK);
+            var rotated = (await asObject.Content.ReadFromJsonAsync<ApiResponse<LoginResponseDto>>())!.Data!;
+
+            var asString = await Client.PostAsJsonAsync("/api/auth/refresh-token", rotated.RefreshToken);
+            asString.StatusCode.Should().Be(HttpStatusCode.OK);
+        }
+
+        [Fact]
+        public async Task SecondDeviceLogin_DoesNotSignTheFirstDeviceOut()
+        {
+            var phone = await LoginAsync("student@example.com", "Password123!");
+            var laptop = await LoginAsync("student@example.com", "Password123!");
+
+            var phoneRefresh = await Client.PostAsJsonAsync("/api/auth/refresh-token", new { refreshToken = phone.RefreshToken });
+            var laptopRefresh = await Client.PostAsJsonAsync("/api/auth/refresh-token", new { refreshToken = laptop.RefreshToken });
+
+            phoneRefresh.StatusCode.Should().Be(HttpStatusCode.OK);
+            laptopRefresh.StatusCode.Should().Be(HttpStatusCode.OK);
+        }
+
+        [Fact]
+        public async Task Logout_WithRefreshToken_OnlySignsOutThatDevice()
+        {
+            var phone = await LoginAsync("student@example.com", "Password123!");
+            var laptop = await LoginAsync("student@example.com", "Password123!");
+
+            Client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", phone.AccessToken);
+            var logout = await Client.PostAsJsonAsync("/api/auth/logout", new { refreshToken = phone.RefreshToken });
+            logout.StatusCode.Should().Be(HttpStatusCode.OK);
+
+            (await Client.PostAsJsonAsync("/api/auth/refresh-token", new { refreshToken = phone.RefreshToken }))
+                .StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+            (await Client.PostAsJsonAsync("/api/auth/refresh-token", new { refreshToken = laptop.RefreshToken }))
+                .StatusCode.Should().Be(HttpStatusCode.OK);
+        }
+
+        [Fact]
+        public async Task ReplayedRefreshToken_RevokesEverySession()
+        {
+            var login = await LoginAsync("student@example.com", "Password123!");
+
+            var rotate = await Client.PostAsJsonAsync("/api/auth/refresh-token", new { refreshToken = login.RefreshToken });
+            var rotated = (await rotate.Content.ReadFromJsonAsync<ApiResponse<LoginResponseDto>>())!.Data!;
+
+            // Presenting the old token again after the grace period looks like theft
+            await Task.Delay(TimeSpan.FromSeconds(11));
+            var replay = await Client.PostAsJsonAsync("/api/auth/refresh-token", new { refreshToken = login.RefreshToken });
+            replay.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+
+            // ...and the legitimately rotated token is gone too
+            (await Client.PostAsJsonAsync("/api/auth/refresh-token", new { refreshToken = rotated.RefreshToken }))
+                .StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        }
+
+        private async Task<LoginResponseDto> LoginAsync(string email, string password)
+        {
+            var response = await Client.PostAsJsonAsync("/api/auth/login", new LoginRequestDto { Email = email, Password = password });
+            response.StatusCode.Should().Be(HttpStatusCode.OK);
+            return (await response.Content.ReadFromJsonAsync<ApiResponse<LoginResponseDto>>())!.Data!;
+        }
     }
 }

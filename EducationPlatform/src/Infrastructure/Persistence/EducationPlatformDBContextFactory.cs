@@ -16,7 +16,7 @@ namespace Infrastructure.Persistence
                 .Build();
 
             // Get connection string
-            var connectionString = configuration.GetConnectionString("Default");
+            var connectionString = configuration.GetConnectionString("Default") ?? configuration.GetConnectionString("Server");
 
             // Build DbContext
             var optionsBuilder = new DbContextOptionsBuilder<EducationPlatformDBContext>();

@@ -4,7 +4,7 @@ using Domain.CourseManagement.Entity;
 using Domain.CourseManagement.Enum;
 using Domain.CourseManagement.Events;
 using Domain.CourseManagement.ValueObject;
-using Domain.DomainExceptions;
+using Domain.Exceptions;
 using FluentAssertions;
 using System;
 using System.Collections.Generic;

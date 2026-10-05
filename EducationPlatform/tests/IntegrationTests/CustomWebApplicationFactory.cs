@@ -47,7 +47,20 @@ namespace IntegrationTests
                     { "JwtSettings:Audience", "EducationPlatform" },
                     { "Logging:LogLevel:Default", "Warning" },
                     { "Logging:LogLevel:Microsoft.AspNetCore", "Warning" },
-                    { "Logging:LogLevel:Microsoft.EntityFrameworkCore.Database.Command", "Warning" }
+                    { "Logging:LogLevel:Microsoft.EntityFrameworkCore.Database.Command", "Warning" },
+
+                    // The test host is plain HTTP, runs migrations itself and must not be throttled
+                    { "RateLimiting:Enabled", "false" },
+                    { "Database:AutoMigrate", "false" },
+                    { "Security:UseHttpsRedirection", "false" },
+                    { "Orders:ExpiredOrderCleanupEnabled", "false" },
+
+                    { "PayOS:ClientId", "test-client-id" },
+                    { "PayOS:ApiKey", "test-api-key" },
+                    { "PayOS:ChecksumKey", "test-checksum-key" },
+                    { "PayOS:ReturnUrl", "http://localhost/api/orders/return" },
+                    { "PayOS:CancelUrl", "http://localhost:3000/student?payment=cancelled" },
+                    { "PayOS:FrontendUrl", "http://localhost:3000" }
                 });
             });
 
@@ -91,6 +104,26 @@ namespace IntegrationTests
 
                 services.AddScoped(_ => mockPaymentService.Object);
 
+                // Signatures cannot be produced without PayOS' secret, so the verifier accepts every callback.
+                // The signature check itself is covered by the PayOSSignatureVerifier unit tests.
+                var verifierDescriptor = services.FirstOrDefault(d => d.ServiceType == typeof(Application.Interface.IPayOSSignatureVerifier));
+                if (verifierDescriptor != null)
+                {
+                    services.Remove(verifierDescriptor);
+                }
+
+                var fakeVerifier = new Mock<Application.Interface.IPayOSSignatureVerifier>();
+                fakeVerifier
+                    .Setup(v => v.VerifyRedirectSignature(
+                        It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(),
+                        It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
+                    .Returns(true);
+                fakeVerifier
+                    .Setup(v => v.VerifyWebhookSignature(It.IsAny<IDictionary<string, string?>>(), It.IsAny<string>(), It.IsAny<string>()))
+                    .Returns(true);
+
+                services.AddSingleton(fakeVerifier.Object);
+
                 // 3. Remove existing storage service registration, and add mock
                 var storageDescriptor = services.FirstOrDefault(d => d.ServiceType == typeof(Application.Interface.IStorageService));
                 if (storageDescriptor != null)
@@ -103,8 +136,8 @@ namespace IntegrationTests
                     .Setup(s => s.SaveAsync(It.IsAny<Stream>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
                     .ReturnsAsync((Stream stream, string ext, CancellationToken ct) => $"2026/06/mock-file.{ext.TrimStart('.')}");
                 mockStorageService
-                    .Setup(s => s.CompleteUploadAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
-                    .ReturnsAsync((string uploadId, string ext, CancellationToken ct) => $"videos/{uploadId}.{ext}");
+                    .Setup(s => s.CompleteUploadAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+                    .ReturnsAsync((string uploadId, string ext, Guid ownerId, CancellationToken ct) => $"videos/{uploadId}.{ext}");
                 mockStorageService
                     .Setup(s => s.GetFullPath(It.IsAny<string>()))
                     .Returns((string path) => path);

@@ -1,7 +1,7 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
-using Application.BusinessException;
+using Application.Exceptions;
 using Application.Features.Users.Commands;
 using Application.Interface;
 using Domain.Common.Interfaces;
@@ -18,7 +18,7 @@ namespace UnitTests.Application.Features.Users.Commands
         private readonly Mock<IUnitOfWork> _mockUnitOfWork;
         private readonly Mock<IUserRepository> _mockUserRepository;
         private readonly Mock<ICurrentUser> _mockCurrentUser;
-        private readonly Mock<Microsoft.Extensions.Caching.Memory.IMemoryCache> _mockMemoryCache;
+        private readonly Mock<IUserActivityCache> _mockActivityCache;
         private readonly UpdateUserStatusCommandHandler _handler;
 
         public UpdateUserStatusCommandHandlerTests()
@@ -26,7 +26,7 @@ namespace UnitTests.Application.Features.Users.Commands
             _mockUnitOfWork = new Mock<IUnitOfWork>();
             _mockUserRepository = new Mock<IUserRepository>();
             _mockCurrentUser = new Mock<ICurrentUser>();
-            _mockMemoryCache = new Mock<Microsoft.Extensions.Caching.Memory.IMemoryCache>();
+            _mockActivityCache = new Mock<IUserActivityCache>();
 
             _mockUnitOfWork
                 .Setup(u => u.GetRepository<IUserRepository>())
@@ -35,7 +35,7 @@ namespace UnitTests.Application.Features.Users.Commands
             _handler = new UpdateUserStatusCommandHandler(
                 _mockUnitOfWork.Object,
                 _mockCurrentUser.Object,
-                _mockMemoryCache.Object);
+                _mockActivityCache.Object);
         }
 
         [Fact]
@@ -51,7 +51,7 @@ namespace UnitTests.Application.Features.Users.Commands
             Func<Task> act = async () => await _handler.Handle(command, CancellationToken.None);
 
             // Assert
-            await act.Should().ThrowAsync<BadRequest>()
+            await act.Should().ThrowAsync<BadRequestException>()
                 .WithMessage("Cannot deactivate your own account.");
         }
 
@@ -73,7 +73,7 @@ namespace UnitTests.Application.Features.Users.Commands
             Func<Task> act = async () => await _handler.Handle(command, CancellationToken.None);
 
             // Assert
-            await act.Should().ThrowAsync<NotFound>()
+            await act.Should().ThrowAsync<NotFoundException>()
                 .WithMessage("User not found.");
         }
 

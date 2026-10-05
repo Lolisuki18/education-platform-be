@@ -4,7 +4,7 @@ using Domain.CourseManagement.Entity;
 using Domain.Common.Interfaces;
 using Domain.CourseManagement.Events;
 using Application.Interface;
-using Application.BusinessException;
+using Application.Exceptions;
 using FluentAssertions;
 using Moq;
 using System;
