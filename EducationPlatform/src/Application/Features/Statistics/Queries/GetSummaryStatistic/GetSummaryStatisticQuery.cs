@@ -8,7 +8,7 @@ using System.Linq;
 
 namespace Application.Features.Statistics.Queries.GetSummaryStatistic
 {
-    public class GetSummaryStatisticQuery : IRequest<SummaryStatisticDTO>
+    public class GetSummaryStatisticQuery : IRequest<SummaryStatisticDTO>, Application.Common.Behaviors.ICachedQuery
     {
         public DateTime? From { get; set; }
         public DateTime? To { get; set; }

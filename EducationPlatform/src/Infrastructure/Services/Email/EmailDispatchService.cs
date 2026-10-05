@@ -1,3 +1,4 @@
+using Application.Common;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
@@ -46,6 +47,7 @@ namespace Infrastructure.Services.Email
                 try
                 {
                     await _sender.SendAsync(email, CancellationToken.None);
+                    PlatformMetrics.EmailsSent.Add(1, new KeyValuePair<string, object?>("result", "sent"));
                     return;
                 }
                 catch (Exception ex)
@@ -53,11 +55,12 @@ namespace Infrastructure.Services.Email
                     var willRetry = attempt < RetryDelays.Length && !stoppingToken.IsCancellationRequested;
                     if (!willRetry)
                     {
-                        _logger.LogError(ex, "Giving up sending an e-mail to {To} after {Attempts} attempt(s).", email.To, attempt + 1);
+                        PlatformMetrics.EmailsSent.Add(1, new KeyValuePair<string, object?>("result", "failed"));
+                        _logger.LogError(ex, "Giving up sending an e-mail to {To} after {Attempts} attempt(s).", LogMask.Email(email.To), attempt + 1);
                         return;
                     }
 
-                    _logger.LogWarning(ex, "Sending an e-mail to {To} failed (attempt {Attempt}), retrying.", email.To, attempt + 1);
+                    _logger.LogWarning(ex, "Sending an e-mail to {To} failed (attempt {Attempt}), retrying.", LogMask.Email(email.To), attempt + 1);
 
                     try
                     {

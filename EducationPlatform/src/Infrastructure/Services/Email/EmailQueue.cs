@@ -36,7 +36,7 @@ namespace Infrastructure.Services.Email
             if (_channel.Writer.TryWrite(message))
                 return true;
 
-            _logger.LogError("E-mail queue is full or closed; dropped a message for {To}.", message.To);
+            _logger.LogError("E-mail queue is full or closed; dropped a message for {To}.", Application.Common.LogMask.Email(message.To));
             return false;
         }
 

@@ -15,6 +15,7 @@ using API.Models.Courses;
 using API.Models.Common;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.OutputCaching;
 using Microsoft.AspNetCore.RateLimiting;
 using Application.Options;
 using API.Extensions;
@@ -50,6 +51,7 @@ namespace API.Controllers
             this.currentUser = currentUser;
         }
 
+        [OutputCache(PolicyName = OutputCachePolicies.PublicListing)]
         [AllowAnonymous]
         [HttpGet]
         public async Task<ActionResult<ApiResponse<PagedResult<CourseDTO>>>> ListCourses([FromQuery] GetLandingPageQuery query, [FromQuery] string? status = null)
@@ -71,6 +73,7 @@ namespace API.Controllers
             return Ok(ApiResponse<PagedResult<CourseDTO>>.Success(result));
         }
 
+        [OutputCache(PolicyName = OutputCachePolicies.PublicListing)]
         [AllowAnonymous]
         [HttpGet("{id:guid}")]
         public async Task<ActionResult<ApiResponse<CourseDetailDTO>>> GetCourseDetail(Guid id)
@@ -177,6 +180,7 @@ namespace API.Controllers
             }, "Upload completed successfully."));
         }
 
+        [OutputCache(PolicyName = OutputCachePolicies.PublicListing)]
         [AllowAnonymous]
         [HttpGet("default-lessons")]
         public async Task<ActionResult<ApiResponse<IEnumerable<object>>>> GetDefaultLessons([FromQuery] Guid subjectId, [FromQuery] Guid gradeId)

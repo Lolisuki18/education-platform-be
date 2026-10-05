@@ -10,7 +10,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Application.Features.Statistics.Queries.GetSummaryStatistics
 {
-    public class GetSummaryStatisticsQuery : IRequest<SummaryStatisticsResult>
+    public class GetSummaryStatisticsQuery : IRequest<SummaryStatisticsResult>, Application.Common.Behaviors.ICachedQuery
     {
         public DateTime? From { get; set; }
         public DateTime? To { get; set; }

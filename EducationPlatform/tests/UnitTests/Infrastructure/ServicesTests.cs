@@ -349,7 +349,7 @@ namespace UnitTests.InfrastructureTests
 
             await AdminSeeder.WarnAboutLegacyPasswordsAsync(db, logger);
 
-            logger.Entries.Should().Contain(e => e.Level == LogLevel.Critical && e.Message.Contains("old-admin@example.com"));
+            logger.Entries.Should().Contain(e => e.Level == LogLevel.Critical && e.Message.Contains("o***@example.com") && !e.Message.Contains("old-admin"));
         }
 
         [Fact]

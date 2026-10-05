@@ -7,7 +7,7 @@ using System.Linq;
 
 namespace Application.Features.Statistics.Queries.GetTopPerformance
 {
-    public class GetTopPerformanceQuery : IRequest<TopPerformanceDTO>
+    public class GetTopPerformanceQuery : IRequest<TopPerformanceDTO>, Application.Common.Behaviors.ICachedQuery
     {
         public DateTime? From { get; set; }
         public DateTime? To { get; set; }

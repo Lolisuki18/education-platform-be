@@ -34,7 +34,7 @@ namespace Infrastructure.Persistence.Seeds
                 null,
                 true));
 
-            logger.LogInformation("Created the first administrator account {Email}.", admin.Email);
+            logger.LogInformation("Created the first administrator account {Email}.", Application.Common.LogMask.Email(admin.Email));
         }
 
         /// <summary>
@@ -51,7 +51,7 @@ namespace Infrastructure.Persistence.Seeds
                 {
                     logger.LogCritical(
                         "Administrator {Email} still uses the default password that shipped with earlier versions. Change it now.",
-                        admin.Email);
+                        Application.Common.LogMask.Email(admin.Email));
                 }
             }
         }

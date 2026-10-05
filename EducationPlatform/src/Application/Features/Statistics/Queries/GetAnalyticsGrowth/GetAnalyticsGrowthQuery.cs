@@ -10,7 +10,7 @@ using System.Linq;
 
 namespace Application.Features.Statistics.Queries.GetAnalyticsGrowth
 {
-    public class GetAnalyticsGrowthQuery : IRequest<AnalyticsGrowthDTO>
+    public class GetAnalyticsGrowthQuery : IRequest<AnalyticsGrowthDTO>, Application.Common.Behaviors.ICachedQuery
     {
         public AnalyticsGrowthType Type { get; set; }
         public DateTime? From { get; set; }

@@ -2,6 +2,7 @@ using MediatR;
 using Application.Results;
 using Domain.Common.Interfaces;
 using AutoMapper;
+using Application.Common;
 using Application.Exceptions;
 using Domain.OrderManagement.Aggregate;
 using Domain.OrderManagement.Enum;
@@ -72,6 +73,8 @@ namespace Application.Features.Orders.Commands.FinishOrder
                 await _unitOfWork.BeginTransactionAsync();
                 await _unitOfWork.GetRepository<IOrderRepository>().UpdateAsync(order.OrderID, order, cancellationToken);
                 await _unitOfWork.CommitAsync(order.StudentID.ToString());
+
+                PlatformMetrics.OrdersPaid.Add(1);
             }
             catch (DbUpdateConcurrencyException)
             {

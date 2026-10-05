@@ -26,7 +26,7 @@ namespace Application.Features.Statistics.Queries.GetTeacherSummary
         public decimal Revenue { get; set; }
     }
 
-    public class GetTeacherSummaryQuery : IRequest<TeacherSummaryDTO>
+    public class GetTeacherSummaryQuery : IRequest<TeacherSummaryDTO>, Application.Common.Behaviors.ICachedQuery
     {
     }
 

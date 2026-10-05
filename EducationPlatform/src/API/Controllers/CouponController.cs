@@ -15,7 +15,9 @@ using Application.Results;
 using Domain.OrderManagement.Enum;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
+using API.Extensions;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.OutputCaching;
 
 namespace API.Controllers
 {
@@ -32,6 +34,7 @@ namespace API.Controllers
             this.mediator = mediator;
         }
 
+        [OutputCache(PolicyName = OutputCachePolicies.PublicListing)]
         [AllowAnonymous]
         [HttpGet("coupons/available")]
         public async Task<ActionResult<ApiResponse<IEnumerable<CouponDTO>>>> GetAvailableCoupons()

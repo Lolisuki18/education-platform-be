@@ -1,3 +1,4 @@
+using Application.Common;
 using MediatR;
 using Domain.Common.Interfaces;
 using Domain.OrderManagement.Aggregate;
@@ -44,6 +45,7 @@ namespace Application.Features.Orders.Commands.CancelExpiredOrders
             await _unitOfWork.BeginTransactionAsync();
             await _unitOfWork.CommitAsync();
 
+            PlatformMetrics.OrdersCancelled.Add(expired.Count);
             return expired.Count;
         }
     }

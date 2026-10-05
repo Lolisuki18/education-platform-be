@@ -2,6 +2,7 @@ using MediatR;
 using Application.Results;
 using Domain.Common.Interfaces;
 using AutoMapper;
+using Application.Common;
 using Application.Exceptions;
 using Domain.CourseManagement.Aggregate;
 using Domain.OrderManagement.Aggregate;
@@ -132,7 +133,11 @@ namespace Application.Features.Orders.Commands.CreateOrder
             }
 
             if (order.IsPaid)
+            {
+                PlatformMetrics.OrdersCreated.Add(1, new KeyValuePair<string, object?>("kind", "free"));
+                PlatformMetrics.OrdersPaid.Add(1);
                 return _mapper.Map<OrderDTO>(order);
+            }
 
             // Generate Payment Link. The order and its coupons are already saved, so a gateway failure must undo them.
             string checkoutUrl;
@@ -146,12 +151,15 @@ namespace Application.Features.Orders.Commands.CreateOrder
             }
             catch
             {
+                PlatformMetrics.PaymentLinkFailures.Add(1);
                 await TryCompensateAsync(order, orderRepository);
                 throw;
             }
 
             order.AttachCheckoutUrl(checkoutUrl);
             await _unitOfWork.CommitAsync();
+
+            PlatformMetrics.OrdersCreated.Add(1, new KeyValuePair<string, object?>("kind", "paid"));
 
             return _mapper.Map<OrderDTO>(order);
         }

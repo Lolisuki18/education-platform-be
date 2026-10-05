@@ -1,4 +1,5 @@
 using System.Text.Json;
+using Application.Common;
 using Application.Exceptions;
 using Application.Features.Orders.Commands.FinishOrder;
 using Application.Interface;
@@ -47,6 +48,15 @@ namespace Application.Features.Orders.Commands.ProcessPayOSWebhook
         }
 
         public async Task<PayOSWebhookResult> Handle(ProcessPayOSWebhookCommand request, CancellationToken cancellationToken)
+        {
+            var result = await ProcessAsync(request, cancellationToken);
+
+            // A jump in InvalidSignature or Malformed is somebody probing the endpoint; none of Processed means PayOS cannot reach us
+            PlatformMetrics.PaymentWebhooks.Add(1, new KeyValuePair<string, object?>("result", result.ToString()));
+            return result;
+        }
+
+        private async Task<PayOSWebhookResult> ProcessAsync(ProcessPayOSWebhookCommand request, CancellationToken cancellationToken)
         {
             if (string.IsNullOrWhiteSpace(request.Body))
                 return PayOSWebhookResult.Ignored;

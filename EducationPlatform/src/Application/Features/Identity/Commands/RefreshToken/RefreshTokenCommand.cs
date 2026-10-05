@@ -1,6 +1,7 @@
 using MediatR;
 using Application.Results;
 using Domain.Common.Interfaces;
+using Application.Common;
 using Application.Exceptions;
 using Domain.IdentityManagement.Aggregate;
 using Domain.IdentityManagement.Enum;
@@ -51,6 +52,7 @@ namespace Application.Features.Identity.Commands.RefreshToken
                     break;
 
                 case RefreshResult.ReuseDetected:
+                    PlatformMetrics.RefreshTokenReplays.Add(1);
                     // A rotated token was replayed: every session of the user has been revoked, persist that.
                     await _unitOfWork.BeginTransactionAsync();
                     await _unitOfWork.CommitAsync();

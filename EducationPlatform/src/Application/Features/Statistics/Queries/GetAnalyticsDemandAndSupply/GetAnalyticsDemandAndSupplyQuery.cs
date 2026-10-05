@@ -8,7 +8,7 @@ using System.Linq;
 
 namespace Application.Features.Statistics.Queries.GetAnalyticsDemandAndSupply
 {
-    public class GetAnalyticsDemandAndSupplyQuery : IRequest<AnalyticsGrowthDTO>
+    public class GetAnalyticsDemandAndSupplyQuery : IRequest<AnalyticsGrowthDTO>, Application.Common.Behaviors.ICachedQuery
     {
         public DateTime? From { get; set; }
         public DateTime? To { get; set; }

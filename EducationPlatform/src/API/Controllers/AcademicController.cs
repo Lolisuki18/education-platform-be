@@ -16,7 +16,9 @@ using Application.Features.Academic.Commands.DeactivateSubject;
 using Application.Results;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
+using API.Extensions;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.OutputCaching;
 
 namespace API.Controllers
 {
@@ -33,6 +35,7 @@ namespace API.Controllers
             this.mediator = mediator;
         }
 
+        [OutputCache(PolicyName = OutputCachePolicies.PublicListing)]
         [AllowAnonymous]
         [HttpGet("grades")]
         public async Task<ActionResult<ApiResponse<IEnumerable<GradeDTO>>>> GetGrades([FromQuery] bool includeInactive = false)
@@ -46,6 +49,7 @@ namespace API.Controllers
             return Ok(ApiResponse<IEnumerable<GradeDTO>>.Success(result));
         }
 
+        [OutputCache(PolicyName = OutputCachePolicies.PublicListing)]
         [AllowAnonymous]
         [HttpGet("subjects")]
         public async Task<ActionResult<ApiResponse<IEnumerable<SubjectDTO>>>> GetSubjects([FromQuery] bool includeInactive = false)

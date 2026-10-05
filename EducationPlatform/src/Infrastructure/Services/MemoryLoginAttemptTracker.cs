@@ -31,6 +31,10 @@ namespace Infrastructure.Services
 
             // Every failure extends the window, so the lock lasts LockoutDuration after the last attempt.
             _cache.Set(cacheKey, failures + 1, LockoutDuration);
+
+            // Counted when the account becomes locked, not for every attempt that follows
+            if (failures + 1 == MaxFailures)
+                Application.Common.PlatformMetrics.AccountLockouts.Add(1);
         }
 
         public void Reset(string key)
