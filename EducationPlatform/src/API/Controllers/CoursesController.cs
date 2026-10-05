@@ -1,3 +1,4 @@
+using Asp.Versioning;
 using Application.Results;
 using Application.Interface;
 using Application.Features.Courses.Queries.GetPolicies;
@@ -14,6 +15,9 @@ using API.Models.Courses;
 using API.Models.Common;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
+using Application.Options;
+using API.Extensions;
 using Microsoft.AspNetCore.SignalR;
 using API.Hubs;
 using MediatR;
@@ -21,24 +25,29 @@ using MediatR;
 namespace API.Controllers
 {
     [ApiController]
+    [ApiVersion("1.0")]
     [Route("api/courses")]
+    [Route("api/v{version:apiVersion}/courses")]
     public class CoursesController : ControllerBase
     {
         private readonly IStorageService storageService;
         private readonly IHubContext<CourseHub> courseHub;
         private readonly IMediator mediator;
         private readonly AutoMapper.IMapper mapper;
+        private readonly ICurrentUser currentUser;
 
         public CoursesController(
             IStorageService storageService,
             IHubContext<CourseHub> courseHub,
             IMediator mediator,
-            AutoMapper.IMapper mapper)
+            AutoMapper.IMapper mapper,
+            ICurrentUser currentUser)
         {
             this.storageService = storageService;
             this.courseHub = courseHub;
             this.mediator = mediator;
             this.mapper = mapper;
+            this.currentUser = currentUser;
         }
 
         [HttpGet]
@@ -132,6 +141,9 @@ namespace API.Controllers
         }
 
         [Authorize(Roles = "Teacher")]
+        [EnableRateLimiting(RateLimitPolicies.Upload)]
+        [RequestSizeLimit(UploadOptions.RequestSizeLimitBytes)]
+        [RequestFormLimits(MultipartBodyLengthLimit = UploadOptions.RequestSizeLimitBytes)]
         [HttpPost("upload-chunk")]
         public async Task<ActionResult<ApiResponse>> UploadChunk(
             [FromForm] UploadChunkRequestDto request,
@@ -141,8 +153,8 @@ namespace API.Controllers
                 return BadRequest(ApiResponse.Error("Empty chunk"));
 
             await using var stream = request.Chunk.OpenReadStream();
-            Application.Helper.FileValidator.Validate(stream, request.Chunk.Length, request.Chunk.FileName);
-            await storageService.SaveChunkAsync(stream, request.UploadId, request.Index, ct);
+            Application.Helpers.FileValidator.Validate(stream, request.Chunk.Length, request.Chunk.FileName);
+            await storageService.SaveChunkAsync(stream, request.UploadId, request.Index, currentUser.Id!.Value, ct);
 
             return Ok(ApiResponse.Success("Chunk uploaded successfully."));
         }
@@ -153,7 +165,7 @@ namespace API.Controllers
             [FromForm] CompleteUploadRequestDto request,
             CancellationToken ct)
         {
-            var path = await storageService.CompleteUploadAsync(request.UploadId, request.Extension, ct);
+            var path = await storageService.CompleteUploadAsync(request.UploadId, request.Extension, currentUser.Id!.Value, ct);
             var fullPath = storageService.GetFullPath(path);
 
             return Ok(ApiResponse<object>.Success(new

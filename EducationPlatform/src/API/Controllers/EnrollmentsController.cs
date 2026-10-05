@@ -1,3 +1,4 @@
+using Asp.Versioning;
 using Application.Results;
 using API.Models.Common;
 using Microsoft.AspNetCore.Authorization;
@@ -10,7 +11,9 @@ using Application.Features.Enrollments.Queries;
 namespace API.Controllers
 {
     [ApiController]
+    [ApiVersion("1.0")]
     [Route("api/enrollments")]
+    [Route("api/v{version:apiVersion}/enrollments")]
     [Authorize(Roles = "Student")]
     public class EnrollmentsController : ControllerBase
     {

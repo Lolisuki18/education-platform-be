@@ -1,3 +1,4 @@
+using Asp.Versioning;
 using Application.Results;
 using Application.Features.StudentReview.Command;
 using Application.Features.StudentReview.Queries;
@@ -9,7 +10,9 @@ using Microsoft.AspNetCore.Mvc;
 namespace API.Controllers
 {
     [ApiController]
+    [ApiVersion("1.0")]
     [Route("api/courses/{courseId:guid}/reviews")]
+    [Route("api/v{version:apiVersion}/courses/{courseId:guid}/reviews")]
     public class ReviewsController : ControllerBase
     {
         private readonly IMediator mediator;

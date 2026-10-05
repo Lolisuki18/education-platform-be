@@ -2,7 +2,7 @@ using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Net;
-using Application.BusinessException;
+using Application.Exceptions;
 
 namespace API.ExceptionHandlers
 {
@@ -41,20 +41,25 @@ namespace API.ExceptionHandlers
                 problemDetails.Status = (int)HttpStatusCode.Forbidden;
                 problemDetails.Title = "Forbidden";
             }
-            else if (exception is NotFound)
+            else if (exception is NotFoundException)
             {
                 problemDetails.Status = (int)HttpStatusCode.NotFound;
                 problemDetails.Title = "Not Found";
             }
-            else if (exception is BadRequest)
+            else if (exception is BadRequestException)
             {
                 problemDetails.Status = (int)HttpStatusCode.BadRequest;
                 problemDetails.Title = "Bad Request";
             }
-            else if (exception is Conflict)
+            else if (exception is ConflictException)
             {
                 problemDetails.Status = (int)HttpStatusCode.Conflict;
                 problemDetails.Title = "Conflict";
+            }
+            else if (exception is TooManyRequestsException)
+            {
+                problemDetails.Status = (int)HttpStatusCode.TooManyRequests;
+                problemDetails.Title = "Too Many Requests";
             }
             else if (exception is DbUpdateConcurrencyException)
             {

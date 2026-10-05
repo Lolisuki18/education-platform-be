@@ -1,3 +1,4 @@
+using Asp.Versioning;
 using API.Models.Common;
 using API.Models.Users;
 using Application.Features.Users.Commands;
@@ -10,7 +11,9 @@ using Microsoft.AspNetCore.Mvc;
 namespace API.Controllers
 {
     [ApiController]
+    [ApiVersion("1.0")]
     [Route("api/user")]
+    [Route("api/v{version:apiVersion}/user")]
     public class UserController : ControllerBase
     {
         private readonly IMediator mediator;
@@ -44,7 +47,7 @@ namespace API.Controllers
             return Ok(ApiResponse<UserDTO>.Success(result));
         }
 
-        [Authorize(Policy = API.Helper.Policies.AdminOnly)]
+        [Authorize(Policy = API.Helpers.Policies.AdminOnly)]
         [HttpGet]
         public async Task<ActionResult<ApiResponse<PagedResult<UserDTO>>>> GetUsers(
             [FromQuery] Domain.IdentityManagement.Enum.Role? role,
@@ -56,7 +59,7 @@ namespace API.Controllers
             return Ok(ApiResponse<PagedResult<UserDTO>>.Success(result));
         }
 
-        [Authorize(Policy = API.Helper.Policies.AdminOnly)]
+        [Authorize(Policy = API.Helpers.Policies.AdminOnly)]
         [HttpGet("{id:guid}")]
         public async Task<ActionResult<ApiResponse<UserDTO>>> GetUserById(Guid id)
         {
@@ -64,7 +67,7 @@ namespace API.Controllers
             return Ok(ApiResponse<UserDTO>.Success(result));
         }
 
-        [Authorize(Policy = API.Helper.Policies.AdminOnly)]
+        [Authorize(Policy = API.Helpers.Policies.AdminOnly)]
         [HttpPut("{id:guid}/status")]
         public async Task<ActionResult<ApiResponse>> UpdateUserStatus(Guid id, [FromBody] UpdateUserStatusRequestDto request)
         {
@@ -72,7 +75,7 @@ namespace API.Controllers
             return Ok(ApiResponse.Success("User status updated successfully."));
         }
 
-        [Authorize(Policy = API.Helper.Policies.AdminOnly)]
+        [Authorize(Policy = API.Helpers.Policies.AdminOnly)]
         [HttpPut("{id:guid}/role")]
         public async Task<ActionResult<ApiResponse>> UpdateUserRole(Guid id, [FromBody] UpdateUserRoleRequestDto request)
         {

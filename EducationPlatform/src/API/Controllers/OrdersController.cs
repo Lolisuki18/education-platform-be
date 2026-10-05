@@ -1,70 +1,46 @@
+using Asp.Versioning;
 using Application.Results;
 using Application.Features.Courses.Queries.GetCourseDetail;
-using Application.Features.Orders.Queries.GetCoupons;
+using Application.Features.Orders.Queries.GetMyCoupons;
 using Application.Features.Orders.Queries.GetOrders;
 using Application.Features.Orders.Commands.CreateOrder;
-using Application.Features.Orders.Commands.FinishOrder;
+using Application.Features.Orders.Commands.ProcessPayOSReturn;
+using Application.Features.Orders.Commands.ProcessPayOSWebhook;
+using Application.Options;
 using API.Models.Orders;
 using API.Models.Common;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Options;
 using Domain.OrderManagement.Enum;
-using Microsoft.Extensions.Configuration;
-using Microsoft.AspNetCore.Hosting;
-using Application.Interface;
 
 namespace API.Controllers
 {
     [ApiController]
+    [ApiVersion("1.0")]
     [Route("api/orders")]
+    [Route("api/v{version:apiVersion}/orders")]
     public class OrdersController : ControllerBase
     {
         private readonly IMediator mediator;
-        private readonly IConfiguration configuration;
-        private readonly IWebHostEnvironment environment;
-        private readonly IServiceScopeFactory scopeFactory;
-        private readonly ILogger<OrdersController> logger;
-        private readonly IPayOSSignatureVerifier signatureVerifier;
+        private readonly PayOSOptions payOSOptions;
 
         public OrdersController(
             IMediator mediator,
-            IConfiguration configuration,
-            IWebHostEnvironment environment,
-            IServiceScopeFactory scopeFactory,
-            ILogger<OrdersController> logger,
-            IPayOSSignatureVerifier signatureVerifier)
+            IOptions<PayOSOptions> payOSOptions)
         {
             this.mediator = mediator;
-            this.configuration = configuration;
-            this.environment = environment;
-            this.scopeFactory = scopeFactory;
-            this.logger = logger;
-            this.signatureVerifier = signatureVerifier;
+            this.payOSOptions = payOSOptions.Value;
         }
 
-        private void FinishOrderInBackground(long orderCode)
-        {
-            _ = Task.Run(async () =>
-            {
-                try
-                {
-                    using var scope = scopeFactory.CreateScope();
-                    var scopedMediator = scope.ServiceProvider.GetRequiredService<IMediator>();
-                    await scopedMediator.Send(new FinishOrderCommand { OrderCode = orderCode });
-                }
-                catch (Exception ex)
-                {
-                    logger.LogError(ex, "Failed to finalize order {OrderCode} in background.", orderCode);
-                }
-            });
-        }
+        private string FrontendUrl => payOSOptions.FrontendUrl.TrimEnd('/');
 
         [Authorize]
         [HttpGet("coupons")]
         public async Task<ActionResult<ApiResponse<IEnumerable<CouponDTO>>>> ListCoupons()
         {
-            var coupons = await mediator.Send(new GetCouponsQuery());
+            var coupons = await mediator.Send(new GetMyCouponsQuery());
             return Ok(ApiResponse<IEnumerable<CouponDTO>>.Success(coupons));
         }
 
@@ -103,151 +79,52 @@ namespace API.Controllers
                 CouponIds = request.SelectedCouponIds
             });
 
+            // A free (or fully discounted) order is paid already: send the client to the same place a payment would
+            var requiresPayment = order.Status == OrderStatus.Created;
+
             return Ok(ApiResponse<CreateOrderResponseDto>.Success(new CreateOrderResponseDto
             {
-                CheckoutUrl = order.CheckoutUrl
+                CheckoutUrl = requiresPayment
+                    ? order.CheckoutUrl ?? string.Empty
+                    : $"{FrontendUrl}/student?payment=success",
+                RequiresPayment = requiresPayment
             }, "Order created successfully"));
         }
 
+        /// <summary>Where PayOS sends the browser after the payment page. Verifies the signature, then redirects to the frontend.</summary>
+        [AllowAnonymous]
         [HttpGet("return")]
-        public async Task<ActionResult<ApiResponse<ReturnOrderResponseDto>>> ReturnOrder(
-            [FromQuery] string? status,
-            [FromQuery] string? orderCode,
-            [FromQuery] string? id,
-            [FromQuery] string? code,
-            [FromQuery] string? signature,
-            [FromQuery] string? amount,
-            [FromQuery] string? cancel)
+        public async Task<IActionResult> ReturnOrder([FromQuery] ProcessPayOSReturnCommand request)
         {
-            bool cancelVal = string.Equals(cancel, "true", StringComparison.OrdinalIgnoreCase);
-            var isSuccess = status == "PAID" && !cancelVal;
-            long codeVal = long.TryParse(orderCode, out var parsedCode) ? parsedCode : 0;
+            var result = await mediator.Send(request);
 
-            var checksumKey = configuration["PayOS:ChecksumKey"];
-            var isTesting = environment.IsEnvironment("Testing");
-
-            if (!isTesting)
+            if (!result.IsSignatureValid)
             {
-                if (string.IsNullOrEmpty(checksumKey) || checksumKey == "YOUR_PAYOS_CHECKSUM_KEY")
-                {
-                    return BadRequest(ApiResponse<ReturnOrderResponseDto>.Success(new ReturnOrderResponseDto
-                    {
-                        OrderCode = codeVal,
-                        Status = status ?? "",
-                        IsSuccess = false,
-                        Message = "Payment signature verification failed. Missing configuration."
-                    }, "PayOS ChecksumKey is missing."));
-                }
-
-                if (string.IsNullOrEmpty(signature) ||
-                    !signatureVerifier.VerifyRedirectSignature(amount ?? "", cancel ?? "", code ?? "", id ?? "", orderCode ?? "", status ?? "", signature, checksumKey))
-                {
-                    return BadRequest(ApiResponse<ReturnOrderResponseDto>.Success(new ReturnOrderResponseDto
-                    {
-                        OrderCode = codeVal,
-                        Status = status ?? "",
-                        IsSuccess = false,
-                        Message = "Security verification failed. Invalid signature."
-                    }, "Invalid signature"));
-                }
+                return BadRequest(ApiResponse.Error("Security verification failed. Invalid signature."));
             }
 
-            var returnData = new ReturnOrderResponseDto
-            {
-                OrderCode = codeVal,
-                Status = status ?? "",
-                IsSuccess = isSuccess
-            };
-
-            if (isTesting)
-            {
-                if (isSuccess)
-                {
-                    await mediator.Send(new FinishOrderCommand { OrderCode = codeVal });
-                    returnData.Message = "Payment successful! Your course is now available.";
-                }
-                else
-                {
-                    returnData.Message = "Payment was cancelled or failed. Please try again.";
-                }
-
-                return Ok(ApiResponse<ReturnOrderResponseDto>.Success(returnData,
-                    isSuccess ? "Payment successful" : "Payment failed"));
-            }
-
-            var frontendUrl = configuration["PayOS:FrontendUrl"] ?? "http://localhost:3000";
-
-            frontendUrl = frontendUrl.TrimEnd('/');
-
-            if (isSuccess)
-            {
-                FinishOrderInBackground(codeVal);
-                return Redirect($"{frontendUrl}/student?payment=success");
-            }
-            else
-            {
-                return Redirect($"{frontendUrl}/student?payment=cancelled");
-            }
+            return Redirect(result.IsSuccess
+                ? $"{FrontendUrl}/student?payment=success"
+                : $"{FrontendUrl}/student?payment=cancelled");
         }
 
+        /// <summary>
+        /// PayOS server-to-server notification. Failures surface as 5xx on purpose so PayOS retries delivery.
+        /// </summary>
         [AllowAnonymous]
         [HttpPost("webhook")]
         public async Task<IActionResult> HandleWebhook()
         {
-            try
+            using var reader = new StreamReader(Request.Body);
+            var body = await reader.ReadToEndAsync();
+
+            var result = await mediator.Send(new ProcessPayOSWebhookCommand { Body = body });
+
+            return result switch
             {
-                using var reader = new System.IO.StreamReader(Request.Body);
-                var bodyString = await reader.ReadToEndAsync();
-
-                if (string.IsNullOrWhiteSpace(bodyString))
-                {
-                    return Ok(new { code = "00", desc = "success" });
-                }
-
-                var payload = Newtonsoft.Json.Linq.JObject.Parse(bodyString);
-                var signature = payload["signature"]?.ToString();
-                var code = payload["code"]?.ToString();
-                var data = payload["data"] as Newtonsoft.Json.Linq.JObject;
-
-                if (string.IsNullOrEmpty(signature) || data == null)
-                {
-                    return Ok(new { code = "00", desc = "success" });
-                }
-
-                var checksumKey = configuration["PayOS:ChecksumKey"]!;
-                var dataDict = data.Properties()
-                    .ToDictionary(p => p.Name, p => JTokenToString(p.Value));
-
-                if (!signatureVerifier.VerifyWebhookSignature(dataDict, signature, checksumKey))
-                {
-                    return Ok(new { code = "99", desc = "Invalid signature" });
-                }
-
-                if (code == "00")
-                {
-                    var orderCode = data["orderCode"] != null ? (long)data["orderCode"] : (long?)null;
-                    if (orderCode.HasValue)
-                    {
-                        FinishOrderInBackground(orderCode.Value);
-                    }
-                }
-
-                return Ok(new { code = "00", desc = "success" });
-            }
-            catch (Exception ex)
-            {
-                logger.LogError(ex, "Failed to process PayOS webhook payload.");
-                return Ok(new { code = "99", desc = ex.Message });
-            }
-        }
-
-        private static string JTokenToString(Newtonsoft.Json.Linq.JToken val)
-        {
-            return val.Type switch
-            {
-                Newtonsoft.Json.Linq.JTokenType.Null => "",
-                Newtonsoft.Json.Linq.JTokenType.Boolean => (bool)val ? "true" : "false",
-                _ => val.ToString()
+                PayOSWebhookResult.InvalidSignature => BadRequest(new { code = "99", desc = "Invalid signature" }),
+                PayOSWebhookResult.Malformed => BadRequest(new { code = "99", desc = "Malformed payload" }),
+                _ => Ok(new { code = "00", desc = "success" })
             };
         }
     }

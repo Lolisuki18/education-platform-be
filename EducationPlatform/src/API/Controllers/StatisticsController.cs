@@ -1,3 +1,4 @@
+using Asp.Versioning;
 using API.Models.Statistics;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
@@ -14,7 +15,9 @@ using API.Models.Common;
 namespace API.Controllers
 {
     [ApiController]
+    [ApiVersion("1.0")]
     [Route("api/statistics")]
+    [Route("api/v{version:apiVersion}/statistics")]
     [Authorize]
     public class StatisticsController : ControllerBase
     {
