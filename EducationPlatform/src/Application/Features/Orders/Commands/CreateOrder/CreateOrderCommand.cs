@@ -2,12 +2,14 @@ using MediatR;
 using Application.Results;
 using Domain.Common.Interfaces;
 using AutoMapper;
-using Application.BusinessException;
+using Application.Exceptions;
 using Domain.CourseManagement.Aggregate;
 using Domain.OrderManagement.Aggregate;
 using Domain.OrderManagement.ValueObject;
 using Application.Interface;
 using Domain.EnrollmentManagement.Aggregate;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
 namespace Application.Features.Orders.Commands.CreateOrder
 {
@@ -24,17 +26,20 @@ namespace Application.Features.Orders.Commands.CreateOrder
         private readonly IMapper _mapper;
         private readonly ICurrentUser _currentUser;
         private readonly IPaymentService _paymentService;
+        private readonly ILogger<CreateOrderCommandHandler> _logger;
 
         public CreateOrderCommandHandler(
             IUnitOfWork unitOfWork,
             IMapper mapper,
             ICurrentUser currentUser,
-            IPaymentService paymentService)
+            IPaymentService paymentService,
+            ILogger<CreateOrderCommandHandler> logger)
         {
             _unitOfWork = unitOfWork;
             _mapper = mapper;
             _currentUser = currentUser;
             _paymentService = paymentService;
+            _logger = logger;
         }
 
         public async Task<OrderDTO> Handle(CreateOrderCommand request, CancellationToken cancellationToken)
@@ -43,6 +48,7 @@ namespace Application.Features.Orders.Commands.CreateOrder
                 throw new AuthenticateException("User must be authenticated to create an order.");
 
             Guid studentId = _currentUser.Id.Value;
+            var orderRepository = _unitOfWork.GetRepository<IOrderRepository>();
 
             // Validate course existence
             var course = await _unitOfWork
@@ -50,48 +56,40 @@ namespace Application.Features.Orders.Commands.CreateOrder
                 .GetByIdAsync(request.CourseID);
 
             if (course == null)
-                throw new NotFound($"Course with ID: {request.CourseID} not found.");
+                throw new NotFoundException($"Course with ID: {request.CourseID} not found.");
 
             // Check if student is already enrolled in this course
-            var studentEnrollments = await _unitOfWork
+            var alreadyEnrolled = await _unitOfWork
                 .GetRepository<IEnrollmentRepository>()
-                .GetStudentEnrollments(studentId);
-            if (studentEnrollments.Any(e => e.CourseID == request.CourseID))
+                .IsStudentEnrolled(studentId, request.CourseID, cancellationToken);
+            if (alreadyEnrolled)
             {
-                throw new Conflict("Student is already enrolled in this course.");
+                throw new ConflictException("Student is already enrolled in this course.");
             }
 
-            // Calculate discount from coupons
-            decimal totalDiscount = 0;
-            List<Coupon> validCoupons = new();
-
-            if (request.CouponIds != null && request.CouponIds.Any())
+            // A student has at most one order awaiting payment per course: hand back its link while it is valid
+            var awaiting = await orderRepository.GetAwaitingPaymentOrder(studentId, request.CourseID);
+            if (awaiting != null)
             {
-                foreach (var couponId in request.CouponIds)
-                {
-                    var coupon = await _unitOfWork
-                        .GetRepository<IOrderRepository>()
-                        .GetCouponDetailById(couponId);
+                if (awaiting.IsAwaitingPayment(DateTime.UtcNow) && !string.IsNullOrEmpty(awaiting.CheckoutUrl))
+                    return _mapper.Map<OrderDTO>(awaiting);
 
-                    if (coupon == null)
-                        continue;
-
-                    // Validate coupon
-                    if (!coupon.CanBeApplied())
-                        continue;
-
-                    if (coupon.StudentID.HasValue && coupon.StudentID.Value != studentId)
-                        continue;
-
-                    totalDiscount += coupon.DiscountAmount;
-                    validCoupons.Add(coupon);
-                }
+                // The previous attempt expired (or never got a link): free its coupons before starting over
+                await CancelAsync(awaiting, orderRepository);
             }
+
+            // Calculate discount from coupons (one query, invalid ones are skipped)
+            var requestedCouponIds = request.CouponIds ?? new List<Guid>();
+            var validCoupons = (await orderRepository.GetCouponsByIds(requestedCouponIds))
+                .Where(c => c.CanBeApplied() && (!c.StudentID.HasValue || c.StudentID.Value == studentId))
+                .ToList();
+
+            decimal totalDiscount = validCoupons.Sum(c => c.DiscountAmount);
 
             // Apply discount
             decimal finalPrice = Math.Max(0, course.Price.Amount - totalDiscount);
 
-            // Apply domain - create commission from course price
+            // Apply domain - create commission from the price the student actually pays
             var commission = Commission.Create(
                 Order.PLATFORM_COMMISSION_RATE,
                 finalPrice);
@@ -102,7 +100,8 @@ namespace Application.Features.Orders.Commands.CreateOrder
                 commission,
                 studentId,
                 request.CourseID,
-                null);
+                null,
+                validCoupons.Select(c => c.CouponID));
 
             // Apply domain - Mark coupons as used
             foreach (var coupon in validCoupons)
@@ -110,22 +109,77 @@ namespace Application.Features.Orders.Commands.CreateOrder
                 coupon.MarkAsUsed();
             }
 
+            // Nothing to pay (free course or fully discounted): enroll straight away, PayOS is not involved
+            if (finalPrice == 0)
+            {
+                order.StudentPaid(null);
+            }
+
             // Apply persistence
-            await _unitOfWork.BeginTransactionAsync();
-            _unitOfWork.GetRepository<IOrderRepository>().Add(order);
+            try
+            {
+                await _unitOfWork.BeginTransactionAsync();
+                orderRepository.Add(order);
+                await _unitOfWork.CommitAsync(order.IsPaid ? studentId.ToString() : null);
+            }
+            catch (DbUpdateConcurrencyException)
+            {
+                throw new ConflictException("A coupon was just used by another request. Please try again.");
+            }
+            catch (DbUpdateException)
+            {
+                throw new ConflictException("You already have an order awaiting payment for this course.");
+            }
+
+            if (order.IsPaid)
+                return _mapper.Map<OrderDTO>(order);
+
+            // Generate Payment Link. The order and its coupons are already saved, so a gateway failure must undo them.
+            string checkoutUrl;
+            try
+            {
+                checkoutUrl = await _paymentService.CreatePaymentLinkAsync(
+                    order.OrderCode,
+                    finalPrice,
+                    $"Order {order.OrderCode} for course {course.Title}"
+                );
+            }
+            catch
+            {
+                await TryCompensateAsync(order, orderRepository);
+                throw;
+            }
+
+            order.AttachCheckoutUrl(checkoutUrl);
             await _unitOfWork.CommitAsync();
 
-            // Generate Payment Link
-            string checkoutUrl = await _paymentService.CreatePaymentLinkAsync(
-                order.OrderCode,
-                finalPrice,
-                $"Order {order.OrderCode} for course {course.Title}"
-            );
+            return _mapper.Map<OrderDTO>(order);
+        }
 
-            var dto = _mapper.Map<OrderDTO>(order);
-            dto.CheckoutUrl = checkoutUrl;
+        private async Task CancelAsync(Order order, IOrderRepository orderRepository)
+        {
+            order.Cancel();
 
-            return dto;
+            foreach (var coupon in await orderRepository.GetCouponsByIds(order.CouponIds))
+            {
+                coupon.Release();
+            }
+
+            await _unitOfWork.BeginTransactionAsync();
+            await _unitOfWork.CommitAsync();
+        }
+
+        private async Task TryCompensateAsync(Order order, IOrderRepository orderRepository)
+        {
+            try
+            {
+                await CancelAsync(order, orderRepository);
+            }
+            catch (Exception ex)
+            {
+                // The expired-order sweeper cancels it later, so the original payment error is the one to surface.
+                _logger.LogError(ex, "Failed to cancel order {OrderCode} after the payment link could not be created.", order.OrderCode);
+            }
         }
     }
 }

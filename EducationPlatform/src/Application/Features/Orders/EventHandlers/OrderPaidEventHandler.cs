@@ -6,7 +6,8 @@ using Application.Interface;
 using Domain.IdentityManagement.Aggregate;
 using Domain.CourseManagement.Aggregate;
 using Domain.OrderManagement.Aggregate;
-using Microsoft.Extensions.Configuration;
+using Application.Options;
+using Microsoft.Extensions.Options;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
@@ -16,20 +17,20 @@ namespace Application.Features.Orders.EventHandlers
     {
         private readonly IUnitOfWork _unitOfWork;
         private readonly IEmailService _emailService;
-        private readonly IConfiguration _configuration;
+        private readonly PayOSOptions _payOSOptions;
         private readonly IServiceScopeFactory? _scopeFactory;
         private readonly ILogger<OrderPaidEventHandler> _logger;
 
         public OrderPaidEventHandler(
             IUnitOfWork unitOfWork,
             IEmailService emailService,
-            IConfiguration configuration,
+            IOptions<PayOSOptions> payOSOptions,
             ILogger<OrderPaidEventHandler> logger,
             IServiceScopeFactory? scopeFactory = null)
         {
             _unitOfWork = unitOfWork;
             _emailService = emailService;
-            _configuration = configuration;
+            _payOSOptions = payOSOptions.Value;
             _logger = logger;
             _scopeFactory = scopeFactory;
         }
@@ -38,8 +39,7 @@ namespace Application.Features.Orders.EventHandlers
         {
             // Check student is already enrolled in this course
             var enrollmentRepo = _unitOfWork.GetRepository<IEnrollmentRepository>();
-            var studentEnrollments = await enrollmentRepo.GetStudentEnrollments(notification.StudentID);
-            if (studentEnrollments != null && studentEnrollments.Any(e => e.CourseID == notification.CourseID))
+            if (await enrollmentRepo.IsStudentEnrolled(notification.StudentID, notification.CourseID, cancellationToken))
             {
                 return;
             }
@@ -62,7 +62,7 @@ namespace Application.Features.Orders.EventHandlers
 
                 if (student != null && course != null && order != null)
                 {
-                    var frontendUrl = _configuration["PayOS:FrontendUrl"] ?? "http://localhost:3000";
+                    var frontendUrl = _payOSOptions.FrontendUrl.TrimEnd('/');
                     string subject = "Payment Confirmation - " + course.Title;
                     string amountStr = (course.Price?.Amount ?? 0).ToString("N0") + " VND";
                     string body = BuildPaymentSuccessEmailBody(student.Name, course.Title, order.OrderCode.ToString(), amountStr, frontendUrl);

@@ -3,30 +3,30 @@ using MediatR;
 using Domain.Common.Interfaces;
 using AutoMapper;
 using Domain.IdentityManagement.Enum;
-using Application.BusinessException;
+using Application.Exceptions;
 using Application.Interface;
 using Domain.OrderManagement.Aggregate;
 
-namespace Application.Features.Orders.Queries.GetCoupons
+namespace Application.Features.Orders.Queries.GetMyCoupons
 {
-    public class GetCouponsQuery : IRequest<IEnumerable<CouponDTO>>
+    public class GetMyCouponsQuery : IRequest<IEnumerable<CouponDTO>>
     {
     }
 
-    public class GetCouponsQueryHandler : IRequestHandler<GetCouponsQuery, IEnumerable<CouponDTO>>
+    public class GetMyCouponsQueryHandler : IRequestHandler<GetMyCouponsQuery, IEnumerable<CouponDTO>>
     {
         private readonly IUnitOfWork _unitOfWork;
         private readonly IMapper _mapper;
         private readonly ICurrentUser _currentUser;
 
-        public GetCouponsQueryHandler(IUnitOfWork unitOfWork, IMapper mapper, ICurrentUser currentUser)
+        public GetMyCouponsQueryHandler(IUnitOfWork unitOfWork, IMapper mapper, ICurrentUser currentUser)
         {
             _unitOfWork = unitOfWork;
             _mapper = mapper;
             _currentUser = currentUser;
         }
 
-        public async Task<IEnumerable<CouponDTO>> Handle(GetCouponsQuery request, CancellationToken cancellationToken)
+        public async Task<IEnumerable<CouponDTO>> Handle(GetMyCouponsQuery request, CancellationToken cancellationToken)
         {
             if (!_currentUser.Id.HasValue || string.IsNullOrEmpty(_currentUser.Role))
                 throw new AuthenticateException("User must be authenticated.");
