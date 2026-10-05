@@ -40,7 +40,7 @@ namespace Application.Features.Orders.Commands.FinishOrder
             // Validate order existence
             var order = await _unitOfWork
                 .GetRepository<IOrderRepository>()
-                .GetOrderByOrderCode(request.OrderCode);
+                .GetOrderByOrderCode(request.OrderCode, cancellationToken);
 
             if (order == null)
                 throw new NotFoundException($"Order with code: {request.OrderCode} not found.");

@@ -31,14 +31,14 @@ namespace API.Controllers
             if (pageSize <= 0) pageSize = 10;
             if (pageIndex <= 0) pageIndex = 1;
 
-            var result = await mediator.Send(new GetStudentEnrollmentsQuery { PageIndex = pageIndex, PageSize = pageSize });
+            var result = await mediator.Send(new GetStudentEnrollmentsQuery { PageIndex = pageIndex, PageSize = pageSize }, HttpContext.RequestAborted);
             return Ok(ApiResponse<IEnumerable<EnrollmentDTO>>.Success(result));
         }
 
         [HttpGet("{EnrollmentID:guid}")]
         public async Task<ActionResult<ApiResponse<EnrollmentDetailDTO>>> GetEnrollment([FromRoute] GetEnrollmentDetailQuery query)
         {
-            var result = await mediator.Send(query);
+            var result = await mediator.Send(query, HttpContext.RequestAborted);
             return Ok(ApiResponse<EnrollmentDetailDTO>.Success(result));
         }
 

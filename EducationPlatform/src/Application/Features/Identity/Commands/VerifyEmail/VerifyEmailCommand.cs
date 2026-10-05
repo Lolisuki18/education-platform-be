@@ -34,7 +34,7 @@ namespace Application.Features.Identity.Commands.VerifyEmail
             // Validate user existence by email (instead of globally by OTP)
             var user = await _unitOfWork
                 .GetRepository<IUserRepository>()
-                .GetUserByEmail(request.Email);
+                .GetUserByEmail(request.Email, cancellationToken);
 
             if (user == null)
                 throw new NotFoundException("User not found.");

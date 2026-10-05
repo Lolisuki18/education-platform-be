@@ -40,8 +40,7 @@ namespace UnitTests.Application.Features.Academic.Commands
         public async Task CreateGrade_NameExists_ShouldThrowConflict()
         {
             // Arrange
-            var existingGrades = new List<Grade> { new Grade(Guid.NewGuid(), "Grade 10") };
-            _mockGradeRepository.Setup(r => r.GetAllAsync()).ReturnsAsync(existingGrades);
+            _mockGradeRepository.Setup(r => r.NameExistsAsync("Grade 10", null, It.IsAny<CancellationToken>())).ReturnsAsync(true);
 
             var command = new CreateGradeCommand { Name = "Grade 10" };
             var handler = new CreateGradeCommandHandler(_mockUnitOfWork.Object, _mockCurrentUser.Object);
@@ -57,7 +56,7 @@ namespace UnitTests.Application.Features.Academic.Commands
         public async Task CreateGrade_Valid_ShouldAddAndCommit()
         {
             // Arrange
-            _mockGradeRepository.Setup(r => r.GetAllAsync()).ReturnsAsync(new List<Grade>());
+            _mockGradeRepository.Setup(r => r.NameExistsAsync("Grade 11", null, It.IsAny<CancellationToken>())).ReturnsAsync(false);
 
             var command = new CreateGradeCommand { Name = "Grade 11" };
             var handler = new CreateGradeCommandHandler(_mockUnitOfWork.Object, _mockCurrentUser.Object);

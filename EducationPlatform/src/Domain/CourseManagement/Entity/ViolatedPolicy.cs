@@ -14,10 +14,13 @@ namespace Domain.CourseManagement.Entity
         public Guid PolicyID { get; private set; }
         public Guid CourseID { get; private set; }
 
-        public Policy Policy { get; private set; }
+        public Policy Policy { get; private set; } = null!;
         #endregion
 
+        // EF Core calls this constructor and then fills the properties
+#pragma warning disable CS8618
         protected ViolatedPolicy() { }
+#pragma warning restore CS8618
 
         public ViolatedPolicy(
             Guid violatedPolicyId,

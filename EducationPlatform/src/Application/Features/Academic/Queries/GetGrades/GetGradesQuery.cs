@@ -27,7 +27,7 @@ namespace Application.Features.Academic.Queries.GetGrades
         {
             var list = await _unitOfWork
                 .GetRepository<IGradeRepository>()
-                .GetAllAsync();
+                .GetAllAsync(cancellationToken);
 
             if (!request.IncludeInactive)
             {

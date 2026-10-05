@@ -1,4 +1,4 @@
-﻿using Application.Exceptions;
+using Application.Exceptions;
 using Application.Interface;
 using Application.Results;
 using AutoMapper;
@@ -15,11 +15,11 @@ namespace Application.Features.Users.Commands
 {
     public class UpdateUserDetailsCommand : IRequest<UserDTO>
     {
-        public string Name { get; set; }
+        public string? Name { get; set; }
 
-        public string Phone { get; set; }
+        public string? Phone { get; set; }
 
-        public string Bio { get; set; }
+        public string? Bio { get; set; }
     }
 
     public class UpdateUserDetailsCommandHandler : IRequestHandler<UpdateUserDetailsCommand, UserDTO>
@@ -42,7 +42,7 @@ namespace Application.Features.Users.Commands
 
             var userId = _currentUser.Id.Value;
 
-            var user = await _unitOfWork.GetRepository<IUserRepository>().GetByIdAsync(userId);
+            var user = await _unitOfWork.GetRepository<IUserRepository>().GetByIdAsync(userId, cancellationToken);
 
             if (user == null)
                 throw new NotFoundException($"User with ID: {userId} not found.");

@@ -286,7 +286,7 @@ namespace UnitTests.Application.Features.Statistics.Queries.GetSummaryStatistic
             return order;
         }
 
-        private void SetPrivateProperty(object target, string propertyName, object value)
+        private void SetPrivateProperty(object target, string propertyName, object? value)
         {
             var prop = target.GetType().GetProperty(propertyName, BindingFlags.Public | BindingFlags.Instance);
             prop?.SetValue(target, value);

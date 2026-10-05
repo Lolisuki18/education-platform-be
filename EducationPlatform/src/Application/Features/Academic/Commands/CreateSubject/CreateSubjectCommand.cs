@@ -33,12 +33,11 @@ namespace Application.Features.Academic.Commands.CreateSubject
                 throw new AuthenticateException("User must be authenticated.");
 
             var subjectRepo = _unitOfWork.GetRepository<ISubjectRepository>();
-            var allSubjects = await subjectRepo.GetAllAsync();
 
             var trimmedCode = request.Code.Trim();
             var trimmedName = request.Name.Trim();
 
-            if (allSubjects.Any(s => string.Equals(s.Code, trimmedCode, StringComparison.OrdinalIgnoreCase)))
+            if (await subjectRepo.CodeExistsAsync(trimmedCode, null, cancellationToken))
             {
                 throw new ConflictException($"Subject with code '{trimmedCode}' already exists.");
             }

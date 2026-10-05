@@ -40,10 +40,10 @@ namespace Application.Features.Statistics.Queries.GetAnalyticsNormalizedGrowth
             var enrollmentRepo = _unitOfWork.GetRepository<IEnrollmentRepository>();
             var orderRepo = _unitOfWork.GetRepository<IOrderRepository>();
 
-            var userRaw = await userRepo.AnalyticsGrowth(request.From, request.To, request.GroupBy.ToString(), request.UserRole);
-            var courseRaw = await courseRepo.AnalyticsGrowth(request.From, request.To, request.GroupBy.ToString(), request.CourseGradeId, request.CourseSubjectId);
-            var enrollmentRaw = await enrollmentRepo.AnalyticsGrowth(request.From, request.To, request.GroupBy.ToString(), request.EnrollmentGradeId, request.EnrollmentSubjectId);
-            var revenueRaw = await orderRepo.AnalyticsGrowth(request.From, request.To, request.GroupBy.ToString(), (request.RevenueType ?? AnalyticRevenueType.All).ToString());
+            var userRaw = await userRepo.AnalyticsGrowth(request.From, request.To, request.GroupBy.ToString(), request.UserRole, cancellationToken);
+            var courseRaw = await courseRepo.AnalyticsGrowth(request.From, request.To, request.GroupBy.ToString(), request.CourseGradeId, request.CourseSubjectId, cancellationToken);
+            var enrollmentRaw = await enrollmentRepo.AnalyticsGrowth(request.From, request.To, request.GroupBy.ToString(), request.EnrollmentGradeId, request.EnrollmentSubjectId, cancellationToken);
+            var revenueRaw = await orderRepo.AnalyticsGrowth(request.From, request.To, request.GroupBy.ToString(), (request.RevenueType ?? AnalyticRevenueType.All).ToString(), cancellationToken);
 
             Dictionary<string, decimal> Flatten(Dictionary<string, List<(string Label, decimal Value)>> raw)
             {

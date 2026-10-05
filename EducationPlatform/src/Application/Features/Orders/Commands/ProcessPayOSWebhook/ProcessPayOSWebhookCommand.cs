@@ -84,7 +84,7 @@ namespace Application.Features.Orders.Commands.ProcessPayOSWebhook
                 }
 
                 var fields = data.EnumerateObject()
-                    .ToDictionary(p => p.Name, p => ToSignedString(p.Value), StringComparer.Ordinal);
+                    .ToDictionary(p => p.Name, p => (string?)ToSignedString(p.Value), StringComparer.Ordinal);
 
                 if (!_signatureVerifier.VerifyWebhookSignature(fields, signatureElement.GetString()!, _options.ChecksumKey))
                     return PayOSWebhookResult.InvalidSignature;

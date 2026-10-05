@@ -47,7 +47,7 @@ namespace Application.Features.StudentReview.Command
 
             var currentStudentId = _currentUser.Id.Value;
             //2. Check if the student has enrolled in the course
-            var enrollments = await _unitOfWork.GetRepository<IEnrollmentRepository>().GetStudentEnrollments(currentStudentId);
+            var enrollments = await _unitOfWork.GetRepository<IEnrollmentRepository>().GetStudentEnrollments(currentStudentId, cancellationToken: cancellationToken);
             if (!enrollments.Any(e => e.CourseID == request.CourseId))
             {
                 throw new ForbiddenException("You must be enrolled in this course to leave a review.");
@@ -56,18 +56,18 @@ namespace Application.Features.StudentReview.Command
             // Check if the student has already reviewed this course
             var hasReviewed = await _unitOfWork
                 .GetRepository<ICourseReviewRepository>()
-                .HasStudentReviewedCourseAsync(request.CourseId, currentStudentId);
+                .HasStudentReviewedCourseAsync(request.CourseId, currentStudentId, cancellationToken);
             if (hasReviewed)
             {
                 throw new ConflictException("You have already reviewed this course.");
             }
 
             //3. Find the course by courseId
-            var course = await _unitOfWork.GetRepository<ICourseRepository>().GetByIdAsync(request.CourseId);
+            var course = await _unitOfWork.GetRepository<ICourseRepository>().GetByIdAsync(request.CourseId, cancellationToken);
             if (course == null) throw new NotFoundException("Course not found.");
 
             //4. Find the student by studentId
-            var student = await _unitOfWork.GetRepository<IUserRepository>().GetByIdAsync(currentStudentId);
+            var student = await _unitOfWork.GetRepository<IUserRepository>().GetByIdAsync(currentStudentId, cancellationToken);
             if (student == null) throw new NotFoundException("Student not found.");
 
             //5. Create a new review and add it to the CourseReview 
@@ -75,7 +75,7 @@ namespace Application.Features.StudentReview.Command
             var review = new CourseReview(request.CourseId, currentStudentId, request.Rating, request.Comment);
 
             //6. Add to the repository and save changes
-            await _unitOfWork.GetRepository<ICourseReviewRepository>().AddAsync(review);
+            await _unitOfWork.GetRepository<ICourseReviewRepository>().AddAsync(review, cancellationToken);
 
             //save in database. The check above can lose a race with a second request; the unique index decides.
             try

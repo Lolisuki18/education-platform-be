@@ -35,7 +35,7 @@ namespace Application.Features.Academic.Commands.UpdateSubject
                 throw new AuthenticateException("User must be authenticated.");
 
             var subjectRepo = _unitOfWork.GetRepository<ISubjectRepository>();
-            var subject = await subjectRepo.GetByIdAsync(request.SubjectID);
+            var subject = await subjectRepo.GetByIdAsync(request.SubjectID, cancellationToken);
 
             if (subject == null)
                 throw new NotFoundException("Subject not found.");
@@ -43,8 +43,7 @@ namespace Application.Features.Academic.Commands.UpdateSubject
             var trimmedCode = request.Code.Trim();
             var trimmedName = request.Name.Trim();
 
-            var allSubjects = await subjectRepo.GetAllAsync();
-            if (allSubjects.Any(s => s.SubjectID != request.SubjectID && string.Equals(s.Code, trimmedCode, StringComparison.OrdinalIgnoreCase)))
+            if (await subjectRepo.CodeExistsAsync(trimmedCode, request.SubjectID, cancellationToken))
             {
                 throw new ConflictException($"Subject with code '{trimmedCode}' already exists.");
             }
@@ -57,7 +56,7 @@ namespace Application.Features.Academic.Commands.UpdateSubject
             }
             else
             {
-                if (await subjectRepo.IsInUse(request.SubjectID))
+                if (await subjectRepo.IsInUse(request.SubjectID, cancellationToken))
                 {
                     throw new ConflictException("Cannot deactivate subject because it is currently in use.");
                 }

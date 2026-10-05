@@ -21,7 +21,10 @@ namespace Domain.AcademicManagement.Aggregate
         }
         #endregion
 
+        // EF Core calls this constructor and then fills the properties
+#pragma warning disable CS8618
         protected Subject() { }
+#pragma warning restore CS8618
 
         public Subject(
             Guid subjectId,

@@ -39,7 +39,7 @@ namespace API.Controllers
         [HttpGet("coupons/available")]
         public async Task<ActionResult<ApiResponse<IEnumerable<CouponDTO>>>> GetAvailableCoupons()
         {
-            var result = await mediator.Send(new GetAvailableCouponsQuery());
+            var result = await mediator.Send(new GetAvailableCouponsQuery(), HttpContext.RequestAborted);
             return Ok(ApiResponse<IEnumerable<CouponDTO>>.Success(result));
         }
 
@@ -59,7 +59,7 @@ namespace API.Controllers
                 Search = search,
                 IsActive = isActive,
                 Type = type
-            });
+            }, HttpContext.RequestAborted);
             return Ok(ApiResponse<PagedResult<CouponDTO>>.Success(result));
         }
 
@@ -67,7 +67,7 @@ namespace API.Controllers
         [HttpGet("admin/coupons/{id}")]
         public async Task<ActionResult<ApiResponse<CouponDTO>>> GetCouponDetails(Guid id)
         {
-            var result = await mediator.Send(new GetCouponByIdQuery { CouponId = id });
+            var result = await mediator.Send(new GetCouponByIdQuery { CouponId = id }, HttpContext.RequestAborted);
             return Ok(ApiResponse<CouponDTO>.Success(result));
         }
 

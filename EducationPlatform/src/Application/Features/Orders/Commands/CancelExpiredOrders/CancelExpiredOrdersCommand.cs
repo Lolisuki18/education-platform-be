@@ -28,7 +28,7 @@ namespace Application.Features.Orders.Commands.CancelExpiredOrders
             var orderRepository = _unitOfWork.GetRepository<IOrderRepository>();
 
             var cutoff = DateTime.UtcNow - Order.PaymentWindow - Grace;
-            var expired = await orderRepository.GetUnpaidOrdersCreatedBefore(cutoff, request.BatchSize);
+            var expired = await orderRepository.GetUnpaidOrdersCreatedBefore(cutoff, request.BatchSize, cancellationToken);
             if (expired.Count == 0)
                 return 0;
 
@@ -36,7 +36,7 @@ namespace Application.Features.Orders.Commands.CancelExpiredOrders
             {
                 order.Cancel();
 
-                foreach (var coupon in await orderRepository.GetCouponsByIds(order.CouponIds))
+                foreach (var coupon in await orderRepository.GetCouponsByIds(order.CouponIds, cancellationToken))
                 {
                     coupon.Release();
                 }

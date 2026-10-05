@@ -38,7 +38,7 @@ namespace Application.Features.Coupons.Commands.CreateCoupon
 
             var repo = _unitOfWork.GetRepository<ICouponRepository>();
 
-            if (await repo.ExistsByCodeAsync(request.Code))
+            if (await repo.ExistsByCodeAsync(request.Code, cancellationToken))
                 throw new ConflictException($"Coupon code '{request.Code}' already exists.");
 
             var coupon = new Coupon(

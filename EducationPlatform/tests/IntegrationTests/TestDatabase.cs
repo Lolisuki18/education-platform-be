@@ -48,8 +48,7 @@ namespace IntegrationTests
         {
             try
             {
-                var container = new PostgreSqlBuilder()
-                    .WithImage("postgres:16-alpine")
+                var container = new PostgreSqlBuilder("postgres:16-alpine")
                     .WithDatabase("EducationPlatformDB_Test")
                     .WithUsername("postgres")
                     .WithPassword("postgres")

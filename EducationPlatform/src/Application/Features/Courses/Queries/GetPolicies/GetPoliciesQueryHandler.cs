@@ -21,7 +21,7 @@ namespace Application.Features.Courses.Queries.GetPolicies
         {
             var policies = await _unitOfWork
                 .GetRepository<IPolicyRepository>()
-                .GetAllAsync();
+                .GetAllAsync(cancellationToken);
 
             if (request.ActiveOnly)
             {

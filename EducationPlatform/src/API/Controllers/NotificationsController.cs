@@ -34,7 +34,7 @@ namespace API.Controllers
                 UnreadOnly = unreadOnly,
                 PageIndex = pageIndex,
                 PageSize = pageSize
-            });
+            }, HttpContext.RequestAborted);
 
             return Ok(ApiResponse<PagedResult<NotificationDTO>>.Success(result));
         }
@@ -42,7 +42,7 @@ namespace API.Controllers
         [HttpGet("unread-count")]
         public async Task<ActionResult<ApiResponse<int>>> UnreadCount()
         {
-            var count = await mediator.Send(new GetUnreadNotificationCountQuery());
+            var count = await mediator.Send(new GetUnreadNotificationCountQuery(), HttpContext.RequestAborted);
             return Ok(ApiResponse<int>.Success(count));
         }
 

@@ -35,7 +35,7 @@ namespace Application.Features.Enrollments.Commands
 
             var enrollment = await _unitOfWork
                 .GetRepository<IEnrollmentRepository>()
-                .GetEnrollmentForUpdate(request.EnrollmentID);
+                .GetEnrollmentForUpdate(request.EnrollmentID, cancellationToken);
 
             if (enrollment == null)
                 throw new NotFoundException("Enrollment not found");
@@ -52,7 +52,7 @@ namespace Application.Features.Enrollments.Commands
                     request.ChapterID,
                     request.LessonID,
                     request.QuizID,
-                    request.SelectedAnswers);
+                    request.SelectedAnswers, cancellationToken);
 
             await _unitOfWork.CommitAsync(_currentUser.Id.Value.ToString());
 

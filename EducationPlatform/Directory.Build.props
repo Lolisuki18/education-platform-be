@@ -1,0 +1,8 @@
+<Project>
+
+  <PropertyGroup>
+    <!-- Every nullable-reference warning (CS8600-CS8625, CS8618, ...) breaks the build, so a new one cannot slip in unnoticed -->
+    <WarningsAsErrors>$(WarningsAsErrors);nullable</WarningsAsErrors>
+  </PropertyGroup>
+
+</Project>

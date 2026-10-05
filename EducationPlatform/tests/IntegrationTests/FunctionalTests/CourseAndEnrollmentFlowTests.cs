@@ -166,7 +166,7 @@ namespace FunctionalTests
 
             var orderResult = await orderResponse.Content.ReadFromJsonAsync<ApiResponse<CreateOrderResponseDto>>();
             orderResult.Should().NotBeNull();
-            orderResult!.Data.CheckoutUrl.Should().Be("https://mock-payment-url.com");
+            orderResult!.Data!.CheckoutUrl.Should().Be("https://mock-payment-url.com");
 
             // Fetch created order from db to get OrderCode
             long orderCode = 0;

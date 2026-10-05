@@ -18,7 +18,10 @@ namespace Domain.AcademicManagement.Entity
         public Guid GradeID { get; private set; }
         #endregion
 
+        // EF Core calls this constructor and then fills the properties
+#pragma warning disable CS8618
         protected DefaultLesson() { }
+#pragma warning restore CS8618
 
         public DefaultLesson(
             Guid defaultLessonId,

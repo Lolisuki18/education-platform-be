@@ -45,7 +45,7 @@ namespace API.Controllers
                 return StatusCode(403, ApiResponse.Error("Forbidden: Only Admin can view inactive grades.", 403));
             }
 
-            var result = await mediator.Send(new GetGradesQuery { IncludeInactive = includeInactive });
+            var result = await mediator.Send(new GetGradesQuery { IncludeInactive = includeInactive }, HttpContext.RequestAborted);
             return Ok(ApiResponse<IEnumerable<GradeDTO>>.Success(result));
         }
 
@@ -59,7 +59,7 @@ namespace API.Controllers
                 return StatusCode(403, ApiResponse.Error("Forbidden: Only Admin can view inactive subjects.", 403));
             }
 
-            var result = await mediator.Send(new GetSubjectsQuery { IncludeInactive = includeInactive });
+            var result = await mediator.Send(new GetSubjectsQuery { IncludeInactive = includeInactive }, HttpContext.RequestAborted);
             return Ok(ApiResponse<IEnumerable<SubjectDTO>>.Success(result));
         }
 

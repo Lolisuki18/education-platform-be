@@ -33,7 +33,10 @@ namespace Domain.IdentityManagement.Aggregate
         public IReadOnlyCollection<RefreshSession> RefreshSessions => _refreshSessions.AsReadOnly();
         #endregion
 
+        // EF Core calls this constructor and then fills the properties
+#pragma warning disable CS8618
         protected User() { }
+#pragma warning restore CS8618
 
         public User(
             Guid userId,

@@ -14,11 +14,11 @@ namespace Infrastructure.Implementation
         {
         }
 
-        public async Task AddAsync(CourseReview courseReview)
+        public async Task AddAsync(CourseReview courseReview, CancellationToken cancellationToken = default)
         {
             await context.AddAsync(courseReview);
         }
-        public async Task<IEnumerable<CourseReview>> GetReviewsByCourseId(Guid courseId, int pageIndex, int pageSize)
+        public async Task<IEnumerable<CourseReview>> GetReviewsByCourseId(Guid courseId, int pageIndex, int pageSize, CancellationToken cancellationToken = default)
         {
             return await context.CourseReviews
                 .Include(r => r.Course)
@@ -28,13 +28,13 @@ namespace Infrastructure.Implementation
                 .Skip((pageIndex - 1) * pageSize)
                 .Take(pageSize)
                 .AsNoTracking()
-                .ToListAsync();
+                .ToListAsync(cancellationToken);
         }
 
-        public async Task<bool> HasStudentReviewedCourseAsync(Guid courseId, Guid studentId)
+        public async Task<bool> HasStudentReviewedCourseAsync(Guid courseId, Guid studentId, CancellationToken cancellationToken = default)
         {
             return await context.CourseReviews
-                .AnyAsync(r => r.CourseID == courseId && r.StudentID == studentId && r.DeleteAt == null);
+                .AnyAsync(r => r.CourseID == courseId && r.StudentID == studentId && r.DeleteAt == null, cancellationToken);
         }
     }
 }

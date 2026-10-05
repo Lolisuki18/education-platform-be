@@ -12,7 +12,7 @@ namespace Application.Features.Identity.Commands.Register
         public string Password { get; set; } = string.Empty;
         public string Phone { get; set; } = string.Empty;
         public string Name { get; set; } = string.Empty;
-        public string Bio { get; set; } = string.Empty;
+        public string? Bio { get; set; }
         public int Role { get; set; }
     }
 
@@ -36,8 +36,8 @@ namespace Application.Features.Identity.Commands.Register
         {
             var userRepo = _unitOfWork.GetRepository<IUserRepository>();
 
-            var userByEmail = await userRepo.GetUserByEmail(request.Email);
-            var userByPhone = await userRepo.GetUserByPhone(request.Phone);
+            var userByEmail = await userRepo.GetUserByEmail(request.Email, cancellationToken);
+            var userByPhone = await userRepo.GetUserByPhone(request.Phone, cancellationToken);
 
             // Phone must be globally unique
             if (userByPhone != null &&

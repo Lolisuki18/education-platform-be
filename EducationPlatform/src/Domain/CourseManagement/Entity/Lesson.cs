@@ -37,7 +37,10 @@ namespace Domain.CourseManagement.Entity
         }
         #endregion
 
+        // EF Core calls this constructor and then fills the properties
+#pragma warning disable CS8618
         protected Lesson() { }
+#pragma warning restore CS8618
 
         public Lesson(
             Guid lessonId,

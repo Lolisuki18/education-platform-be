@@ -36,7 +36,7 @@ namespace Application.Features.Coupons.Queries.GetCouponById
 
             var coupon = await _unitOfWork
                 .GetRepository<ICouponRepository>()
-                .GetByIdAsync(request.CouponId);
+                .GetByIdAsync(request.CouponId, cancellationToken);
 
             if (coupon == null)
                 throw new NotFoundException("Coupon not found.");

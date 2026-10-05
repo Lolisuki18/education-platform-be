@@ -42,7 +42,7 @@ namespace Application.Features.Coupons.Queries.GetCoupons
 
             var (coupons, totalCount) = await _unitOfWork
                 .GetRepository<ICouponRepository>()
-                .GetPagedAsync(request.PageIndex, request.PageSize, request.Search, request.IsActive, request.Type);
+                .GetPagedAsync(request.PageIndex, request.PageSize, request.Search, request.IsActive, request.Type, cancellationToken);
 
             var couponDtos = _mapper.Map<IEnumerable<CouponDTO>>(coupons).ToList();
 

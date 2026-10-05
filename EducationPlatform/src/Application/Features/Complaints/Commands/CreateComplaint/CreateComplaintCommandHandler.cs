@@ -33,7 +33,7 @@ namespace Application.Features.Complaints.Commands.CreateComplaint
 
             // 1. Validate enrollment
             var enrollmentRepo = _unitOfWork.GetRepository<IEnrollmentRepository>();
-            var enrollments = await enrollmentRepo.GetStudentEnrollments(studentId);
+            var enrollments = await enrollmentRepo.GetStudentEnrollments(studentId, cancellationToken: cancellationToken);
 
             var isEnrolled = enrollments.Any(e => e.CourseID == request.CourseID);
             if (!isEnrolled)

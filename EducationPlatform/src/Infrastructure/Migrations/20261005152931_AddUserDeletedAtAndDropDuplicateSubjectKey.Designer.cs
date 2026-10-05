@@ -13,8 +13,8 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Infrastructure.Migrations
 {
     [DbContext(typeof(EducationPlatformDBContext))]
-    [Migration("20261005145826_AddUserDeletedAt")]
-    partial class AddUserDeletedAt
+    [Migration("20261005152931_AddUserDeletedAtAndDropDuplicateSubjectKey")]
+    partial class AddUserDeletedAtAndDropDuplicateSubjectKey
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -111,14 +111,9 @@ namespace Infrastructure.Migrations
                     b.Property<Guid>("SubjectID")
                         .HasColumnType("uuid");
 
-                    b.Property<Guid?>("SubjectID1")
-                        .HasColumnType("uuid");
-
                     b.HasKey("DefaultLessonID");
 
                     b.HasIndex("GradeID");
-
-                    b.HasIndex("SubjectID1");
 
                     b.HasIndex("SubjectID", "GradeID");
 
@@ -996,14 +991,10 @@ namespace Infrastructure.Migrations
                         .IsRequired();
 
                     b.HasOne("Domain.AcademicManagement.Aggregate.Subject", null)
-                        .WithMany()
+                        .WithMany("DefaultLessons")
                         .HasForeignKey("SubjectID")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
-
-                    b.HasOne("Domain.AcademicManagement.Aggregate.Subject", null)
-                        .WithMany("DefaultLessons")
-                        .HasForeignKey("SubjectID1");
                 });
 
             modelBuilder.Entity("Domain.CourseManagement.Aggregate.Complaint", b =>

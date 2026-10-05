@@ -34,14 +34,13 @@ namespace Application.Features.Academic.Commands.UpdateGrade
                 throw new AuthenticateException("User must be authenticated.");
 
             var gradeRepo = _unitOfWork.GetRepository<IGradeRepository>();
-            var grade = await gradeRepo.GetByIdAsync(request.GradeID);
+            var grade = await gradeRepo.GetByIdAsync(request.GradeID, cancellationToken);
 
             if (grade == null)
                 throw new NotFoundException("Grade not found.");
 
             var trimmedName = request.Name.Trim();
-            var allGrades = await gradeRepo.GetAllAsync();
-            if (allGrades.Any(g => g.GradeID != request.GradeID && string.Equals(g.Name, trimmedName, StringComparison.OrdinalIgnoreCase)))
+            if (await gradeRepo.NameExistsAsync(trimmedName, request.GradeID, cancellationToken))
             {
                 throw new ConflictException($"Grade with name '{trimmedName}' already exists.");
             }
@@ -54,7 +53,7 @@ namespace Application.Features.Academic.Commands.UpdateGrade
             }
             else
             {
-                if (await gradeRepo.IsInUse(request.GradeID))
+                if (await gradeRepo.IsInUse(request.GradeID, cancellationToken))
                 {
                     throw new ConflictException("Cannot deactivate grade because it is currently in use.");
                 }

@@ -56,7 +56,7 @@ namespace IntegrationTests.Controllers
             var result1 = await response1.Content.ReadFromJsonAsync<ApiResponse<CourseReviewDTO>>();
             result1.Should().NotBeNull();
             result1!.IsSuccess.Should().BeTrue();
-            result1.Data.Rating.Should().Be(4.5f);
+            result1.Data!.Rating.Should().Be(4.5f);
             result1.Data.Comment.Should().Be("Excellent course!");
 
             // Act 2: Attempt to submit duplicate review

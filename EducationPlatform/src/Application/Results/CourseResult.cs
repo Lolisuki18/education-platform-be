@@ -168,11 +168,11 @@ namespace Application.Results
     {
         public Guid CourseReviewID { get; set; }
 
-        public string CourseName { get; set; }
+        public string CourseName { get; set; } = string.Empty;
 
-        public string Reviewer { get; set; }
+        public string Reviewer { get; set; } = string.Empty;
 
-        public string Comment { get; set; }
+        public string? Comment { get; set; }
 
         public float Rating { get; set; }
 

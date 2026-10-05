@@ -15,11 +15,14 @@ namespace Domain.OrderManagement.Aggregate
         public Guid TeacherID { get; private set; }
         public Guid CourseID { get; private set; }
 
-        public User Teacher { get; private set; }
-        public Course Course { get; private set; }
+        public User Teacher { get; private set; } = null!;
+        public Course Course { get; private set; } = null!;
         #endregion
 
+        // EF Core calls this constructor and then fills the properties
+#pragma warning disable CS8618
         protected Penalty() { }
+#pragma warning restore CS8618
 
         public Penalty(
             Guid penaltyId,

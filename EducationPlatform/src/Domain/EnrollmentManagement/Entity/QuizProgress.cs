@@ -17,10 +17,13 @@ namespace Domain.EnrollmentManagement.Entity
         public Guid LessonProgressID { get; private set; }
         public Guid QuizID { get; private set; }
 
-        public Quiz Quiz { get; private set; }
+        public Quiz Quiz { get; private set; } = null!;
         #endregion
 
+        // EF Core calls this constructor and then fills the properties
+#pragma warning disable CS8618
         protected QuizProgress() { }
+#pragma warning restore CS8618
 
         public QuizProgress(
             Guid quizProgressID,

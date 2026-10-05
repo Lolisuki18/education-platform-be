@@ -40,7 +40,7 @@ namespace Application.Features.Users.Queries
 
             var (users, totalCount) = await _unitOfWork
                 .GetRepository<IUserRepository>()
-                .GetUsersPaged(request.PageIndex, request.PageSize, request.Role);
+                .GetUsersPaged(request.PageIndex, request.PageSize, request.Role, cancellationToken);
 
             var userDtos = _mapper.Map<IEnumerable<UserDTO>>(users).ToList();
 

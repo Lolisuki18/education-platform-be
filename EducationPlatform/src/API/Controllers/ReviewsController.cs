@@ -40,7 +40,7 @@ namespace API.Controllers
                 CourseId = courseId,
                 PageIndex = pageIndex,
                 PageSize = pageSize
-            });
+            }, HttpContext.RequestAborted);
             return Ok(ApiResponse<IEnumerable<CourseReviewDTO>>.Success(result));
         }
     }

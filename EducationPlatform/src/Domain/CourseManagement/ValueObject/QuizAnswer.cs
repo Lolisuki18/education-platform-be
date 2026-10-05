@@ -9,13 +9,16 @@ namespace Domain.CourseManagement.ValueObject
         public IReadOnlyCollection<string> CorrectAnswers { get; }
         public IReadOnlyCollection<string>? Options { get; }
 
+        // EF Core calls this constructor and then fills the properties
+#pragma warning disable CS8618
         private QuizAnswer() { }
+#pragma warning restore CS8618
 
         private QuizAnswer(QuizType type, IEnumerable<string> correctAnswers, IEnumerable<string>? options = null)
         {
             var answers = correctAnswers
-                .Select(a => a?.Trim())
                 .Where(a => !string.IsNullOrWhiteSpace(a))
+                .Select(a => a.Trim())
                 .ToList();
 
             if (!answers.Any())

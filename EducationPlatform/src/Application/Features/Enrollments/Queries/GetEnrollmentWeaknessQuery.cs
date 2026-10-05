@@ -24,7 +24,7 @@ namespace Application.Features.Enrollments.Queries
         {
             var enrollment = await _unitOfWork
                 .GetRepository<IEnrollmentRepository>()
-                .GetEnrollmentStatistic(request.EnrollmentID);
+                .GetEnrollmentStatistic(request.EnrollmentID, cancellationToken);
 
             if (enrollment == null)
                 throw new NotFoundException("Student statistic not found");

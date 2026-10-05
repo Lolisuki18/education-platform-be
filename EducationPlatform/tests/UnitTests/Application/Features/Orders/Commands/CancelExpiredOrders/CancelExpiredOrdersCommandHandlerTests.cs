@@ -75,7 +75,7 @@ namespace UnitTests.Application.Features.Orders.Commands.CancelExpiredOrders
             DateTime? cutoff = null;
             _orderRepository
                 .Setup(r => r.GetUnpaidOrdersCreatedBefore(It.IsAny<DateTime>(), It.IsAny<int>()))
-                .Callback<DateTime, int>((c, _) => cutoff = c)
+                .Callback<DateTime, int, CancellationToken>((c, _, _) => cutoff = c)
                 .ReturnsAsync(new List<Order>());
 
             await _handler.Handle(new CancelExpiredOrdersCommand(), CancellationToken.None);

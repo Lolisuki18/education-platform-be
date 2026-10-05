@@ -29,7 +29,7 @@ namespace IntegrationTests.Controllers
             var result = await response.Content.ReadFromJsonAsync<ApiResponse<SummaryStatisticsResult>>();
             result.Should().NotBeNull();
             result!.IsSuccess.Should().BeTrue();
-            result.Data.Grades.Should().NotBeNull();
+            result.Data!.Grades.Should().NotBeNull();
             result.Data.Subjects.Should().NotBeNull();
         }
 

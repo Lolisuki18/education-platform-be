@@ -62,7 +62,7 @@ namespace Application.Features.Orders.Queries.GetOrders
                     request.PageIndex,
                     request.PageSize,
                     teacherId,
-                    studentId);
+                    studentId, cancellationToken);
 
             if (list == null || !list.Any())
                 throw new NotFoundException("Order list is not found or empty");

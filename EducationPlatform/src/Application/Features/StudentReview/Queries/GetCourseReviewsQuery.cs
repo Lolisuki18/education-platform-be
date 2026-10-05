@@ -40,13 +40,13 @@ namespace Application.Features.StudentReview.Queries
         public async Task<IEnumerable<CourseReviewDTO>> Handle(GetCourseReviewsQuery request, CancellationToken cancellationToken)
         {
             //1.Check is course exist
-            var courseExist = await _unitOfWork.GetRepository<ICourseRepository>().GetByIdAsync(request.CourseId);
+            var courseExist = await _unitOfWork.GetRepository<ICourseRepository>().GetByIdAsync(request.CourseId, cancellationToken);
 
             if (courseExist == null) throw new NotFoundException($"Course not found.");
 
             //2. get list of reviews for that course
             var reviews = await _unitOfWork.GetRepository<ICourseReviewRepository>()
-                .GetReviewsByCourseId(request.CourseId, request.PageIndex, request.PageSize);
+                .GetReviewsByCourseId(request.CourseId, request.PageIndex, request.PageSize, cancellationToken);
             return _mapper.Map<IEnumerable<CourseReviewDTO>>(reviews);
         }
     }

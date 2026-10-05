@@ -77,7 +77,7 @@ namespace IntegrationTests.Controllers
             var result = await response.Content.ReadFromJsonAsync<ApiResponse<EnrollmentDetailDTO>>();
             result.Should().NotBeNull();
             result!.IsSuccess.Should().BeTrue();
-            result.Data.EnrollmentID.Should().Be(enrollmentId);
+            result.Data!.EnrollmentID.Should().Be(enrollmentId);
         }
 
         [Fact]

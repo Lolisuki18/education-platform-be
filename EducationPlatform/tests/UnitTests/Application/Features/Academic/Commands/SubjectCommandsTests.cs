@@ -40,8 +40,7 @@ namespace UnitTests.Application.Features.Academic.Commands
         public async Task CreateSubject_CodeExists_ShouldThrowConflict()
         {
             // Arrange
-            var existingSubjects = new List<Subject> { new Subject(Guid.NewGuid(), "MATH", "Mathematics", Guid.Empty) };
-            _mockSubjectRepository.Setup(r => r.GetAllAsync()).ReturnsAsync(existingSubjects);
+            _mockSubjectRepository.Setup(r => r.CodeExistsAsync("MATH", null, It.IsAny<CancellationToken>())).ReturnsAsync(true);
 
             var command = new CreateSubjectCommand { Code = "MATH", Name = "Maths" };
             var handler = new CreateSubjectCommandHandler(_mockUnitOfWork.Object, _mockCurrentUser.Object);
@@ -57,7 +56,7 @@ namespace UnitTests.Application.Features.Academic.Commands
         public async Task CreateSubject_Valid_ShouldAddAndCommit()
         {
             // Arrange
-            _mockSubjectRepository.Setup(r => r.GetAllAsync()).ReturnsAsync(new List<Subject>());
+            _mockSubjectRepository.Setup(r => r.CodeExistsAsync("ENG", null, It.IsAny<CancellationToken>())).ReturnsAsync(false);
 
             var command = new CreateSubjectCommand { Code = "ENG", Name = "English" };
             var handler = new CreateSubjectCommandHandler(_mockUnitOfWork.Object, _mockCurrentUser.Object);

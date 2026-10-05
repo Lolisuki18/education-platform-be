@@ -24,7 +24,8 @@ namespace Infrastructure.Implementation
             int pageIndex,
             int pageSize,
             Guid? teacherId,
-            Role? callerRole)
+            Role? callerRole,
+            CancellationToken cancellationToken = default)
         {
             // Safety guards
             pageIndex = pageIndex < 1 ? 1 : pageIndex;
@@ -86,7 +87,7 @@ namespace Infrastructure.Implementation
                 .Skip((pageIndex - 1) * pageSize)
                 .Take(pageSize);
 
-            return await query.ToListAsync();
+            return await query.ToListAsync(cancellationToken);
         }
 
 
@@ -108,7 +109,7 @@ namespace Infrastructure.Implementation
                 .AnyAsync(c => c.Slug == slug, cancellationToken);
         }
 
-        public async Task<Course?> GetCourseMetadataByID(Guid courseId)
+        public async Task<Course?> GetCourseMetadataByID(Guid courseId, CancellationToken cancellationToken = default)
         {
             return await context.Courses
                 .AsNoTracking()
@@ -118,10 +119,10 @@ namespace Infrastructure.Implementation
                 .Include(c => c.ViolatedPolicies)
                     .ThenInclude(vp => vp.Policy)
                         .ThenInclude(p => p.PolicyRules)
-                .FirstOrDefaultAsync(c => c.CourseID == courseId);
+                .FirstOrDefaultAsync(c => c.CourseID == courseId, cancellationToken);
         }
 
-        public async Task<Course?> GetCourseDetailByID(Guid courseId)
+        public async Task<Course?> GetCourseDetailByID(Guid courseId, CancellationToken cancellationToken = default)
         {
             return await context.Courses
                 .AsNoTracking()
@@ -141,13 +142,14 @@ namespace Infrastructure.Implementation
                 .Include(c => c.Chapters)
                     .ThenInclude(ch => ch.Lessons)
                         .ThenInclude(l => l.Materials)
-                .FirstOrDefaultAsync(c => c.CourseID == courseId);
+                .FirstOrDefaultAsync(c => c.CourseID == courseId, cancellationToken);
         }
 
 
         public async Task ReplaceViolatedPolicies(
             Guid courseId,
-            IEnumerable<ViolatedPolicy> newViolatedPolicies)
+            IEnumerable<ViolatedPolicy> newViolatedPolicies,
+            CancellationToken cancellationToken = default)
         {
             if (newViolatedPolicies == null)
                 newViolatedPolicies = Enumerable.Empty<ViolatedPolicy>();
@@ -155,7 +157,7 @@ namespace Infrastructure.Implementation
             // Remove existing policies for the course
             var existingPolicies = await context.ViolatedPolicies
                                           .Where(vp => vp.CourseID == courseId)
-                                          .ToListAsync();
+                                          .ToListAsync(cancellationToken);
 
             if (existingPolicies.Any())
                 context.ViolatedPolicies.RemoveRange(existingPolicies);
@@ -215,7 +217,7 @@ namespace Infrastructure.Implementation
             int Published,
             Dictionary<string, int> GradeCounts,
             Dictionary<string, int> SubjectCounts
-        )> Summary(DateTime? from, DateTime? to)
+        )> Summary(DateTime? from, DateTime? to, CancellationToken cancellationToken = default)
         {
             var query = context.Courses.AsNoTracking().AsQueryable();
 
@@ -234,7 +236,7 @@ namespace Infrastructure.Implementation
                     Rejected = g.Count(c => c.Status == CourseStatus.Rejected),
                     Published = g.Count(c => c.Status == CourseStatus.Published)
                 })
-                .FirstOrDefaultAsync();
+                .FirstOrDefaultAsync(cancellationToken);
 
             // ===== 2. Grade distribution =====
             var gradeDict = await query
@@ -244,7 +246,7 @@ namespace Infrastructure.Implementation
                     Grade = g.Key,
                     Count = g.Count()
                 })
-                .ToDictionaryAsync(x => x.Grade, x => x.Count);
+                .ToDictionaryAsync(x => x.Grade, x => x.Count, cancellationToken);
 
             // ===== 3. Subject distribution =====
             var subjectDict = await query
@@ -254,7 +256,7 @@ namespace Infrastructure.Implementation
                     Subject = g.Key,
                     Count = g.Count()
                 })
-                .ToDictionaryAsync(x => x.Subject, x => x.Count);
+                .ToDictionaryAsync(x => x.Subject, x => x.Count, cancellationToken);
 
             return (
                 status?.InReview ?? 0,
@@ -270,7 +272,8 @@ namespace Infrastructure.Implementation
             DateTime? to,
             string groupBy,
             Guid? gradeId,
-            Guid? subjectId)
+            Guid? subjectId,
+            CancellationToken cancellationToken = default)
         {
             var query = context.Courses.AsNoTracking().AsQueryable();
 
@@ -302,7 +305,7 @@ namespace Infrastructure.Implementation
                     g.Key.Day,
                     Count = g.Count()
                 })
-                .ToListAsync();
+                .ToListAsync(cancellationToken);
 
             // ===== Step 2: Format labels in memory =====
             var data = rawData

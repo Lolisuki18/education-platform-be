@@ -6,7 +6,7 @@ namespace Domain.CourseManagement.Aggregate
 {
     public interface IComplaintRepository : IGenericRepository<Complaint>
     {
-        Task<Complaint?> GetComplaintDetailByID(Guid complaintId);
+        Task<Complaint?> GetComplaintDetailByID(Guid complaintId, CancellationToken cancellationToken = default);
 
         Task<IEnumerable<Complaint>> GetComplaintsAsync(
             ComplaintStatus? complaintStatus,
@@ -15,7 +15,7 @@ namespace Domain.CourseManagement.Aggregate
             int pageSize = 10,
             CancellationToken cancellationToken = default);
 
-        Task<IEnumerable<Complaint>> GetApprovedByCoursesAsync(Guid courseId);
+        Task<IEnumerable<Complaint>> GetApprovedByCoursesAsync(Guid courseId, CancellationToken cancellationToken = default);
 
         void CreateComplaint(Complaint complaint);
 

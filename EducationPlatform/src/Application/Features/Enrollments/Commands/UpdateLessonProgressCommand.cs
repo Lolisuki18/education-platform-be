@@ -31,7 +31,7 @@ namespace Application.Features.Enrollments.Commands
                 throw new AuthenticateException("User must be authenticated.");
 
             // Ownership check
-            var enrollment = await _unitOfWork.GetRepository<IEnrollmentRepository>().GetByIdAsync(request.EnrollmentID);
+            var enrollment = await _unitOfWork.GetRepository<IEnrollmentRepository>().GetByIdAsync(request.EnrollmentID, cancellationToken);
             if (enrollment == null || enrollment.StudentID != _currentUser.Id.Value)
                 throw new ForbiddenException("Not authorized to update this enrollment.");
 
@@ -39,7 +39,7 @@ namespace Application.Features.Enrollments.Commands
 
             await _unitOfWork
                 .GetRepository<IEnrollmentRepository>()
-                .UpsertLessonProgress(request.EnrollmentID, request.ChapterID, request.LessonID, request.IsCompleted);
+                .UpsertLessonProgress(request.EnrollmentID, request.ChapterID, request.LessonID, request.IsCompleted, cancellationToken);
 
             await _unitOfWork.CommitAsync(_currentUser.Id.Value.ToString());
 

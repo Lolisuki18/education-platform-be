@@ -10,10 +10,11 @@ namespace Domain.OrderManagement.Aggregate
             int pageSize,
             string? search,
             bool? isActive,
-            CouponType? type);
+            CouponType? type,
+            CancellationToken cancellationToken = default);
 
-        Task<bool> ExistsByCodeAsync(string code);
+        Task<bool> ExistsByCodeAsync(string code, CancellationToken cancellationToken = default);
 
-        Task<Coupon?> GetByCodeAsync(string code);
+        Task<Coupon?> GetByCodeAsync(string code, CancellationToken cancellationToken = default);
     }
 }

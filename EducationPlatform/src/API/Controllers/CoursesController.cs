@@ -65,11 +65,11 @@ namespace API.Controllers
                     PageIndex = query.PageIndex,
                     PageSize = query.PageSize
                 };
-                var pagedResult = await mediator.Send(pagedQuery);
+                var pagedResult = await mediator.Send(pagedQuery, HttpContext.RequestAborted);
                 return Ok(ApiResponse<PagedResult<CourseDTO>>.Success(pagedResult));
             }
 
-            var result = await mediator.Send(query);
+            var result = await mediator.Send(query, HttpContext.RequestAborted);
             return Ok(ApiResponse<PagedResult<CourseDTO>>.Success(result));
         }
 
@@ -78,7 +78,7 @@ namespace API.Controllers
         [HttpGet("{id:guid}")]
         public async Task<ActionResult<ApiResponse<CourseDetailDTO>>> GetCourseDetail(Guid id)
         {
-            var course = await mediator.Send(new GetCourseDetailQuery { CourseID = id });
+            var course = await mediator.Send(new GetCourseDetailQuery { CourseID = id }, HttpContext.RequestAborted);
             return Ok(ApiResponse<CourseDetailDTO>.Success(course));
         }
 
@@ -185,7 +185,7 @@ namespace API.Controllers
         [HttpGet("default-lessons")]
         public async Task<ActionResult<ApiResponse<IEnumerable<object>>>> GetDefaultLessons([FromQuery] Guid subjectId, [FromQuery] Guid gradeId)
         {
-            var defaultLessons = await mediator.Send(new GetDefaultLessonsQuery { SubjectId = subjectId, GradeId = gradeId });
+            var defaultLessons = await mediator.Send(new GetDefaultLessonsQuery { SubjectId = subjectId, GradeId = gradeId }, HttpContext.RequestAborted);
             return Ok(ApiResponse<IEnumerable<object>>.Success(defaultLessons));
         }
 
@@ -225,7 +225,7 @@ namespace API.Controllers
                 Status = status,
                 PageIndex = pageIndex,
                 PageSize = pageSize
-            });
+            }, HttpContext.RequestAborted);
             return Ok(ApiResponse<IEnumerable<ComplaintDTO>>.Success(complaints));
         }
 
@@ -275,8 +275,8 @@ namespace API.Controllers
 
         private async Task<ReviewComplaintResponseDto> BuildComplaintReviewResponse(Guid complaintId, string message)
         {
-            var complaint = await mediator.Send(new GetComplaintDetailQuery { ComplaintID = complaintId });
-            var course = await mediator.Send(new GetCourseDetailQuery { CourseID = complaint.CourseID });
+            var complaint = await mediator.Send(new GetComplaintDetailQuery { ComplaintID = complaintId }, HttpContext.RequestAborted);
+            var course = await mediator.Send(new GetCourseDetailQuery { CourseID = complaint.CourseID }, HttpContext.RequestAborted);
 
             return new ReviewComplaintResponseDto
             {
@@ -288,8 +288,8 @@ namespace API.Controllers
 
         private async Task<ReviewCourseResponseDto> BuildCourseReviewResponse(Guid courseId, string message)
         {
-            var course = await mediator.Send(new GetCourseDetailQuery { CourseID = courseId });
-            var policies = await mediator.Send(new GetPoliciesQuery());
+            var course = await mediator.Send(new GetCourseDetailQuery { CourseID = courseId }, HttpContext.RequestAborted);
+            var policies = await mediator.Send(new GetPoliciesQuery(), HttpContext.RequestAborted);
 
             return new ReviewCourseResponseDto
             {

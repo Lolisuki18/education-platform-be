@@ -18,7 +18,8 @@ namespace Domain.CourseManagement.Aggregate
             int pageIndex,
             int pageSize,
             Guid? teacherId,
-            Role? callerRole);
+            Role? callerRole,
+            CancellationToken cancellationToken = default);
 
         /// <summary>Whether a course already uses this slug (slugs are unique).</summary>
         Task<bool> SlugExistsAsync(
@@ -31,15 +32,18 @@ namespace Domain.CourseManagement.Aggregate
             CancellationToken cancellationToken = default);
 
         Task<Course?> GetCourseMetadataByID(
-            Guid courseId);
+            Guid courseId,
+            CancellationToken cancellationToken = default);
 
         Task<Course?> GetCourseDetailByID(
-            Guid courseId);
+            Guid courseId,
+            CancellationToken cancellationToken = default);
 
 
         Task ReplaceViolatedPolicies(
             Guid courseId,
-            IEnumerable<ViolatedPolicy> newViolatedPolicies);
+            IEnumerable<ViolatedPolicy> newViolatedPolicies,
+            CancellationToken cancellationToken = default);
 
         void AddChapters(
             IEnumerable<Chapter> chapters);
@@ -65,13 +69,15 @@ namespace Domain.CourseManagement.Aggregate
             Dictionary<string, int> SubjectCounts
         )> Summary(
             DateTime? from,
-            DateTime? to);
+            DateTime? to,
+            CancellationToken cancellationToken = default);
 
         Task<Dictionary<string, List<(string Label, decimal Value)>>> AnalyticsGrowth(
             DateTime? from,
             DateTime? to,
             string groupBy,
             Guid? gradeId,
-            Guid? subjectId);
+            Guid? subjectId,
+            CancellationToken cancellationToken = default);
     }
 }

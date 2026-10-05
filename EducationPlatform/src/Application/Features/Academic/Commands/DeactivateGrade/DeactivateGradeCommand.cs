@@ -31,12 +31,12 @@ namespace Application.Features.Academic.Commands.DeactivateGrade
                 throw new AuthenticateException("User must be authenticated.");
 
             var gradeRepo = _unitOfWork.GetRepository<IGradeRepository>();
-            var grade = await gradeRepo.GetByIdAsync(request.GradeID);
+            var grade = await gradeRepo.GetByIdAsync(request.GradeID, cancellationToken);
 
             if (grade == null)
                 throw new NotFoundException("Grade not found.");
 
-            if (await gradeRepo.IsInUse(request.GradeID))
+            if (await gradeRepo.IsInUse(request.GradeID, cancellationToken))
             {
                 throw new ConflictException("Cannot deactivate grade because it is currently in use by courses or lessons.");
             }

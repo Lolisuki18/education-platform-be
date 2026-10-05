@@ -227,7 +227,7 @@ namespace IntegrationTests.Controllers
             var result = await response.Content.ReadFromJsonAsync<ApiResponse<ReviewCourseResponseDto>>();
             result.Should().NotBeNull();
             result!.IsSuccess.Should().BeTrue();
-            result.Data.Course.Status.Should().Be("Published");
+            result.Data!.Course.Status.Should().Be("Published");
 
             // Verify status in DB
             await ExecuteDbContextAsync(async db =>

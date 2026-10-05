@@ -16,10 +16,13 @@ namespace Domain.CourseManagement.Entity
 
         public Guid LessonID { get; private set; }
 
-        public QuizAnswer Answer { get; private set; }
+        public QuizAnswer Answer { get; private set; } = null!;
         #endregion
 
+        // EF Core calls this constructor and then fills the properties
+#pragma warning disable CS8618
         protected Quiz() { }
+#pragma warning restore CS8618
 
         public Quiz(
             Guid quizId,

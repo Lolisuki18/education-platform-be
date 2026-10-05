@@ -46,7 +46,7 @@ namespace Application.Features.Courses.Queries.GetCourseDetail
             // 2. Fetch Metadata first
             var courseMetadata = await _unitOfWork
                 .GetRepository<ICourseRepository>()
-                .GetCourseMetadataByID(request.CourseID);
+                .GetCourseMetadataByID(request.CourseID, cancellationToken);
 
             if (courseMetadata == null)
                 throw new NotFoundException($"Course with ID: {request.CourseID} is not found");
@@ -70,7 +70,7 @@ namespace Application.Features.Courses.Queries.GetCourseDetail
             {
                 course = await _unitOfWork
                     .GetRepository<ICourseRepository>()
-                    .GetCourseDetailByID(request.CourseID);
+                    .GetCourseDetailByID(request.CourseID, cancellationToken);
             }
             else
             {

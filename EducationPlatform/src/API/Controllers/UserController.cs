@@ -29,7 +29,7 @@ namespace API.Controllers
         [HttpGet("me")]
         public async Task<ActionResult<ApiResponse<UserDTO>>> GetMe()
         {
-            var result = await mediator.Send(new GetUserDetailsQuery());
+            var result = await mediator.Send(new GetUserDetailsQuery(), HttpContext.RequestAborted);
             return Ok(ApiResponse<UserDTO>.Success(result));
         }
 
@@ -55,7 +55,7 @@ namespace API.Controllers
         [HttpGet("me/export")]
         public async Task<ActionResult<ApiResponse<PersonalDataExport>>> ExportMyData()
         {
-            var result = await mediator.Send(new ExportMyDataQuery());
+            var result = await mediator.Send(new ExportMyDataQuery(), HttpContext.RequestAborted);
 
             Response.Headers.ContentDisposition = "attachment; filename=\"my-data.json\"";
             return Ok(ApiResponse<PersonalDataExport>.Success(result));
@@ -87,7 +87,7 @@ namespace API.Controllers
             [FromQuery] int pageSize = 10)
         {
             var query = new GetUsersQuery { Role = role, PageIndex = pageIndex, PageSize = pageSize };
-            var result = await mediator.Send(query);
+            var result = await mediator.Send(query, HttpContext.RequestAborted);
             return Ok(ApiResponse<PagedResult<UserDTO>>.Success(result));
         }
 
@@ -95,7 +95,7 @@ namespace API.Controllers
         [HttpGet("{id:guid}")]
         public async Task<ActionResult<ApiResponse<UserDTO>>> GetUserById(Guid id)
         {
-            var result = await mediator.Send(new GetUserDetailsQuery { UserId = id });
+            var result = await mediator.Send(new GetUserDetailsQuery { UserId = id }, HttpContext.RequestAborted);
             return Ok(ApiResponse<UserDTO>.Success(result));
         }
 

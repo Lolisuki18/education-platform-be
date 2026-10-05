@@ -34,7 +34,7 @@ namespace API.Controllers
         [HttpGet("summary")]
         public async Task<ActionResult<ApiResponse<SummaryStatisticsResult>>> GetSummary([FromQuery] GetSummaryStatisticsQuery query)
         {
-            var result = await mediator.Send(query);
+            var result = await mediator.Send(query, HttpContext.RequestAborted);
             return Ok(ApiResponse<SummaryStatisticsResult>.Success(result));
         }
 
@@ -42,7 +42,7 @@ namespace API.Controllers
         [HttpGet("analytics/growth")]
         public async Task<ActionResult<ApiResponse<Application.Results.AnalyticsGrowthDTO>>> GetAnalyticsGrowth([FromQuery] GetAnalyticsGrowthQuery query)
         {
-            var data = await mediator.Send(query);
+            var data = await mediator.Send(query, HttpContext.RequestAborted);
             return Ok(ApiResponse<Application.Results.AnalyticsGrowthDTO>.Success(data));
         }
 
@@ -50,7 +50,7 @@ namespace API.Controllers
         [HttpGet("analytics/demand-supply")]
         public async Task<ActionResult<ApiResponse<Application.Results.AnalyticsGrowthDTO>>> GetAnalyticsDemandAndSupply([FromQuery] GetAnalyticsDemandAndSupplyQuery query)
         {
-            var data = await mediator.Send(query);
+            var data = await mediator.Send(query, HttpContext.RequestAborted);
             return Ok(ApiResponse<Application.Results.AnalyticsGrowthDTO>.Success(data));
         }
 
@@ -58,7 +58,7 @@ namespace API.Controllers
         [HttpGet("analytics/normalized-growth")]
         public async Task<ActionResult<ApiResponse<Application.Results.AnalyticsGrowthDTO>>> GetAnalyticsNormalizedGrowth([FromQuery] GetAnalyticsNormalizedGrowthQuery query)
         {
-            var data = await mediator.Send(query);
+            var data = await mediator.Send(query, HttpContext.RequestAborted);
             return Ok(ApiResponse<Application.Results.AnalyticsGrowthDTO>.Success(data));
         }
 
@@ -66,7 +66,7 @@ namespace API.Controllers
         [HttpGet("analytics/top-performance")]
         public async Task<ActionResult<ApiResponse<Application.Results.TopPerformanceDTO>>> GetTopPerformance([FromQuery] GetTopPerformanceQuery query)
         {
-            var data = await mediator.Send(query);
+            var data = await mediator.Send(query, HttpContext.RequestAborted);
             return Ok(ApiResponse<Application.Results.TopPerformanceDTO>.Success(data));
         }
 
@@ -74,7 +74,7 @@ namespace API.Controllers
         [HttpGet("teacher/summary")]
         public async Task<ActionResult<ApiResponse<TeacherSummaryDTO>>> GetTeacherSummary()
         {
-            var result = await mediator.Send(new GetTeacherSummaryQuery());
+            var result = await mediator.Send(new GetTeacherSummaryQuery(), HttpContext.RequestAborted);
             return Ok(ApiResponse<TeacherSummaryDTO>.Success(result));
         }
     }

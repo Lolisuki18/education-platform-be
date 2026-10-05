@@ -49,7 +49,10 @@ namespace Domain.CourseManagement.Aggregate
         }
         #endregion
 
+        // EF Core calls this constructor and then fills the properties
+#pragma warning disable CS8618
         protected Course() { }
+#pragma warning restore CS8618
 
         public Course(
             Guid courseId,

@@ -22,10 +22,13 @@ namespace Domain.EnrollmentManagement.Entity
             get { return quizProgresses.AsReadOnly(); }
         }
 
-        public Lesson Lesson { get; private set; }
+        public Lesson Lesson { get; private set; } = null!;
         #endregion
 
+        // EF Core calls this constructor and then fills the properties
+#pragma warning disable CS8618
         protected LessonProgress() { }
+#pragma warning restore CS8618
 
         public LessonProgress(
             Guid lessonProgressID,

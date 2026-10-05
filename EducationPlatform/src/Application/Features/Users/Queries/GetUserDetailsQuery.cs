@@ -1,4 +1,4 @@
-﻿using Application.Exceptions;
+using Application.Exceptions;
 using Application.Interface;
 using Application.Results;
 using AutoMapper;
@@ -33,7 +33,7 @@ namespace Application.Features.Users.Queries
                 throw new AuthenticateException("User must be authenticated.");
 
             var userId = request.UserId == Guid.Empty ? _currentUser.Id.Value : request.UserId;
-            var user = await _unitOfWork.GetRepository<IUserRepository>().GetByIdAsync(userId);
+            var user = await _unitOfWork.GetRepository<IUserRepository>().GetByIdAsync(userId, cancellationToken);
 
             if (user == null)
                 throw new NotFoundException("User detail not found");

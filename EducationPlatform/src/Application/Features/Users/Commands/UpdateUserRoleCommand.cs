@@ -38,7 +38,7 @@ namespace Application.Features.Users.Commands
                 throw new BadRequestException("Cannot change your own role.");
 
             var userRepo = _unitOfWork.GetRepository<IUserRepository>();
-            var user = await userRepo.GetByIdAsync(request.UserId);
+            var user = await userRepo.GetByIdAsync(request.UserId, cancellationToken);
 
             if (user == null)
                 throw new NotFoundException("User not found.");

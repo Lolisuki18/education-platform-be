@@ -69,7 +69,7 @@ namespace IntegrationTests.Controllers
             var createResult = await createResponse.Content.ReadFromJsonAsync<API.Models.Common.ApiResponse<CreateOrderResponseDto>>();
             createResult.Should().NotBeNull();
             createResult!.IsSuccess.Should().BeTrue();
-            createResult.Data.CheckoutUrl.Should().Be("https://mock-payment-url.com");
+            createResult.Data!.CheckoutUrl.Should().Be("https://mock-payment-url.com");
 
             // Find the order code from DB
             Order? dbOrder = null;

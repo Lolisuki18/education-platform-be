@@ -40,7 +40,7 @@ namespace API.Controllers
         [HttpGet("coupons")]
         public async Task<ActionResult<ApiResponse<IEnumerable<CouponDTO>>>> ListCoupons()
         {
-            var coupons = await mediator.Send(new GetMyCouponsQuery());
+            var coupons = await mediator.Send(new GetMyCouponsQuery(), HttpContext.RequestAborted);
             return Ok(ApiResponse<IEnumerable<CouponDTO>>.Success(coupons));
         }
 
@@ -53,7 +53,7 @@ namespace API.Controllers
                 OrderStatus = Enum.TryParse<OrderStatus>(request.Status, true, out var s) ? s : null,
                 PageIndex = request.Page,
                 PageSize = request.PageSize
-            });
+            }, HttpContext.RequestAborted);
 
             return Ok(ApiResponse<ListOrdersResponseDto>.Success(new ListOrdersResponseDto
             {
@@ -65,7 +65,7 @@ namespace API.Controllers
         [HttpGet("course/{courseId:guid}")]
         public async Task<ActionResult<ApiResponse<CourseDetailDTO>>> GetCourseForOrder(Guid courseId)
         {
-            var course = await mediator.Send(new GetCourseDetailQuery { CourseID = courseId });
+            var course = await mediator.Send(new GetCourseDetailQuery { CourseID = courseId }, HttpContext.RequestAborted);
             return Ok(ApiResponse<CourseDetailDTO>.Success(course));
         }
 

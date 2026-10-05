@@ -52,26 +52,26 @@ namespace Application.Features.Statistics.Queries.GetAnalyticsGrowth
                 {
                     case AnalyticsGrowthType.User:
                         raw = await userRepo.AnalyticsGrowth(
-                            from, to, request.GroupBy.ToString(), request.UserRole);
+                            from, to, request.GroupBy.ToString(), request.UserRole, cancellationToken);
                         break;
 
                     case AnalyticsGrowthType.Course:
                         raw = await courseRepo.AnalyticsGrowth(
                             from, to, request.GroupBy.ToString(),
-                            request.CourseGradeId, request.CourseSubjectId);
+                            request.CourseGradeId, request.CourseSubjectId, cancellationToken);
                         break;
 
                     case AnalyticsGrowthType.Enrollment:
                         raw = await enrollmentRepo.AnalyticsGrowth(
                             from, to, request.GroupBy.ToString(),
-                            request.EnrollmentGradeId, request.EnrollmentSubjectId);
+                            request.EnrollmentGradeId, request.EnrollmentSubjectId, cancellationToken);
                         break;
 
                     case AnalyticsGrowthType.Revenue:
                         var revenueType = request.RevenueType ?? AnalyticRevenueType.All;
                         raw = await orderRepo.AnalyticsGrowth(
                             from, to, request.GroupBy.ToString(),
-                            revenueType.ToString());
+                            revenueType.ToString(), cancellationToken);
                         break;
 
                     default:

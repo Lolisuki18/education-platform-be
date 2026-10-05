@@ -28,7 +28,7 @@ namespace Application.Features.Academic.Queries.GetDefaultLessons
         {
             var list = await _unitOfWork
                 .GetRepository<ISubjectRepository>()
-                .GetDefaultLessons(request.SubjectId, request.GradeId);
+                .GetDefaultLessons(request.SubjectId, request.GradeId, cancellationToken);
 
             if (list == null || !list.Any())
                 throw new NotFoundException("Default lessons list is empty or was not found");

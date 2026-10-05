@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Infrastructure.Implementation
 {
-    public class OrderRepository :
+    public partial class OrderRepository :
         GenericRepository<Order>,
         IOrderRepository
     {
@@ -24,7 +24,8 @@ namespace Infrastructure.Implementation
             int pageIndex,
             int pageSize,
             Guid? teacherId,
-            Guid? studentId)
+            Guid? studentId,
+            CancellationToken cancellationToken = default)
         {
             pageIndex = pageIndex < 1 ? 1 : pageIndex;
             pageSize = pageSize <= 0 ? 10 : pageSize;
@@ -59,17 +60,19 @@ namespace Infrastructure.Implementation
                 .OrderByDescending(o => o.PaidAt ?? DateTime.MinValue)
                 .Skip((pageIndex - 1) * pageSize)
                 .Take(pageSize)
-                .ToListAsync();
+                .ToListAsync(cancellationToken);
         }
 
         public async Task<Order?> GetOrderByOrderCode(
-            long orderCode)
+            long orderCode,
+            CancellationToken cancellationToken = default)
         {
-            return await context.Orders.FirstOrDefaultAsync(o => o.OrderCode == orderCode);
+            return await context.Orders.FirstOrDefaultAsync(o => o.OrderCode == orderCode, cancellationToken);
         }
 
         public async Task<IEnumerable<Penalty>> GetPenalties(
-            Guid? teacherId)
+            Guid? teacherId,
+            CancellationToken cancellationToken = default)
         {
             var query = context.Penalties
                 .AsNoTracking()
@@ -82,7 +85,7 @@ namespace Infrastructure.Implementation
 
             return await query
                 .OrderByDescending(p => p.CreatedAt)
-                .ToListAsync();
+                .ToListAsync(cancellationToken);
         }
 
         public void CreatePenalty(
@@ -95,7 +98,8 @@ namespace Infrastructure.Implementation
         }
 
         public async Task<IEnumerable<Coupon>> GetCoupons(
-            Guid? studentId)
+            Guid? studentId,
+            CancellationToken cancellationToken = default)
         {
             var query = context.Coupons
                 .AsNoTracking()
@@ -108,18 +112,20 @@ namespace Infrastructure.Implementation
 
             return await query
                 .OrderByDescending(c => c.CreatedAt)
-                .ToListAsync();
+                .ToListAsync(cancellationToken);
         }
 
         public async Task<Coupon?> GetCouponDetailById(
-            Guid couponId)
+            Guid couponId,
+            CancellationToken cancellationToken = default)
         {
             return await context.Coupons
-                .FirstOrDefaultAsync(c => c.CouponID == couponId);
+                .FirstOrDefaultAsync(c => c.CouponID == couponId, cancellationToken);
         }
 
         public async Task<List<Coupon>> GetCouponsByIds(
-            IEnumerable<Guid> couponIds)
+            IEnumerable<Guid> couponIds,
+            CancellationToken cancellationToken = default)
         {
             var ids = couponIds.Distinct().ToList();
             if (ids.Count == 0)
@@ -127,23 +133,25 @@ namespace Infrastructure.Implementation
 
             return await context.Coupons
                 .Where(c => ids.Contains(c.CouponID))
-                .ToListAsync();
+                .ToListAsync(cancellationToken);
         }
 
         public async Task<Order?> GetAwaitingPaymentOrder(
             Guid studentId,
-            Guid courseId)
+            Guid courseId,
+            CancellationToken cancellationToken = default)
         {
             return await context.Orders
                 .FirstOrDefaultAsync(o =>
                     o.StudentID == studentId &&
                     o.CourseID == courseId &&
-                    o.Status == OrderStatus.Created);
+                    o.Status == OrderStatus.Created, cancellationToken);
         }
 
         public async Task<bool> HasOpenOrderAsync(
             Guid studentId,
-            DateTime now)
+            DateTime now,
+            CancellationToken cancellationToken = default)
         {
             var oldestOpen = now - Order.PaymentWindow;
 
@@ -152,18 +160,19 @@ namespace Infrastructure.Implementation
                 .AnyAsync(o =>
                     o.StudentID == studentId &&
                     o.Status == OrderStatus.Created &&
-                    o.CreatedAt > oldestOpen);
+                    o.CreatedAt > oldestOpen, cancellationToken);
         }
 
         public async Task<List<Order>> GetUnpaidOrdersCreatedBefore(
             DateTime createdBefore,
-            int take)
+            int take,
+            CancellationToken cancellationToken = default)
         {
             return await context.Orders
                 .Where(o => o.Status == OrderStatus.Created && o.CreatedAt < createdBefore)
                 .OrderBy(o => o.CreatedAt)
                 .Take(take)
-                .ToListAsync();
+                .ToListAsync(cancellationToken);
         }
 
         public void CreateCoupons(IEnumerable<Coupon> coupons)
@@ -173,266 +182,7 @@ namespace Infrastructure.Implementation
 
             context.Coupons.AddRange(coupons);
         }
-        public async Task<(int Total, int Commission, int TeacherFinance)> Summary(
-           DateTime? from,
-           DateTime? to)
-        {
-            // ===== Base query with filters =====
-            var query = context.Orders.AsNoTracking();
 
-            if (from.HasValue)
-                query = query.Where(o => o.PaidAt >= from.Value);
-
-            if (to.HasValue)
-                query = query.Where(o => o.PaidAt <= to.Value);
-
-            var result = await query
-                .GroupBy(o => 1)
-                .Select(g => new
-                {
-                    Total = g.Sum(x => (int)(x.PlatformAmount + x.TeacherAmount)),
-                    Commission = g.Sum(x => (int)x.PlatformAmount),
-                    TeacherFinance = g.Sum(x => (int)x.TeacherAmount)
-                })
-                .FirstOrDefaultAsync();
-
-            return result == null
-                ? (0, 0, 0)
-                : (result.Total, result.Commission, result.TeacherFinance);
-        }
-
-        public async Task<Dictionary<string, List<(string Label, decimal Value)>>> AnalyticsGrowth(
-            DateTime? from,
-            DateTime? to,
-            string groupBy,
-            string revenueType)
-        {
-            var query = context.Orders.AsNoTracking();
-
-            // ===== Filters =====
-            if (from.HasValue)
-                query = query.Where(o => o.CreatedAt >= from.Value);
-
-            if (to.HasValue)
-                query = query.Where(o => o.CreatedAt <= to.Value);
-
-            var gb = (groupBy ?? "month").ToLower();
-
-            // ===== Step 1: Dynamic grouping =====
-            var rawData = gb switch
-            {
-                "day" => await query
-                    .GroupBy(o => new { o.CreatedAt.Year, o.CreatedAt.Month, o.CreatedAt.Day })
-                    .Select(g => new
-                    {
-                        g.Key.Year,
-                        g.Key.Month,
-                        g.Key.Day,
-                        Commission = g.Sum(x => x.PlatformAmount),
-                        Teacher = g.Sum(x => x.TeacherAmount)
-                    })
-                    .ToListAsync(),
-
-                "month" => await query
-                    .GroupBy(o => new { o.CreatedAt.Year, o.CreatedAt.Month })
-                    .Select(g => new
-                    {
-                        g.Key.Year,
-                        g.Key.Month,
-                        Day = 0,
-                        Commission = g.Sum(x => x.PlatformAmount),
-                        Teacher = g.Sum(x => x.TeacherAmount)
-                    })
-                    .ToListAsync(),
-
-                "year" => await query
-                    .GroupBy(o => new { o.CreatedAt.Year })
-                    .Select(g => new
-                    {
-                        g.Key.Year,
-                        Month = 0,
-                        Day = 0,
-                        Commission = g.Sum(x => x.PlatformAmount),
-                        Teacher = g.Sum(x => x.TeacherAmount)
-                    })
-                    .ToListAsync(),
-
-                _ => throw new ArgumentException("Invalid groupBy")
-            };
-
-            // ===== Step 2: Format labels =====
-            var data = rawData
-                .Select(x => new
-                {
-                    Label = gb switch
-                    {
-                        "day" => $"{x.Year}-{x.Month:D2}-{x.Day:D2}",
-                        "month" => $"{x.Year}-{x.Month:D2}",
-                        "year" => x.Year.ToString(),
-                        _ => $"{x.Year}-{x.Month:D2}"
-                    },
-                    x.Commission,
-                    x.Teacher,
-                    x.Year,
-                    x.Month,
-                    x.Day
-                })
-                .OrderBy(x => x.Year)
-                .ThenBy(x => x.Month)
-                .ThenBy(x => x.Day)
-                .ToList();
-
-            // ===== Build result =====
-            var result = new Dictionary<string, List<(string, decimal)>>();
-
-            if (revenueType == "All" || revenueType == "Commission")
-            {
-                result["Commission"] = data
-                    .Select(x => (x.Label, x.Commission))
-                    .ToList();
-            }
-
-            if (revenueType == "All" || revenueType == "Teacher")
-            {
-                result["Teacher"] = data
-                    .Select(x => (x.Label, x.Teacher))
-                    .ToList();
-            }
-
-            return result;
-        }
-
-        public async Task<List<(Guid CourseId, string CourseName, decimal Revenue)>>
-            GetTopCoursesByRevenue(
-                DateTime? from,
-                DateTime? to,
-                Guid? gradeId,
-                Guid? subjectId,
-                int top)
-        {
-            var query = context.Orders
-                .AsNoTracking()
-                .Include(o => o.Course)
-                .AsQueryable();
-
-            if (from.HasValue)
-                query = query.Where(o => o.CreatedAt >= from.Value);
-
-            if (to.HasValue)
-                query = query.Where(o => o.CreatedAt <= to.Value);
-
-            if (gradeId.HasValue)
-                query = query.Where(o => o.Course.GradeID == gradeId.Value);
-
-            if (subjectId.HasValue)
-                query = query.Where(o => o.Course.SubjectID == subjectId.Value);
-
-            var result = await query
-                .GroupBy(o => new
-                {
-                    o.CourseID,
-                    CourseName = o.Course.Title
-                })
-                .Select(g => new
-                {
-                    g.Key.CourseID,
-                    g.Key.CourseName,
-                    Revenue = g.Sum(x => x.PlatformAmount)
-                })
-                .OrderByDescending(x => x.Revenue)
-                .Take(top)
-                .ToListAsync();
-
-            return result
-                .Select(x => (x.CourseID, x.CourseName, (decimal)x.Revenue))
-                .ToList();
-        }
-
-        public async Task<List<(Guid SubjectId, string SubjectName, decimal Revenue)>>
-            GetTopSubjectsByRevenue(
-                DateTime? from,
-                DateTime? to,
-                Guid? gradeId,
-                int top)
-        {
-            var query = context.Orders
-                .AsNoTracking()
-                .Include(o => o.Course)
-                .ThenInclude(c => c.Subject)
-                .AsQueryable();
-
-            if (from.HasValue)
-                query = query.Where(o => o.CreatedAt >= from.Value);
-
-            if (to.HasValue)
-                query = query.Where(o => o.CreatedAt <= to.Value);
-
-            if (gradeId.HasValue)
-                query = query.Where(o => o.Course.GradeID == gradeId.Value);
-
-            var result = await query
-                .GroupBy(o => new
-                {
-                    o.Course.SubjectID,
-                    SubjectName = o.Course.Subject.Name
-                })
-                .Select(g => new
-                {
-                    g.Key.SubjectID,
-                    g.Key.SubjectName,
-                    Revenue = g.Sum(x => x.PlatformAmount)
-                })
-                .OrderByDescending(x => x.Revenue)
-                .Take(top)
-                .ToListAsync();
-
-            return result
-                .Select(x => (x.SubjectID, x.SubjectName, (decimal)x.Revenue))
-                .ToList();
-        }
-
-        public async Task<List<(Guid GradeId, string GradeName, decimal Revenue)>>
-            GetTopGradesByRevenue(
-                DateTime? from,
-                DateTime? to,
-                Guid? subjectId,
-                int top)
-        {
-            var query = context.Orders
-                .AsNoTracking()
-                .Include(o => o.Course)
-                .ThenInclude(c => c.Grade)
-                .AsQueryable();
-
-            if (from.HasValue)
-                query = query.Where(o => o.CreatedAt >= from.Value);
-
-            if (to.HasValue)
-                query = query.Where(o => o.CreatedAt <= to.Value);
-
-            if (subjectId.HasValue)
-                query = query.Where(o => o.Course.SubjectID == subjectId.Value);
-
-            var result = await query
-                .GroupBy(o => new
-                {
-                    o.Course.GradeID,
-                    GradeName = o.Course.Grade.Name
-                })
-                .Select(g => new
-                {
-                    g.Key.GradeID,
-                    g.Key.GradeName,
-                    Revenue = g.Sum(x => x.PlatformAmount)
-                })
-                .OrderByDescending(x => x.Revenue)
-                .Take(top)
-                .ToListAsync();
-
-            return result
-                .Select(x => (x.GradeID, x.GradeName, (decimal)x.Revenue))
-                .ToList();
-        }
         #endregion
     }
 }

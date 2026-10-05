@@ -24,7 +24,7 @@ namespace Application.Features.Complaints.Commands.ReviewComplaint
                 throw new AuthenticateException("User must be authenticated.");
 
             var complaintRepo = _unitOfWork.GetRepository<IComplaintRepository>();
-            var complaint = await complaintRepo.GetComplaintDetailByID(request.ComplaintID);
+            var complaint = await complaintRepo.GetComplaintDetailByID(request.ComplaintID, cancellationToken);
 
             if (complaint == null)
             {

@@ -40,7 +40,7 @@ namespace Application.Features.Enrollments.Queries.GetEnrollmentDetail
 
             var enrollment = await _unitOfWork
                 .GetRepository<IEnrollmentRepository>()
-                .GetEnrollmentDetailByID(request.EnrollmentID);
+                .GetEnrollmentDetailByID(request.EnrollmentID, cancellationToken);
 
             if (enrollment == null)
                 throw new NotFoundException("Enrollment detail not found");

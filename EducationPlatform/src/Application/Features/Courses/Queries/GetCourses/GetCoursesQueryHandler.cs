@@ -49,7 +49,7 @@ namespace Application.Features.Courses.Queries.GetCourses
                     request.PageIndex,
                     request.PageSize,
                     teacherId,
-                    role);
+                    role, cancellationToken);
 
             var result = _mapper.Map<List<CourseDTO>>(courses);
 

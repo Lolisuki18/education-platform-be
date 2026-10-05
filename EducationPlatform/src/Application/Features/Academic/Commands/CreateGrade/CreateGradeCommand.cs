@@ -32,10 +32,9 @@ namespace Application.Features.Academic.Commands.CreateGrade
                 throw new AuthenticateException("User must be authenticated.");
 
             var gradeRepo = _unitOfWork.GetRepository<IGradeRepository>();
-            var allGrades = await gradeRepo.GetAllAsync();
 
             var trimmedName = request.Name.Trim();
-            if (allGrades.Any(g => string.Equals(g.Name, trimmedName, StringComparison.OrdinalIgnoreCase)))
+            if (await gradeRepo.NameExistsAsync(trimmedName, null, cancellationToken))
             {
                 throw new ConflictException($"Grade with name '{trimmedName}' already exists.");
             }

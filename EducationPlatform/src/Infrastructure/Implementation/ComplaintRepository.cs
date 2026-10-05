@@ -10,14 +10,14 @@ namespace Infrastructure.Implementation
     {
         public ComplaintRepository(EducationPlatformDBContext context) : base(context) { }
 
-        public async Task<Complaint?> GetComplaintDetailByID(Guid complaintId)
+        public async Task<Complaint?> GetComplaintDetailByID(Guid complaintId, CancellationToken cancellationToken = default)
         {
             return await context.Complaints
                 .AsNoTracking()
                 .Include(c => c.User) // Student
                 .Include(c => c.Course)
                     .ThenInclude(c => c.Teacher) // Teacher
-                .FirstOrDefaultAsync(c => c.ComplaintID == complaintId);
+                .FirstOrDefaultAsync(c => c.ComplaintID == complaintId, cancellationToken);
         }
 
         public async Task<IEnumerable<Complaint>> GetComplaintsAsync(
@@ -53,14 +53,14 @@ namespace Infrastructure.Implementation
                 .ToListAsync(cancellationToken);
         }
 
-        public async Task<IEnumerable<Complaint>> GetApprovedByCoursesAsync(Guid courseId)
+        public async Task<IEnumerable<Complaint>> GetApprovedByCoursesAsync(Guid courseId, CancellationToken cancellationToken = default)
         {
             // RemoveComplaints() re-attaches results explicitly, so no-tracking is safe here too.
             return await context.Complaints
                 .AsNoTracking()
                 .Where(c => c.CourseID == courseId &&
                             c.Status == ComplaintStatus.Approved)
-                .ToListAsync();
+                .ToListAsync(cancellationToken);
         }
 
         public void CreateComplaint(Complaint complaint)

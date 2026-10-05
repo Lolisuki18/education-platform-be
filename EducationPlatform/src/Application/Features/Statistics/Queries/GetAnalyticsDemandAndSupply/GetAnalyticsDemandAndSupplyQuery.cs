@@ -35,11 +35,11 @@ namespace Application.Features.Statistics.Queries.GetAnalyticsDemandAndSupply
 
             var courseRaw = await courseRepo.AnalyticsGrowth(
                 request.From, request.To, request.GroupBy.ToString(),
-                request.CourseGradeId, request.CourseSubjectId);
+                request.CourseGradeId, request.CourseSubjectId, cancellationToken);
 
             var enrollmentRaw = await enrollmentRepo.AnalyticsGrowth(
                 request.From, request.To, request.GroupBy.ToString(),
-                request.EnrollmentGradeId, request.EnrollmentSubjectId);
+                request.EnrollmentGradeId, request.EnrollmentSubjectId, cancellationToken);
 
             var courseDict = courseRaw.FirstOrDefault().Value?
                 .GroupBy(x => x.Label)

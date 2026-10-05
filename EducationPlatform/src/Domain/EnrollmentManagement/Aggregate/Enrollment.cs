@@ -19,11 +19,14 @@ namespace Domain.EnrollmentManagement.Aggregate
         public Guid StudentID { get; private set; }
         public Guid CourseID { get; private set; }
 
-        public CourseProgress CourseProgress { get; private set; }
-        public Course Course { get; private set; }
+        public CourseProgress CourseProgress { get; private set; } = null!;
+        public Course Course { get; private set; } = null!;
         #endregion
 
+        // EF Core calls this constructor and then fills the properties
+#pragma warning disable CS8618
         protected Enrollment() { }
+#pragma warning restore CS8618
 
         public Enrollment(
             Guid enrollmentId,

@@ -31,12 +31,12 @@ namespace Application.Features.Academic.Commands.DeactivateSubject
                 throw new AuthenticateException("User must be authenticated.");
 
             var subjectRepo = _unitOfWork.GetRepository<ISubjectRepository>();
-            var subject = await subjectRepo.GetByIdAsync(request.SubjectID);
+            var subject = await subjectRepo.GetByIdAsync(request.SubjectID, cancellationToken);
 
             if (subject == null)
                 throw new NotFoundException("Subject not found.");
 
-            if (await subjectRepo.IsInUse(request.SubjectID))
+            if (await subjectRepo.IsInUse(request.SubjectID, cancellationToken))
             {
                 throw new ConflictException("Cannot deactivate subject because it is currently in use by courses or lessons.");
             }

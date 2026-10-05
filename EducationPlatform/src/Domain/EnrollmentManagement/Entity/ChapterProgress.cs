@@ -21,10 +21,13 @@ namespace Domain.EnrollmentManagement.Entity
             get { return lessonProgresses.AsReadOnly(); }
         }
 
-        public Chapter Chapter { get; private set; }
+        public Chapter Chapter { get; private set; } = null!;
         #endregion
 
+        // EF Core calls this constructor and then fills the properties
+#pragma warning disable CS8618
         protected ChapterProgress() { }
+#pragma warning restore CS8618
 
         public ChapterProgress(Guid chapterProgressId, Guid courseProgressId, Guid chapterId)
         {

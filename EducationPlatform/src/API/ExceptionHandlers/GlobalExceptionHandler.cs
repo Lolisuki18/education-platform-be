@@ -20,6 +20,13 @@ namespace API.ExceptionHandlers
             Exception exception,
             CancellationToken cancellationToken)
         {
+            // The client went away (closed the tab, timed out): nobody reads the response, and it is not a server fault
+            if (exception is OperationCanceledException && httpContext.RequestAborted.IsCancellationRequested)
+            {
+                _logger.LogDebug("{Method} {Path} was cancelled by the client.", httpContext.Request.Method, httpContext.Request.Path);
+                httpContext.Response.StatusCode = 499;
+                return true;
+            }
 
             var problemDetails = new ProblemDetails
             {

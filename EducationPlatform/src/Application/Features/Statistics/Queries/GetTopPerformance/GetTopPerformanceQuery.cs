@@ -31,22 +31,22 @@ namespace Application.Features.Statistics.Queries.GetTopPerformance
             var enrollmentRepo = _unitOfWork.GetRepository<IEnrollmentRepository>();
 
             var topCoursesByEnrollment = await enrollmentRepo.GetTopCoursesByEnrollment(
-                request.From, request.To, request.GradeId, request.SubjectId, request.Top);
+                request.From, request.To, request.GradeId, request.SubjectId, request.Top, cancellationToken);
 
             var topSubjectsByEnrollment = await enrollmentRepo.GetTopSubjectsByEnrollment(
-                request.From, request.To, request.GradeId, request.Top);
+                request.From, request.To, request.GradeId, request.Top, cancellationToken);
 
             var topGradesByEnrollment = await enrollmentRepo.GetTopGradesByEnrollment(
-                request.From, request.To, request.SubjectId, request.Top);
+                request.From, request.To, request.SubjectId, request.Top, cancellationToken);
 
             var topCoursesByRevenue = await orderRepo.GetTopCoursesByRevenue(
-                request.From, request.To, request.GradeId, request.SubjectId, request.Top);
+                request.From, request.To, request.GradeId, request.SubjectId, request.Top, cancellationToken);
 
             var topSubjectsByRevenue = await orderRepo.GetTopSubjectsByRevenue(
-                request.From, request.To, request.GradeId, request.Top);
+                request.From, request.To, request.GradeId, request.Top, cancellationToken);
 
             var topGradesByRevenue = await orderRepo.GetTopGradesByRevenue(
-                request.From, request.To, request.SubjectId, request.Top);
+                request.From, request.To, request.SubjectId, request.Top, cancellationToken);
 
             return new TopPerformanceDTO
             {

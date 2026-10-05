@@ -40,7 +40,7 @@ namespace Application.Features.Orders.Queries.GetMyCoupons
 
             var list = await _unitOfWork
                 .GetRepository<IOrderRepository>()
-                .GetCoupons(studentId);
+                .GetCoupons(studentId, cancellationToken);
 
             return _mapper.Map<IEnumerable<CouponDTO>>(list);
         }

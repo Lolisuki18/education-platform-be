@@ -86,7 +86,7 @@ namespace UnitTests.Application.Features.Orders.Queries.GetOrders
 
             _mockOrderRepository
                 .Setup(r => r.GetOrders(null, 1, 10, null, null))
-                .ReturnsAsync((IEnumerable<Order>?)null);
+                .ReturnsAsync((IEnumerable<Order>)null!);
 
             var query = new GetOrdersQuery { PageIndex = 1, PageSize = 10 };
 

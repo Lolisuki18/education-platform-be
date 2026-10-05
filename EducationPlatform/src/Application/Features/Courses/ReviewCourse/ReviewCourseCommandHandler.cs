@@ -26,7 +26,7 @@ namespace Application.Features.Courses.ReviewCourse
             // ---------- 1. Load the Aggregate ----------
             var course = await _unitOfWork
                 .GetRepository<ICourseRepository>()
-                .GetCourseDetailByID(request.CourseID);
+                .GetCourseDetailByID(request.CourseID, cancellationToken);
 
             if (course == null)
                 throw new NotFoundException($"Course with ID: {request.CourseID} is not found");
@@ -50,7 +50,7 @@ namespace Application.Features.Courses.ReviewCourse
                        .UpdateAsync(course.CourseID, course, cancellationToken);
 
             await _unitOfWork.GetRepository<ICourseRepository>()
-                       .ReplaceViolatedPolicies(course.CourseID, violatedPolicies);
+                       .ReplaceViolatedPolicies(course.CourseID, violatedPolicies, cancellationToken);
 
             await _unitOfWork.CommitAsync(_currentUser.Id.Value.ToString());
         }

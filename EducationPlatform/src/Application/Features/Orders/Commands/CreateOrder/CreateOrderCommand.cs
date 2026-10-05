@@ -54,7 +54,7 @@ namespace Application.Features.Orders.Commands.CreateOrder
             // Validate course existence
             var course = await _unitOfWork
                 .GetRepository<ICourseRepository>()
-                .GetByIdAsync(request.CourseID);
+                .GetByIdAsync(request.CourseID, cancellationToken);
 
             if (course == null)
                 throw new NotFoundException($"Course with ID: {request.CourseID} not found.");
@@ -69,7 +69,7 @@ namespace Application.Features.Orders.Commands.CreateOrder
             }
 
             // A student has at most one order awaiting payment per course: hand back its link while it is valid
-            var awaiting = await orderRepository.GetAwaitingPaymentOrder(studentId, request.CourseID);
+            var awaiting = await orderRepository.GetAwaitingPaymentOrder(studentId, request.CourseID, cancellationToken);
             if (awaiting != null)
             {
                 if (awaiting.IsAwaitingPayment(DateTime.UtcNow) && !string.IsNullOrEmpty(awaiting.CheckoutUrl))
@@ -81,7 +81,7 @@ namespace Application.Features.Orders.Commands.CreateOrder
 
             // Calculate discount from coupons (one query, invalid ones are skipped)
             var requestedCouponIds = request.CouponIds ?? new List<Guid>();
-            var validCoupons = (await orderRepository.GetCouponsByIds(requestedCouponIds))
+            var validCoupons = (await orderRepository.GetCouponsByIds(requestedCouponIds, cancellationToken))
                 .Where(c => c.CanBeApplied() && (!c.StudentID.HasValue || c.StudentID.Value == studentId))
                 .ToList();
 

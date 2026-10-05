@@ -108,14 +108,9 @@ namespace Infrastructure.Migrations
                     b.Property<Guid>("SubjectID")
                         .HasColumnType("uuid");
 
-                    b.Property<Guid?>("SubjectID1")
-                        .HasColumnType("uuid");
-
                     b.HasKey("DefaultLessonID");
 
                     b.HasIndex("GradeID");
-
-                    b.HasIndex("SubjectID1");
 
                     b.HasIndex("SubjectID", "GradeID");
 
@@ -993,14 +988,10 @@ namespace Infrastructure.Migrations
                         .IsRequired();
 
                     b.HasOne("Domain.AcademicManagement.Aggregate.Subject", null)
-                        .WithMany()
+                        .WithMany("DefaultLessons")
                         .HasForeignKey("SubjectID")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
-
-                    b.HasOne("Domain.AcademicManagement.Aggregate.Subject", null)
-                        .WithMany("DefaultLessons")
-                        .HasForeignKey("SubjectID1");
                 });
 
             modelBuilder.Entity("Domain.CourseManagement.Aggregate.Complaint", b =>

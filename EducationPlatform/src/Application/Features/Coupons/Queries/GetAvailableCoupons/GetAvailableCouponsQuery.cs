@@ -31,7 +31,7 @@ namespace Application.Features.Coupons.Queries.GetAvailableCoupons
             var repo = _unitOfWork.GetRepository<ICouponRepository>();
 
             // Fetch marketing active coupons
-            var (coupons, _) = await repo.GetPagedAsync(1, 1000, null, true, CouponType.Marketing);
+            var (coupons, _) = await repo.GetPagedAsync(1, 1000, null, true, CouponType.Marketing, cancellationToken);
 
             // Filter by domain rules
             var availableCoupons = coupons.Where(c => c.CanBeApplied()).ToList();

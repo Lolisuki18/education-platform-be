@@ -17,7 +17,10 @@ namespace Domain.CourseManagement.Entity
         public Guid LessonID { get; private set; }
         #endregion
 
+        // EF Core calls this constructor and then fills the properties
+#pragma warning disable CS8618
         protected Material() { }
+#pragma warning restore CS8618
 
         public Material(
             Guid materialId,

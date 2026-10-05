@@ -25,7 +25,7 @@ namespace Application.Features.Complaints.Queries.GetComplaintDetail
         {
             var complaint = await _unitOfWork
                 .GetRepository<IComplaintRepository>()
-                .GetComplaintDetailByID(request.ComplaintID);
+                .GetComplaintDetailByID(request.ComplaintID, cancellationToken);
 
             if (complaint == null)
             {

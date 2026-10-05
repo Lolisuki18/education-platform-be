@@ -27,7 +27,7 @@ namespace Application.Features.Academic.Queries.GetSubjects
         {
             var list = await _unitOfWork
                 .GetRepository<ISubjectRepository>()
-                .GetAllAsync();
+                .GetAllAsync(cancellationToken);
 
             if (!request.IncludeInactive)
             {
