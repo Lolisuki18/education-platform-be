@@ -1,39 +1,36 @@
-using System;
 using System.Net;
-using System.Threading.Tasks;
 using Application.Interface;
 using Domain.Common.Interfaces;
 using Domain.IdentityManagement.Aggregate;
-using Microsoft.AspNetCore.Http;
-using Microsoft.Extensions.Caching.Memory;
 
-namespace API.Helper
+namespace API.Helpers
 {
+    /// <summary>Rejects requests from accounts an admin has deactivated, even if their access token is still valid.</summary>
     public class UserActiveMiddleware
     {
         private readonly RequestDelegate _next;
-        private readonly IMemoryCache _memoryCache;
-        private static readonly TimeSpan CacheDuration = TimeSpan.FromMinutes(2);
 
-        public UserActiveMiddleware(RequestDelegate next, IMemoryCache memoryCache)
+        public UserActiveMiddleware(RequestDelegate next)
         {
             _next = next;
-            _memoryCache = memoryCache;
         }
 
-        public async Task InvokeAsync(HttpContext context, IUnitOfWork unitOfWork, ICurrentUser currentUser)
+        public async Task InvokeAsync(
+            HttpContext context,
+            IUnitOfWork unitOfWork,
+            ICurrentUser currentUser,
+            IUserActivityCache activityCache)
         {
             if (currentUser.IsAuthenticated && currentUser.Id.HasValue)
             {
                 var userId = currentUser.Id.Value;
-                var cacheKey = $"UserActive:{userId}";
 
-                if (!_memoryCache.TryGetValue(cacheKey, out bool isActive))
+                if (!activityCache.TryGetIsActive(userId, out var isActive))
                 {
                     var user = await unitOfWork.GetRepository<IUserRepository>().GetByIdAsync(userId);
                     isActive = user != null && user.IsActive;
 
-                    _memoryCache.Set(cacheKey, isActive, CacheDuration);
+                    activityCache.SetIsActive(userId, isActive);
                 }
 
                 if (!isActive)

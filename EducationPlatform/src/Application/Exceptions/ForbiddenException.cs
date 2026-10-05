@@ -1,4 +1,4 @@
-namespace Application.BusinessException
+namespace Application.Exceptions
 {
     public class ForbiddenException : Exception
     {

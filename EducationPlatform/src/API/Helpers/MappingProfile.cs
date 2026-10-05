@@ -2,7 +2,7 @@ using AutoMapper;
 using API.Models.Courses;
 using Application.Features.Courses.ReviewCourse;
 
-namespace API.Helper
+namespace API.Helpers
 {
     public class MappingProfile : Profile
     {

@@ -1,8 +1,8 @@
-namespace Application.BusinessException
+namespace Application.Exceptions
 {
-    public class Conflict : Exception
+    public class ConflictException : Exception
     {
-        public Conflict(string message) : base(message) { }
+        public ConflictException(string message) : base(message) { }
     }
 }
 

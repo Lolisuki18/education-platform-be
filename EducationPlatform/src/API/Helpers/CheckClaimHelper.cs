@@ -1,6 +1,6 @@
 using System.Security.Claims;
 
-namespace API.Helper
+namespace API.Helpers
 {
     public static class CheckClaimHelper
     {

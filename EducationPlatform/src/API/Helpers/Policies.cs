@@ -1,4 +1,4 @@
-namespace API.Helper
+namespace API.Helpers
 {
     public static class Policies
     {

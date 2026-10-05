@@ -1,8 +1,8 @@
-namespace Application.BusinessException
+namespace Application.Exceptions
 {
-    public class BadRequest : Exception
+    public class BadRequestException : Exception
     {
-        public BadRequest(string message) : base(message)
+        public BadRequestException(string message) : base(message)
         {
         }
     }
