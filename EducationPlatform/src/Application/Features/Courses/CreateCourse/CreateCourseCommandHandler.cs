@@ -8,7 +8,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
-using Application.BusinessException;
+using Application.Exceptions;
 
 namespace Application.Features.Courses.CreateCourse
 {
@@ -41,7 +41,7 @@ namespace Application.Features.Courses.CreateCourse
             {
                 var length = request.ThumbnailFileStream.CanSeek ? request.ThumbnailFileStream.Length : 0;
                 var ext = "." + request.ThumbnailFileExtension.TrimStart('.').ToLowerInvariant();
-                Application.Helper.FileValidator.Validate(request.ThumbnailFileStream, length, "thumbnail" + ext);
+                Application.Helpers.FileValidator.Validate(request.ThumbnailFileStream, length, "thumbnail" + ext);
 
                 thumbnailName = await _storageService.SaveAsync(
                     request.ThumbnailFileStream,

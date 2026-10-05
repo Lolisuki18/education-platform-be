@@ -1,4 +1,4 @@
-using Application.BusinessException;
+using Application.Exceptions;
 using Application.Interface;
 using Domain.Common.Interfaces;
 using Domain.OrderManagement.Aggregate;
@@ -39,7 +39,7 @@ namespace Application.Features.Coupons.Commands.CreateCoupon
             var repo = _unitOfWork.GetRepository<ICouponRepository>();
 
             if (await repo.ExistsByCodeAsync(request.Code))
-                throw new Conflict($"Coupon code '{request.Code}' already exists.");
+                throw new ConflictException($"Coupon code '{request.Code}' already exists.");
 
             var coupon = new Coupon(
                 Guid.NewGuid(),
@@ -59,7 +59,7 @@ namespace Application.Features.Coupons.Commands.CreateCoupon
             }
             catch (DbUpdateConcurrencyException)
             {
-                throw new Conflict("The coupon was modified by another user. Please refresh and try again.");
+                throw new ConflictException("The coupon was modified by another user. Please refresh and try again.");
             }
 
             return coupon.CouponID;

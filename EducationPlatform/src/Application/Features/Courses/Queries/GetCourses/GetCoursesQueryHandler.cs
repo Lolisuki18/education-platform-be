@@ -1,5 +1,5 @@
 using Application.Results;
-using Application.BusinessException;
+using Application.Exceptions;
 using AutoMapper;
 using Domain.CourseManagement.Enum;
 using Domain.IdentityManagement.Enum;
@@ -55,7 +55,7 @@ namespace Application.Features.Courses.Queries.GetCourses
 
             if (result == null || !result.Any())
             {
-                throw new NotFound("Course list is not found or empty");
+                throw new NotFoundException("Course list is not found or empty");
             }
 
             return result;

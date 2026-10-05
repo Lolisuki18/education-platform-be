@@ -1,4 +1,4 @@
-using Application.BusinessException;
+using Application.Exceptions;
 using Application.Interface;
 using Application.Results;
 using AutoMapper;
@@ -39,7 +39,7 @@ namespace Application.Features.Coupons.Queries.GetCouponById
                 .GetByIdAsync(request.CouponId);
 
             if (coupon == null)
-                throw new NotFound("Coupon not found.");
+                throw new NotFoundException("Coupon not found.");
 
             return _mapper.Map<CouponDTO>(coupon);
         }

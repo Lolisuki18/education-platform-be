@@ -1,4 +1,4 @@
-using Application.BusinessException;
+using Application.Exceptions;
 using Application.Results;
 using AutoMapper;
 using Domain.CourseManagement.Enum;
@@ -45,7 +45,7 @@ namespace Application.Features.Courses.Queries.GetCourseDetail
                 .GetCourseMetadataByID(request.CourseID);
 
             if (courseMetadata == null)
-                throw new NotFound($"Course with ID: {request.CourseID} is not found");
+                throw new NotFoundException($"Course with ID: {request.CourseID} is not found");
 
             // 3. Visibility guard: public / student → must be Published 
             bool isAdmin = role == Role.Admin;
@@ -54,7 +54,7 @@ namespace Application.Features.Courses.Queries.GetCourseDetail
             if (!isAdmin && !isTeacher)
             {
                 if (courseMetadata.Status != CourseStatus.Published)
-                    throw new NotFound($"Course with ID: {request.CourseID} is not found");
+                    throw new NotFoundException($"Course with ID: {request.CourseID} is not found");
             }
 
             //4. Determine if detailed chapters are needed
@@ -74,7 +74,7 @@ namespace Application.Features.Courses.Queries.GetCourseDetail
             }
 
             if (course == null)
-                throw new NotFound($"Course with ID: {request.CourseID} is not found");
+                throw new NotFoundException($"Course with ID: {request.CourseID} is not found");
 
             //  5. Map to DTO 
             var dto = _mapper.Map<CourseDetailDTO>(course);

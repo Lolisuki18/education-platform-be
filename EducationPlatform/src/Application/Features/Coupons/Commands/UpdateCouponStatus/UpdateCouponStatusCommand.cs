@@ -1,4 +1,4 @@
-using Application.BusinessException;
+using Application.Exceptions;
 using Application.Interface;
 using Domain.Common.Interfaces;
 using Domain.OrderManagement.Aggregate;
@@ -36,7 +36,7 @@ namespace Application.Features.Coupons.Commands.UpdateCouponStatus
 
             var coupon = await repo.GetByIdAsync(request.CouponId, cancellationToken);
             if (coupon == null)
-                throw new NotFound("Coupon not found.");
+                throw new NotFoundException("Coupon not found.");
 
             if (request.IsActive)
             {
@@ -44,9 +44,9 @@ namespace Application.Features.Coupons.Commands.UpdateCouponStatus
                 {
                     coupon.Activate();
                 }
-                catch (Domain.DomainExceptions.DomainException ex)
+                catch (Domain.Exceptions.DomainException ex)
                 {
-                    throw new Conflict(ex.Message);
+                    throw new ConflictException(ex.Message);
                 }
             }
             else
@@ -62,7 +62,7 @@ namespace Application.Features.Coupons.Commands.UpdateCouponStatus
             }
             catch (DbUpdateConcurrencyException)
             {
-                throw new Conflict("The coupon was modified by another user. Please refresh and try again.");
+                throw new ConflictException("The coupon was modified by another user. Please refresh and try again.");
             }
 
             return Unit.Value;

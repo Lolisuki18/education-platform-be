@@ -1,4 +1,4 @@
-using Application.BusinessException;
+using Application.Exceptions;
 using Application.Interface;
 using Application.Results;
 using AutoMapper;
