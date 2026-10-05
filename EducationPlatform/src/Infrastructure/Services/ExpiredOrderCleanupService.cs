@@ -16,16 +16,24 @@ namespace Infrastructure.Services
         private const int MaxBatchesPerRun = 20;
 
         private readonly IServiceScopeFactory _scopeFactory;
+        private readonly Microsoft.Extensions.Configuration.IConfiguration _configuration;
         private readonly ILogger<ExpiredOrderCleanupService> _logger;
 
-        public ExpiredOrderCleanupService(IServiceScopeFactory scopeFactory, ILogger<ExpiredOrderCleanupService> logger)
+        public ExpiredOrderCleanupService(
+            IServiceScopeFactory scopeFactory,
+            Microsoft.Extensions.Configuration.IConfiguration configuration,
+            ILogger<ExpiredOrderCleanupService> logger)
         {
             _scopeFactory = scopeFactory;
+            _configuration = configuration;
             _logger = logger;
         }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
+            if (!Microsoft.Extensions.Configuration.ConfigurationBinder.GetValue(_configuration, "Orders:ExpiredOrderCleanupEnabled", true))
+                return;
+
             // Give the database migration at startup a head start
             await Task.Delay(TimeSpan.FromSeconds(30), stoppingToken);
 

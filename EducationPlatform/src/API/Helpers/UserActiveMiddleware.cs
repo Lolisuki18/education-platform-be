@@ -44,7 +44,10 @@ namespace API.Helpers
                 }
 
                 // A role change only reaches a token when it is reissued, so make the client do that now
-                if (!string.Equals(status.Role, currentUser.Role, StringComparison.Ordinal))
+                // (except on the endpoints that do the reissuing, or the client could never recover)
+                var allowsStaleRole = context.GetEndpoint()?.Metadata.GetMetadata<AllowStaleRoleAttribute>() != null;
+
+                if (!allowsStaleRole && !string.Equals(status.Role, currentUser.Role, StringComparison.Ordinal))
                 {
                     await WriteProblemAsync(context, HttpStatusCode.Unauthorized, "Unauthorized",
                         "Your permissions have changed. Please refresh your session.");

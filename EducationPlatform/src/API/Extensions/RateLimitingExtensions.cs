@@ -16,6 +16,11 @@ namespace API.Extensions
         public const string Upload = "upload";
     }
 
+    public class RateLimitingOptions
+    {
+        public bool Enabled { get; set; } = true;
+    }
+
     public static class RateLimitingExtensions
     {
         /// <summary>
@@ -24,7 +29,9 @@ namespace API.Extensions
         /// </summary>
         public static IServiceCollection AddApiRateLimiting(this IServiceCollection services, IConfiguration configuration)
         {
-            var enabled = configuration.GetValue("RateLimiting:Enabled", true);
+            // Read per request, not here: configuration added later (tests, hosting overrides) must still count
+            services.AddOptions<RateLimitingOptions>()
+                .Bind(configuration.GetSection("RateLimiting"));
 
             services.AddRateLimiter(options =>
             {
@@ -43,28 +50,31 @@ namespace API.Extensions
 
                 // A safety net for the whole API
                 options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(context =>
-                    Partition(enabled, ClientKey(context), 300, TimeSpan.FromMinutes(1)));
+                    Partition(IsEnabled(context), ClientKey(context), 300, TimeSpan.FromMinutes(1)));
 
                 // Credentials and one-time codes: brute-force targets
                 options.AddPolicy(RateLimitPolicies.Login, context =>
-                    Partition(enabled, ClientKey(context), 10, TimeSpan.FromMinutes(1)));
+                    Partition(IsEnabled(context), ClientKey(context), 10, TimeSpan.FromMinutes(1)));
 
                 options.AddPolicy(RateLimitPolicies.Register, context =>
-                    Partition(enabled, ClientKey(context), 5, TimeSpan.FromMinutes(10)));
+                    Partition(IsEnabled(context), ClientKey(context), 5, TimeSpan.FromMinutes(10)));
 
                 options.AddPolicy(RateLimitPolicies.VerifyEmail, context =>
-                    Partition(enabled, ClientKey(context), 10, TimeSpan.FromMinutes(5)));
+                    Partition(IsEnabled(context), ClientKey(context), 10, TimeSpan.FromMinutes(5)));
 
                 options.AddPolicy(RateLimitPolicies.RefreshToken, context =>
-                    Partition(enabled, ClientKey(context), 30, TimeSpan.FromMinutes(1)));
+                    Partition(IsEnabled(context), ClientKey(context), 30, TimeSpan.FromMinutes(1)));
 
                 // A video is uploaded as many chunks, so this is generous per user but still bounded
                 options.AddPolicy(RateLimitPolicies.Upload, context =>
-                    Partition(enabled, ClientKey(context), 600, TimeSpan.FromMinutes(1)));
+                    Partition(IsEnabled(context), ClientKey(context), 600, TimeSpan.FromMinutes(1)));
             });
 
             return services;
         }
+
+        private static bool IsEnabled(HttpContext context) =>
+            context.RequestServices.GetRequiredService<Microsoft.Extensions.Options.IOptions<RateLimitingOptions>>().Value.Enabled;
 
         private static RateLimitPartition<string> Partition(bool enabled, string key, int permitLimit, TimeSpan window)
         {

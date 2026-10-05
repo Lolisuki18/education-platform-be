@@ -2,6 +2,7 @@ using Asp.Versioning;
 using System.Security.Claims;
 using Application.Results;
 using API.Extensions;
+using API.Helpers;
 using API.Hubs;
 using API.Models.Auth;
 using API.Models.Common;
@@ -83,6 +84,7 @@ namespace API.Controllers
             return Ok(ApiResponse.Success("Email verified successfully."));
         }
 
+        [AllowStaleRole]
         [EnableRateLimiting(RateLimitPolicies.RefreshToken)]
         [AllowAnonymous]
         [HttpPost("refresh-token")]
@@ -97,6 +99,7 @@ namespace API.Controllers
         }
 
         /// <summary>Signs out one device (when its refresh token is sent) or every device.</summary>
+        [AllowStaleRole]
         [Authorize]
         [HttpPost("logout")]
         public async Task<ActionResult<ApiResponse>> Logout(
