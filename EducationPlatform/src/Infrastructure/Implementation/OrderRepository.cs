@@ -118,6 +118,40 @@ namespace Infrastructure.Implementation
                 .FirstOrDefaultAsync(c => c.CouponID == couponId);
         }
 
+        public async Task<List<Coupon>> GetCouponsByIds(
+            IEnumerable<Guid> couponIds)
+        {
+            var ids = couponIds.Distinct().ToList();
+            if (ids.Count == 0)
+                return new List<Coupon>();
+
+            return await context.Coupons
+                .Where(c => ids.Contains(c.CouponID))
+                .ToListAsync();
+        }
+
+        public async Task<Order?> GetAwaitingPaymentOrder(
+            Guid studentId,
+            Guid courseId)
+        {
+            return await context.Orders
+                .FirstOrDefaultAsync(o =>
+                    o.StudentID == studentId &&
+                    o.CourseID == courseId &&
+                    o.Status == OrderStatus.Created);
+        }
+
+        public async Task<List<Order>> GetUnpaidOrdersCreatedBefore(
+            DateTime createdBefore,
+            int take)
+        {
+            return await context.Orders
+                .Where(o => o.Status == OrderStatus.Created && o.CreatedAt < createdBefore)
+                .OrderBy(o => o.CreatedAt)
+                .Take(take)
+                .ToListAsync();
+        }
+
         public void CreateCoupons(IEnumerable<Coupon> coupons)
         {
             if (coupons == null || !coupons.Any())
@@ -130,7 +164,7 @@ namespace Infrastructure.Implementation
            DateTime? to)
         {
             // ===== Base query with filters =====
-            var query = context.Orders.AsQueryable();
+            var query = context.Orders.AsNoTracking();
 
             if (from.HasValue)
                 query = query.Where(o => o.PaidAt >= from.Value);
@@ -159,7 +193,7 @@ namespace Infrastructure.Implementation
             string groupBy,
             string revenueType)
         {
-            var query = context.Orders.AsQueryable();
+            var query = context.Orders.AsNoTracking();
 
             // ===== Filters =====
             if (from.HasValue)
@@ -263,6 +297,7 @@ namespace Infrastructure.Implementation
                 int top)
         {
             var query = context.Orders
+                .AsNoTracking()
                 .Include(o => o.Course)
                 .AsQueryable();
 
@@ -307,6 +342,7 @@ namespace Infrastructure.Implementation
                 int top)
         {
             var query = context.Orders
+                .AsNoTracking()
                 .Include(o => o.Course)
                 .ThenInclude(c => c.Subject)
                 .AsQueryable();
@@ -349,6 +385,7 @@ namespace Infrastructure.Implementation
                 int top)
         {
             var query = context.Orders
+                .AsNoTracking()
                 .Include(o => o.Course)
                 .ThenInclude(c => c.Grade)
                 .AsQueryable();

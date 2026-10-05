@@ -34,6 +34,13 @@ namespace Infrastructure.Implementation
                 .ToListAsync(cancellationToken);
         }
 
+        public async Task<bool> IsStudentEnrolled(Guid studentId, Guid courseId, CancellationToken cancellationToken = default)
+        {
+            return await context.Enrollments
+                .AsNoTracking()
+                .AnyAsync(e => e.StudentID == studentId && e.CourseID == courseId, cancellationToken);
+        }
+
         public async Task<Enrollment?> GetEnrollmentDetailByID(Guid enrollmentId)
         {
             return await context.Enrollments

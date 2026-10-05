@@ -1,4 +1,4 @@
-namespace Infrastructure.DataAccessException
+namespace Infrastructure.Exceptions
 {
     public class RepositoryException : Exception
     {

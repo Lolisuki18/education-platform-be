@@ -1,7 +1,7 @@
 using Domain.Common.Interfaces;
 using Domain.IdentityManagement.Aggregate;
 using Domain.IdentityManagement.Enum;
-using Domain.IdentityManagement.ValueObject;
+using Domain.IdentityManagement.Entity;
 using Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using System;
@@ -21,7 +21,9 @@ namespace Infrastructure.Implementation
         #region Methods
         public async Task<User?> GetUserByEmail(string email, CancellationToken cancellationToken = default)
         {
-            return await context.Users.FirstOrDefaultAsync(u => u.Email == email, cancellationToken);
+            return await context.Users
+                .Include(u => u.RefreshSessions)
+                .FirstOrDefaultAsync(u => u.Email == email, cancellationToken);
         }
 
         public async Task<User?> GetUserByPhone(string phone, CancellationToken cancellationToken = default)
@@ -31,42 +33,23 @@ namespace Infrastructure.Implementation
 
         public async Task<User?> GetByRefreshToken(string refreshToken, CancellationToken cancellationToken = default)
         {
-            var hash = RefreshToken.HashToken(refreshToken);
+            // Revoked and expired sessions are matched too, so the domain can tell a replayed token from an unknown one.
+            var hash = RefreshSession.HashToken(refreshToken);
             return await context.Users
-                .FirstOrDefaultAsync(u =>
-                    u.RefreshToken != null &&
-                    u.RefreshToken.Hash == hash &&
-                    u.RefreshToken.ExpiresAt > DateTime.UtcNow, cancellationToken);
+                .Include(u => u.RefreshSessions)
+                .FirstOrDefaultAsync(u => u.RefreshSessions.Any(s => s.Hash == hash), cancellationToken);
         }
 
-        public async Task<User?> GetUserByOTP(string otp, CancellationToken cancellationToken = default)
-        {
-            return await context.Users
-                .FirstOrDefaultAsync(u => u.EmailOtp == otp, cancellationToken);
-        }
-
-        public async Task<User?> GetUserForLogin(string email, string password, CancellationToken cancellationToken = default)
-        {
-            var user = await GetUserByEmail(email, cancellationToken);
-            if (user == null || !user.Password.Verify(password))
-                return null;
-            return user;
-        }
-
-        public async Task<User?> GetUserForRefreshToken(string refreshToken, CancellationToken cancellationToken = default)
-        {
-            return await GetByRefreshToken(refreshToken, cancellationToken);
-        }
-
-        public async Task<User?> GetUserForVerification(string email, string verificationCode, CancellationToken cancellationToken = default)
+        public async Task<User?> GetByIdWithSessions(Guid userId, CancellationToken cancellationToken = default)
         {
             return await context.Users
-                .FirstOrDefaultAsync(u => u.Email == email && u.EmailOtp == verificationCode, cancellationToken);
+                .Include(u => u.RefreshSessions)
+                .FirstOrDefaultAsync(u => u.UserID == userId, cancellationToken);
         }
 
         public async Task<(int TotalUsers, int TotalTeachers, int TotalStudents)> Summary(DateTime? from, DateTime? to, CancellationToken cancellationToken = default)
         {
-            var query = context.Users.AsQueryable();
+            var query = context.Users.AsNoTracking();
 
             if (from.HasValue)
                 query = query.Where(u => u.CreatedAt >= from.Value);
@@ -96,7 +79,7 @@ namespace Infrastructure.Implementation
             string? userRole = null,
             CancellationToken cancellationToken = default)
         {
-            var query = context.Users.AsQueryable();
+            var query = context.Users.AsNoTracking();
 
             if (from.HasValue)
                 query = query.Where(u => u.CreatedAt >= from.Value);
@@ -151,7 +134,7 @@ namespace Infrastructure.Implementation
 
         public async Task<(IEnumerable<User> Users, int TotalCount)> GetUsersPaged(int pageIndex, int pageSize, Role? role, CancellationToken cancellationToken = default)
         {
-            var query = context.Users.AsQueryable();
+            var query = context.Users.AsNoTracking();
 
             if (role.HasValue)
             {

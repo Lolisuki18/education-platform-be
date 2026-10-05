@@ -4,6 +4,7 @@ namespace Domain.OrderManagement.Enum
     {
         Created = 1,
         Pending = 2,
+        Cancelled = 3,
     }
 }
 

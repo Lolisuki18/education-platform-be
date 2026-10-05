@@ -1,4 +1,4 @@
-using Domain.DomainExceptions;
+using Domain.Exceptions;
 
 namespace Domain.OrderManagement.ValueObject
 {
@@ -27,9 +27,10 @@ namespace Domain.OrderManagement.ValueObject
                 throw new DomainException(
                     "Invalid commission rate");
 
-            if (total <= 0)
+            // Zero is allowed: a coupon can cover the whole price.
+            if (total < 0)
                 throw new DomainException(
-                    "Total amount must be greater than zero");
+                    "Total amount cannot be negative");
 
             return new Commission(rate, total);
         }

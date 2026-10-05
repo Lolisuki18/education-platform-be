@@ -1,4 +1,4 @@
-using Infrastructure.DataAccessException;
+using Infrastructure.Exceptions;
 using Domain.Common.Interfaces;
 using Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;

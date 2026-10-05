@@ -18,7 +18,16 @@ namespace Infrastructure
         public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
         {
             // Get connection string
-            var connectionString = configuration.GetConnectionString("Server");
+            // "Server" is the name older deployments use; "Default" is what the example config and EF tooling use
+            var connectionString = configuration.GetConnectionString("Server") ?? configuration.GetConnectionString("Default");
+
+            services.AddOptions<Application.Options.PayOSOptions>()
+                .Bind(configuration.GetSection(Application.Options.PayOSOptions.SectionName))
+                .ValidateDataAnnotations()
+                .ValidateOnStart();
+
+            services.AddOptions<Application.Options.UploadOptions>()
+                .Bind(configuration.GetSection(Application.Options.UploadOptions.SectionName));
 
             services.AddScoped<Infrastructure.Persistence.Interceptors.DomainEventDispatcherInterceptor>();
 
@@ -49,6 +58,9 @@ namespace Infrastructure
             services.AddHttpContextAccessor();
             services.AddScoped<Application.Interface.ICurrentUser, Infrastructure.Services.CurrentUser>();
             services.AddScoped<Application.Interface.ITokenService, Infrastructure.Services.JwtTokenService>();
+            services.AddMemoryCache();
+            services.AddSingleton<Application.Interface.ILoginAttemptTracker, Infrastructure.Services.MemoryLoginAttemptTracker>();
+            services.AddSingleton<Application.Interface.IUserActivityCache, Infrastructure.Services.MemoryUserActivityCache>();
 
             services.AddScoped<Application.Interface.IPaymentService, Infrastructure.Services.PayOSPaymentService>();
             services.AddScoped<Application.Interface.IPayOSSignatureVerifier, Infrastructure.Services.PayOSSignatureVerifier>();
@@ -58,8 +70,13 @@ namespace Infrastructure
 
             services.AddScoped<Application.Interface.IStorageService, Infrastructure.Services.StorageService>();
 
-            // Register background storage cleanup service
+            // Register background services
             services.AddHostedService<Infrastructure.Services.StorageCleanupService>();
+
+            if (configuration.GetValue("Orders:ExpiredOrderCleanupEnabled", true))
+            {
+                services.AddHostedService<Infrastructure.Services.ExpiredOrderCleanupService>();
+            }
 
             return services;
         }
