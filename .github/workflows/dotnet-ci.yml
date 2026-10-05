@@ -10,13 +10,18 @@ jobs:
   build-and-test:
     runs-on: ubuntu-latest
 
+    env:
+      # Throwaway database that only lives for this job; unique per run so no static password sits in the repo
+      TEST_DB_PASSWORD: ci-${{ github.run_id }}-${{ github.run_attempt }}
+      MIN_LINE_COVERAGE: 65
+
     services:
       postgres:
         image: postgres:15
         env:
           POSTGRES_DB: EducationPlatformDB_Test
           POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: 12345
+          POSTGRES_PASSWORD: ${{ env.TEST_DB_PASSWORD }}
         ports:
           - 5432:5432
         options: >-
@@ -54,5 +59,23 @@ jobs:
           exit 1
         fi
 
-    - name: Run all tests
-      run: dotnet test EducationPlatform/EducationPlatform.sln --configuration Release --no-build --verbosity minimal --logger trx
+    - name: Run unit tests with coverage
+      run: >
+        dotnet test EducationPlatform/tests/UnitTests
+        --configuration Release --no-build --verbosity minimal
+        --logger trx --collect:"XPlat Code Coverage" --results-directory coverage
+
+    - name: Enforce coverage of the Domain and Application layers
+      run: python3 .github/scripts/check-coverage.py coverage "$MIN_LINE_COVERAGE"
+
+    - name: Run integration tests
+      run: dotnet test EducationPlatform/tests/IntegrationTests --configuration Release --no-build --verbosity minimal --logger trx
+      env:
+        TEST_DB_CONNECTION_STRING: Host=localhost;Database=EducationPlatformDB_Test;Username=postgres;Password=${{ env.TEST_DB_PASSWORD }}
+
+    - name: Upload coverage report
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: coverage
+        path: coverage/**/coverage.cobertura.xml

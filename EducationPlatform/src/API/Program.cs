@@ -1,19 +1,12 @@
-using System.Data.Common;
-using System.Text;
+using API.ExceptionHandlers;
+using API.Extensions;
+using API.Hubs;
+using API.Middlewares;
 using Application;
 using Infrastructure;
 using Infrastructure.Persistence;
-using Infrastructure.Persistence.Seeds;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.Data.SqlClient;
-using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.Extensions.FileProviders;
-using Microsoft.IdentityModel.Tokens;
-using API.Hubs;
-using API.ExceptionHandlers;
-using API.Middlewares;
-using Microsoft.OpenApi.Models;
-using Microsoft.AspNetCore.RateLimiting;
 using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -21,42 +14,38 @@ var builder = WebApplication.CreateBuilder(args);
 // 1. Core Configuration
 AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
 
-builder.Host.UseSerilog((context, services, configuration) => configuration
-    .ReadFrom.Configuration(context.Configuration)
-    .Enrich.FromLogContext()
-    .Enrich.WithMachineName()
-    .WriteTo.Console(outputTemplate:
-        "[{Timestamp:HH:mm:ss} {Level:u3}] ({CorrelationId}) {Message:lj}{NewLine}{Exception}")
-    .WriteTo.File("logs/log-.txt",
-        rollingInterval: RollingInterval.Day,
-        retainedFileCountLimit: 14,
-        outputTemplate:
-        "{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} [{Level:u3}] ({CorrelationId}) {Message:lj}{NewLine}{Exception}"));
+builder.Host.UseSerilog((context, services, configuration) =>
+{
+    configuration
+        .ReadFrom.Configuration(context.Configuration)
+        .Enrich.FromLogContext()
+        .Enrich.WithMachineName()
+        .WriteTo.Console(outputTemplate:
+            "[{Timestamp:HH:mm:ss} {Level:u3}] ({CorrelationId}) {Message:lj}{NewLine}{Exception}");
+
+    // Containers log to the console only (the log shipper collects it); a file is for local development
+    if (context.Configuration.GetValue("Logging:File:Enabled", context.HostingEnvironment.IsDevelopment()))
+    {
+        configuration.WriteTo.File("logs/log-.txt",
+            rollingInterval: RollingInterval.Day,
+            retainedFileCountLimit: 14,
+            outputTemplate:
+            "{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} [{Level:u3}] ({CorrelationId}) {Message:lj}{NewLine}{Exception}");
+    }
+});
 
 // 2. Web API Services
-builder.Services.AddControllers();
+builder.Services.AddControllers(options => options.AddCommonProblemResponses());
 builder.Services.AddProblemDetails();
 builder.Services.AddExceptionHandler<ValidationExceptionHandler>();
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
-builder.Services.AddMemoryCache();
 builder.Services.AddAuthorization(options =>
 {
-    options.AddPolicy(API.Helper.Policies.AdminOnly, policy => policy.RequireRole("Admin"));
+    options.AddPolicy(API.Helpers.Policies.AdminOnly, policy => policy.RequireRole("Admin"));
 });
 
-// Configure Rate Limiting to protect auth/OTP endpoints from brute-force
-builder.Services.AddRateLimiter(options =>
-{
-    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
-
-    var isTesting = builder.Environment.EnvironmentName == "Testing";
-    options.AddFixedWindowLimiter("AuthLimiter", opt =>
-    {
-        opt.Window = TimeSpan.FromMinutes(1);
-        opt.PermitLimit = isTesting ? 10000 : 5; // Bypass rate limit during integration tests
-        opt.QueueLimit = 0;
-    });
-});
+builder.Services.AddForwardedHeadersSupport(builder.Configuration);
+builder.Services.AddApiRateLimiting(builder.Configuration);
 
 builder.Services.AddHttpClient("PayOSClient")
     .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
@@ -64,146 +53,51 @@ builder.Services.AddHttpClient("PayOSClient")
         SslProtocols = System.Security.Authentication.SslProtocols.Tls12
     });
 
-// 3. CORS Configuration (Crucial for Flutter Web / Swagger)
-builder.Services.AddCors(options =>
-{
-    options.AddPolicy("AllowAll", policy =>
-    {
-        var allowedOrigins = builder.Configuration.GetSection("CorsSettings:AllowedOrigins").Get<string[]>();
-        if (allowedOrigins != null && allowedOrigins.Length > 0)
-        {
-            policy.WithOrigins(allowedOrigins)
-                  .AllowAnyMethod()
-                  .AllowAnyHeader()
-                  .AllowCredentials();
-        }
-        else
-        {
-            policy.WithOrigins("http://localhost:3000")
-                  .AllowAnyMethod()
-                  .AllowAnyHeader()
-                  .AllowCredentials();
-        }
-    });
-});
+// 3. CORS (Flutter Web / Swagger UI)
+builder.Services.AddFrontendCors(builder.Configuration, builder.Environment);
 
 // 4. Dependency Injection (Layered)
 builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddApplication();
-builder.Services.AddAutoMapper(cfg => cfg.AddMaps(typeof(API.Helper.MappingProfile).Assembly));
+builder.Services.AddAutoMapper(cfg => cfg.AddMaps(typeof(API.Helpers.MappingProfile).Assembly));
+
+// "ready" checks decide whether the instance can serve traffic; liveness (/healthz) deliberately checks nothing
 builder.Services.AddHealthChecks()
-    .AddDbContextCheck<EducationPlatformDBContext>();
+    .AddDbContextCheck<EducationPlatformDBContext>("database", tags: new[] { "ready" });
 
-// 5. JWT Authentication & SignalR Setup
-builder.Services.AddAuthentication(options =>
-{
-    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
-})
-.AddJwtBearer(options =>
-{
-    var jwtSettings = builder.Configuration.GetSection("JwtSettings");
-    var secretKey = jwtSettings["SecretKey"];
-    var issuer = jwtSettings["Issuer"];
-    var audience = jwtSettings["Audience"];
-
-    if (string.IsNullOrWhiteSpace(secretKey))
-        throw new InvalidOperationException("Missing configuration: JwtSettings:SecretKey");
-    if (Encoding.UTF8.GetByteCount(secretKey) < 32)
-        throw new InvalidOperationException(
-            "JwtSettings:SecretKey must be at least 32 bytes (256 bits) long for HS256 signing.");
-    if (string.IsNullOrWhiteSpace(issuer))
-        throw new InvalidOperationException("Missing configuration: JwtSettings:Issuer");
-    if (string.IsNullOrWhiteSpace(audience))
-        throw new InvalidOperationException("Missing configuration: JwtSettings:Audience");
-
-    options.TokenValidationParameters = new TokenValidationParameters
-    {
-        ValidateIssuer = true,
-        ValidateAudience = true,
-        ValidateLifetime = true,
-        ValidateIssuerSigningKey = true,
-        ValidIssuer = issuer,
-        ValidAudience = audience,
-        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey)),
-        ClockSkew = TimeSpan.Zero
-    };
-
-    options.Events = new JwtBearerEvents
-    {
-        OnMessageReceived = context =>
-        {
-            // Read JWT from cookie (For Web browsers)
-            var token = context.Request.Cookies["access_token"];
-
-            // Read JWT from query string (For Flutter SignalR Websockets)
-            var accessToken = context.Request.Query["access_token"];
-            var path = context.HttpContext.Request.Path;
-
-            if (!string.IsNullOrEmpty(accessToken) &&
-                (path.StartsWithSegments("/authHub") || path.StartsWithSegments("/courseHub")))
-            {
-                token = accessToken;
-            }
-
-            if (!string.IsNullOrEmpty(token))
-            {
-                context.Token = token;
-            }
-            return Task.CompletedTask;
-        }
-    };
-});
-
-// 6. Swagger Configuration
-
-builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen(c =>
-{
-    c.SwaggerDoc("v1", new OpenApiInfo { Title = "Education Platform API", Version = "v1" });
-    c.EnableAnnotations();
-
-    // JWT Configuration for Swagger
-    c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
-    {
-        Description = "JWT Authorization header using the Bearer scheme. Example: \"Authorization: Bearer {token}\"",
-        Name = "Authorization",
-        In = ParameterLocation.Header,
-        Type = SecuritySchemeType.Http,
-        Scheme = "bearer"
-    });
-
-    c.AddSecurityRequirement(new OpenApiSecurityRequirement
-    {
-        {
-            new OpenApiSecurityScheme
-            {
-                Reference = new OpenApiReference
-                {
-                    Type = ReferenceType.SecurityScheme,
-                    Id = "Bearer"
-                }
-            },
-            Array.Empty<string>()
-        }
-    });
-});
-
+// 5. JWT Authentication, API versioning & Swagger, SignalR, telemetry
+builder.Services.AddJwtAuthentication(builder.Configuration);
+builder.Services.AddApiVersioningAndSwagger();
 builder.Services.AddSignalR();
+builder.Services.AddObservability(builder.Configuration);
 
-// BUID THE APP
+// BUILD THE APP
 var app = builder.Build();
 
+var logger = app.Services.GetRequiredService<ILogger<Program>>();
+
+// 6. DB Migration & Seeding.
+// Run `dotnet API.dll --migrate` as a one-off job (init container / release step) and set
+// Database:AutoMigrate=false to keep migrations out of the instances that serve traffic.
+if (args.Contains("--migrate"))
+{
+    await DatabaseInitializer.InitializeAsync(app.Services, logger);
+    return;
+}
+
+if (app.Configuration.GetValue("Database:AutoMigrate", true))
+{
+    await DatabaseInitializer.InitializeAsync(app.Services, logger);
+}
+
+// 7. Middleware Pipeline
+app.UseForwardedHeaders();
 app.UseMiddleware<CorrelationIdMiddleware>();
 app.UseSerilogRequestLogging();
 
 app.UseExceptionHandler();
 
-var logger = app.Services.GetRequiredService<ILogger<Program>>();
-
-
-// 7. Environment Specific Setup
-if (app.Environment.IsDevelopment() || app.Environment.EnvironmentName == "Testing")
+if (app.Configuration.GetValue("Swagger:Enabled", app.Environment.IsDevelopment()))
 {
     app.UseSwagger();
     app.UseSwaggerUI(c =>
@@ -213,7 +107,7 @@ if (app.Environment.IsDevelopment() || app.Environment.EnvironmentName == "Testi
     });
 }
 
-if (!app.Environment.IsDevelopment() && app.Environment.EnvironmentName != "Testing")
+if (app.Configuration.GetValue("Security:UseHttpsRedirection", !app.Environment.IsDevelopment()))
 {
     app.UseHsts();
     app.UseHttpsRedirection();
@@ -223,7 +117,7 @@ if (!app.Environment.IsDevelopment() && app.Environment.EnvironmentName != "Test
 var storageRootPath = builder.Configuration["Storage:RootPath"];
 if (string.IsNullOrWhiteSpace(storageRootPath))
 {
-    throw new Exception("Storage:RootPath is not configured.");
+    throw new InvalidOperationException("Missing configuration: Storage:RootPath");
 }
 
 // Auto-create the storage directory if it doesn't exist
@@ -240,51 +134,29 @@ app.UseStaticFiles(new StaticFileOptions
     RequestPath = "/media"
 });
 
-// 9. DB Migration & Seeding
-if (app.Environment.EnvironmentName != "Testing")
-{
-    using (var scope = app.Services.CreateAsyncScope())
-    {
-        var db = scope.ServiceProvider.GetRequiredService<EducationPlatformDBContext>();
-
-        var retries = 5;
-        for (int i = 0; i < retries; i++)
-        {
-            try
-            {
-                await db.Database.MigrateAsync();
-                await Seeder.SeedAsync(db);
-                logger.LogInformation("Database migrated and seeded successfully.");
-                break;
-            }
-            catch (DbException ex) // Handle both PostgreSQL and SQL Server issues safely
-            {
-                logger.LogWarning(ex, "Database not ready, retrying in 5s... ({Attempt}/{Retries})", i + 1, retries);
-                await Task.Delay(5000);
-                if (i == retries - 1) throw;
-            }
-        }
-    }
-}
-
-// 10. Middleware Pipeline
 app.UseRouting();
 
-app.UseRateLimiter();
-
-app.UseCors("AllowAll");
+app.UseCors(StartupExtensions.CorsPolicyName);
 
 app.UseAuthentication();
-app.UseMiddleware<API.Helper.UserActiveMiddleware>();
+
+// After authentication so limits can be kept per user; before the user lookup so rejected requests stay cheap
+app.UseRateLimiter();
+
+app.UseMiddleware<API.Helpers.UserActiveMiddleware>();
 app.UseAuthorization();
 
-// 11. Endpoints & Hubs
+// 9. Endpoints & Hubs
 app.MapControllers();
 app.MapHub<AuthHub>("/authHub");
 app.MapHub<CourseHub>("/courseHub");
 app.MapGet("/", () => "API is running successfully!");
-app.MapHealthChecks("/healthz");
-app.MapHealthChecks("/readiness");
+
+// Liveness: the process is up (no dependencies checked, so a database blip does not restart the container)
+app.MapHealthChecks("/healthz", new HealthCheckOptions { Predicate = _ => false });
+
+// Readiness: dependencies are reachable, safe to route traffic here
+app.MapHealthChecks("/readiness", new HealthCheckOptions { Predicate = check => check.Tags.Contains("ready") });
 
 app.Run();
 

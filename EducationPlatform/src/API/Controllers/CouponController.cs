@@ -1,9 +1,10 @@
+using Asp.Versioning;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using API.Models.Common;
 using API.Models.Coupons;
-using API.Helper;
+using API.Helpers;
 using Application.Features.Coupons.Queries.GetCoupons;
 using Application.Features.Coupons.Queries.GetCouponById;
 using Application.Features.Coupons.Queries.GetAvailableCoupons;
@@ -19,7 +20,9 @@ using Microsoft.AspNetCore.Mvc;
 namespace API.Controllers
 {
     [ApiController]
+    [ApiVersion("1.0")]
     [Route("api")]
+    [Route("api/v{version:apiVersion}")]
     public class CouponController : ControllerBase
     {
         private readonly IMediator mediator;

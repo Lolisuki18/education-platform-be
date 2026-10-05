@@ -1,9 +1,10 @@
+using Asp.Versioning;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using API.Models.Common;
 using API.Models.Academic;
-using API.Helper;
+using API.Helpers;
 using Application.Features.Academic.Queries.GetGrades;
 using Application.Features.Academic.Queries.GetSubjects;
 using Application.Features.Academic.Commands.CreateGrade;
@@ -20,7 +21,9 @@ using Microsoft.AspNetCore.Mvc;
 namespace API.Controllers
 {
     [ApiController]
+    [ApiVersion("1.0")]
     [Route("api/academic")]
+    [Route("api/v{version:apiVersion}/academic")]
     public class AcademicController : ControllerBase
     {
         private readonly IMediator mediator;
@@ -35,7 +38,7 @@ namespace API.Controllers
         {
             if (includeInactive && !User.IsInRole("Admin"))
             {
-                return StatusCode(403, ApiResponse.Success("Forbidden: Only Admin can view inactive grades.", 403));
+                return StatusCode(403, ApiResponse.Error("Forbidden: Only Admin can view inactive grades.", 403));
             }
 
             var result = await mediator.Send(new GetGradesQuery { IncludeInactive = includeInactive });
@@ -47,7 +50,7 @@ namespace API.Controllers
         {
             if (includeInactive && !User.IsInRole("Admin"))
             {
-                return StatusCode(403, ApiResponse.Success("Forbidden: Only Admin can view inactive subjects.", 403));
+                return StatusCode(403, ApiResponse.Error("Forbidden: Only Admin can view inactive subjects.", 403));
             }
 
             var result = await mediator.Send(new GetSubjectsQuery { IncludeInactive = includeInactive });

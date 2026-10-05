@@ -1,5 +1,7 @@
+using Asp.Versioning;
 using System.Security.Claims;
 using Application.Results;
+using API.Extensions;
 using API.Hubs;
 using API.Models.Auth;
 using API.Models.Common;
@@ -16,8 +18,9 @@ using Application.Features.Identity.Commands.RefreshToken;
 namespace API.Controllers
 {
     [ApiController]
+    [ApiVersion("1.0")]
     [Route("api/auth")]
-    [EnableRateLimiting("AuthLimiter")]
+    [Route("api/v{version:apiVersion}/auth")]
     public class AuthController : ControllerBase
     {
         private readonly IMediator mediator;
@@ -31,6 +34,7 @@ namespace API.Controllers
             this.hubContext = hubContext;
         }
 
+        [EnableRateLimiting(RateLimitPolicies.Login)]
         [HttpPost("login")]
         public async Task<ActionResult<ApiResponse<LoginResponseDto>>> Login([FromBody] LoginRequestDto request)
         {
@@ -47,6 +51,7 @@ namespace API.Controllers
             }, "Login successful"));
         }
 
+        [EnableRateLimiting(RateLimitPolicies.Register)]
         [HttpPost("register")]
         public async Task<ActionResult<ApiResponse>> Register([FromBody] RegisterRequestDto request)
         {
@@ -63,6 +68,7 @@ namespace API.Controllers
             return Accepted(ApiResponse.Success("Registration successful. Please check your email to verify your account.", 202));
         }
 
+        [EnableRateLimiting(RateLimitPolicies.VerifyEmail)]
         [HttpPost("verify-email")]
         public async Task<ActionResult<ApiResponse>> VerifyEmail([FromBody] VerifyEmailRequestDto request)
         {
@@ -74,10 +80,11 @@ namespace API.Controllers
             return Ok(ApiResponse.Success("Email verified successfully."));
         }
 
+        [EnableRateLimiting(RateLimitPolicies.RefreshToken)]
         [HttpPost("refresh-token")]
-        public async Task<ActionResult<ApiResponse<LoginResponseDto>>> RefreshToken([FromBody] string refreshToken)
+        public async Task<ActionResult<ApiResponse<LoginResponseDto>>> RefreshToken([FromBody] RefreshTokenRequestDto request)
         {
-            var token = await mediator.Send(new RefreshTokenCommand { RefreshToken = refreshToken });
+            var token = await mediator.Send(new RefreshTokenCommand { RefreshToken = request.RefreshToken });
             return Ok(ApiResponse<LoginResponseDto>.Success(new LoginResponseDto
             {
                 AccessToken = token.Token,
@@ -85,19 +92,27 @@ namespace API.Controllers
             }, "Token refreshed successfully"));
         }
 
+        /// <summary>Signs out one device (when its refresh token is sent) or every device.</summary>
         [Authorize]
         [HttpPost("logout")]
-        public async Task<ActionResult<ApiResponse>> Logout()
+        public async Task<ActionResult<ApiResponse>> Logout(
+            [FromBody(EmptyBodyBehavior = Microsoft.AspNetCore.Mvc.ModelBinding.EmptyBodyBehavior.Allow)] LogoutRequestDto? request = null)
         {
             var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
 
-            if (!string.IsNullOrEmpty(userId))
+            if (Guid.TryParse(userId, out var userGuid))
             {
-                if (Guid.TryParse(userId, out var userGuid))
+                await mediator.Send(new Application.Features.Identity.Commands.Logout.LogoutCommand
                 {
-                    await mediator.Send(new Application.Features.Identity.Commands.Logout.LogoutCommand { UserId = userGuid });
+                    UserId = userGuid,
+                    RefreshToken = request?.RefreshToken
+                });
+
+                // Kicking the SignalR connections signs the user out everywhere, so only do it for a full logout
+                if (string.IsNullOrWhiteSpace(request?.RefreshToken))
+                {
+                    await AuthHub.ForceLogout(hubContext, userId!);
                 }
-                await AuthHub.ForceLogout(hubContext, userId);
             }
 
             return Ok(ApiResponse.Success("Logged out successfully."));

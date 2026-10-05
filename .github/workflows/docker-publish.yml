@@ -8,13 +8,17 @@ jobs:
   test:
     runs-on: ubuntu-latest
 
+    env:
+      # Throwaway database that only lives for this job; unique per run so no static password sits in the repo
+      TEST_DB_PASSWORD: ci-${{ github.run_id }}-${{ github.run_attempt }}
+
     services:
       postgres:
         image: postgres:15
         env:
           POSTGRES_DB: EducationPlatformDB_Test
           POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: 12345
+          POSTGRES_PASSWORD: ${{ env.TEST_DB_PASSWORD }}
         ports:
           - 5432:5432
         options: >-
@@ -41,7 +45,7 @@ jobs:
       - name: Run all tests (unit + integration)
         run: dotnet test EducationPlatform/EducationPlatform.sln --no-build --configuration Release
         env:
-          TEST_DB_CONNECTION_STRING: "Host=localhost;Database=EducationPlatformDB_Test;Username=postgres;Password=12345"
+          TEST_DB_CONNECTION_STRING: "Host=localhost;Database=EducationPlatformDB_Test;Username=postgres;Password=${{ env.TEST_DB_PASSWORD }}"
 
   build-and-push:
     needs: test
