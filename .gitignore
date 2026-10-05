@@ -78,3 +78,5 @@ Thumbs.db
 *.log
 sha256-*
 **/sha256-*
+# Local secrets for docker compose
+.env

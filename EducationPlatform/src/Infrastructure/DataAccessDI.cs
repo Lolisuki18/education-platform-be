@@ -31,6 +31,15 @@ namespace Infrastructure
                 .Bind(configuration.GetSection(Application.Options.JwtOptions.SectionName))
                 .ValidateOnStart();
 
+            services.AddOptions<Application.Options.CachingOptions>()
+                .Bind(configuration.GetSection(Application.Options.CachingOptions.SectionName));
+
+            services.AddOptions<Application.Options.MediaOptions>()
+                .Bind(configuration.GetSection(Application.Options.MediaOptions.SectionName));
+
+            services.AddSingleton(TimeProvider.System);
+            services.AddSingleton<Application.Interface.IMediaUrlSigner, Infrastructure.Services.HmacMediaUrlSigner>();
+
             services.AddOptions<Application.Options.EmailOptions>()
                 .Bind(configuration.GetSection(Application.Options.EmailOptions.SectionName));
 
@@ -53,6 +62,7 @@ namespace Infrastructure
             services.AddScoped<Application.Interface.IApplicationDBContext>(sp => sp.GetRequiredService<EducationPlatformDBContext>());
 
             services.AddScoped<IAuditRepository, AuditLogRepository>();
+            services.AddScoped<Domain.NotificationManagement.Aggregate.INotificationRepository, NotificationRepository>();
             services.AddScoped<ICourseRepository, CourseRepository>();
             services.AddScoped<IComplaintRepository, ComplaintRepository>();
             services.AddScoped<ICourseReviewRepository, CourseReviewRepository>();
@@ -82,23 +92,17 @@ namespace Infrastructure
             services.AddSingleton<Infrastructure.Services.Email.IEmailSender, Infrastructure.Services.Email.SmtpEmailSender>();
             services.AddScoped<Application.Interface.IEmailService, Infrastructure.Services.Email.QueuedEmailService>();
             services.AddHostedService<Infrastructure.Services.Email.EmailDispatchService>();
-            services.AddScoped<Domain.Common.Interfaces.INotificationService,
-                               Infrastructure.Services.LogNotificationService>();
+            // INotificationService (in-app + SignalR + e-mail) lives in the API project, next to the hubs it pushes to
 
             services.AddScoped<Application.Interface.IStorageService, Infrastructure.Services.StorageService>();
 
             // Register background services
             services.AddHostedService<Infrastructure.Services.StorageCleanupService>();
 
-            if (configuration.GetValue("Retention:Enabled", true))
-            {
-                services.AddHostedService<Infrastructure.Services.DataRetentionService>();
-            }
-
-            if (configuration.GetValue("Orders:ExpiredOrderCleanupEnabled", true))
-            {
-                services.AddHostedService<Infrastructure.Services.ExpiredOrderCleanupService>();
-            }
+            // Always registered; each job checks its own switch (Retention:Enabled, Orders:ExpiredOrderCleanupEnabled)
+            // when it starts, so configuration added after registration is honoured
+            services.AddHostedService<Infrastructure.Services.DataRetentionService>();
+            services.AddHostedService<Infrastructure.Services.ExpiredOrderCleanupService>();
 
             return services;
         }

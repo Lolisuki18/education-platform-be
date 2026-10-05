@@ -12,7 +12,8 @@ Dự án bao gồm các module quản lý cốt lõi:
 
 - **Quản Lý Khóa Học (Course Management):** Quản lý Chương (Chapter), Bài học (Lesson), Tài liệu (Material), Bài tập (Assignment) và Quản lý Chính sách.
 - **Quản Lý Học Thuật (Academic Management):** Quản lý Môn học (Subject) và Hệ thống chấm điểm (Grading).
-- **Media:** Upload video theo từng chunk (có giới hạn kích thước/số chunk và gắn với người upload), lưu local hoặc Cloudinary.
+- **Media:** Upload video theo từng chunk (có giới hạn kích thước/số chunk và gắn với người upload), lưu local hoặc Cloudinary. Video lưu trên server **không công khai**: chỉ truy cập được qua link có chữ ký và hạn dùng (xem mục *Video được bảo vệ*).
+- **Thông báo:** thông báo trong app (lưu DB, đẩy realtime qua SignalR `courseHub` và gửi kèm email) cho duyệt khoá học, khoá học mới chờ duyệt, khiếu nại.
 - **Thanh Toán (Payment):** Tích hợp cổng thanh toán **PayOS**: webhook/redirect có xác thực chữ ký, xử lý idempotent, tự huỷ đơn hết hạn và hoàn lại coupon, đơn 0đ ghi danh ngay không qua PayOS.
 - **Bảo Mật:** Hệ thống xác thực và phân quyền dựa trên **JWT (JSON Web Token)**.
 - **Thông Báo:** Hệ thống thông báo thời gian thực thông qua **SignalR**.
@@ -93,9 +94,30 @@ Health check endpoints (dùng cho container orchestration):
 - `GET /healthz` — liveness: tiến trình còn sống (không kiểm tra dependency, nên DB chập chờn không làm container bị restart).
 - `GET /readiness` — readiness: kết nối được tới database, an toàn để nhận traffic.
 
+### 🎬 Video được bảo vệ
+
+File trong `Storage/videos` không còn phục vụ công khai. `GET /media/videos/...` cần `?exp=...&sig=...` hợp lệ, nếu không trả 403. Link này được API tự cấp:
+
+- `GET /api/enrollments/{id}` (học viên đã ghi danh hoặc admin): mọi `videoUrl` lưu trên server được thay bằng link có chữ ký, sống `Media:UrlLifetimeMinutes` phút (mặc định 240).
+- `GET /api/courses/{id}` cho admin / giáo viên chủ khoá: tương tự.
+- Video ngoài (https://…, ví dụ YouTube) giữ nguyên. Video đã upload lên **Cloudinary** vẫn là link công khai của Cloudinary (chưa dùng được chữ ký) — nếu cần bảo vệ nội dung trả phí tuyệt đối, hãy để `Cloudinary` trống và dùng lưu trữ local.
+- Khoá ký lấy từ `Media:SigningKey`, để trống thì suy ra từ `JwtSettings:SecretKey`. Link `videoUrl` của giáo viên nhập vào chỉ được là đường dẫn trong storage hoặc `https://`; đặt `Media:AllowedExternalHosts` để giới hạn thêm domain.
+
+### 🔔 Thông báo
+
+`GET /api/notifications?unreadOnly=&pageIndex=&pageSize=`, `GET /api/notifications/unread-count`, `POST /api/notifications/{id}/read`, `POST /api/notifications/read-all`. Thông báo mới cũng được đẩy realtime tới mọi kết nối `/courseHub` của người nhận qua sự kiện `Notification`. Tắt email đi kèm bằng `Notifications:EmailEnabled=false`. Thông báo tự xoá sau `Retention:NotificationDays` ngày.
+
 ### 🔀 Phiên bản API
 
 Mọi endpoint truy cập được qua cả `/api/...` (như trước đây) và `/api/v1/...`. Swagger chỉ liệt kê các route `/api/v1/...`. Frontend nên chuyển dần sang `/api/v1`.
+
+### 🐳 Chạy toàn bộ môi trường dev bằng Docker Compose
+
+```bash
+docker compose up --build
+```
+
+Khởi động PostgreSQL, API (http://localhost:8080, Swagger ở trang gốc) và **Mailpit** (http://localhost:8025): mọi email (mã OTP, thông báo) rơi vào hộp thư giả này nên không cần cấu hình SMTP. Có dữ liệu demo và tài khoản admin `admin@example.com` / `Admin-dev-only-1`. Đổi giá trị bằng file `.env` (xem `.env.example`). **Chỉ dùng cho phát triển.**
 
 ### 🐳 Chạy bằng Docker
 
@@ -104,7 +126,7 @@ docker build -t education-platform-be .
 docker run -p 8080:8080 --env-file .env education-platform-be
 ```
 
-Image chạy bằng user không phải root và có sẵn `HEALTHCHECK` gọi `/healthz` mỗi 30 giây.
+Image dùng nền `aspnet:9.0-noble-chiseled` (không shell, không curl, chạy bằng user `app`). `HEALTHCHECK` chạy `dotnet API.dll --healthcheck`: ứng dụng tự gọi `/healthz` của chính nó và thoát với mã 0/1.
 
 Khi chạy sau reverse proxy / load balancer (nginx, Traefik, ...) phải khai báo proxy tin cậy để rate limit và HTTPS redirect thấy đúng IP/scheme của client:
 
@@ -136,6 +158,10 @@ Các khoá cấu hình vận hành (đặt trong `appsettings.json` hoặc dạn
 | `Admin:Email` / `Admin:Password`      | (trống)                 | Tài khoản admin đầu tiên, chỉ tạo khi chưa có admin nào (mật khẩu ≥ 8 ký tự, có chữ và số) |
 | `Retention:*`                         | bật, 7 / 365 / 7 ngày   | Dọn refresh session hết hạn, audit log cũ, tài khoản không xác thực email |
 | `JwtSettings:ExpiryMinutes`           | `60`                    | Thời hạn access token (cho phép số lẻ)                                   |
+| `Media:*`                             | khoá suy ra từ JWT, 240 phút | Chữ ký video, thời hạn link, danh sách host ngoài được phép          |
+| `Notifications:EmailEnabled`          | `true`                  | Gửi email kèm mỗi thông báo trong app                                    |
+| `OutputCache:Enabled` / `PublicSeconds` | bật, 30 giây          | Cache GET công khai (danh sách khoá học, lớp, môn…) — **chỉ cho khách chưa đăng nhập** |
+| `Caching:Enabled`                     | `true`                  | Cache 2 phút cho báo cáo thống kê (theo người dùng và tham số)           |
 | `Swagger:Enabled`                     | chỉ Development         | Bật Swagger UI                                                           |
 | `Security:UseHttpsRedirection`        | `true` ngoài Development | HTTPS redirect + HSTS                                                    |
 | `Logging:File:Enabled`                | chỉ Development         | Ghi log ra file `logs/` (container nên chỉ log ra console)               |
@@ -144,6 +170,9 @@ Các khoá cấu hình vận hành (đặt trong `appsettings.json` hoặc dạn
 | `OpenTelemetry:OtlpEndpoint`          | (trống = tắt)           | Địa chỉ OTLP collector để xuất trace + metric                            |
 
 ### Chạy Integration Tests cục bộ
+
+Không cần cài PostgreSQL nếu máy có Docker: test tự dựng một container `postgres:16-alpine` (Testcontainers). Thứ tự ưu tiên: biến `TEST_DB_CONNECTION_STRING` → container Testcontainers (tắt bằng `TESTCONTAINERS_DISABLED=true`) → `ConnectionStrings:Test` trong `tests/IntegrationTests/appsettings.json`.
+
 
 ```bash
 # Thiết lập biến môi trường trước khi chạy test

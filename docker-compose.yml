@@ -1,0 +1,81 @@
+# Local development stack: `docker compose up --build`
+#
+#   API + Swagger   http://localhost:8080
+#   Mailpit (inbox) http://localhost:8025   <- verification codes and notification e-mails land here
+#   PostgreSQL      localhost:5432
+#
+# Everything below is for development only (throw-away passwords, demo data, PayOS placeholders).
+# Never reuse these values on a real server. Override any of them with a .env file (see .env.example).
+
+name: education-platform
+
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: educationplatform
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres-dev-only}
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d educationplatform"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  mailpit:
+    image: axllent/mailpit:latest
+    ports:
+      - "8025:8025"   # web inbox
+      - "1025:1025"   # SMTP
+
+  api:
+    build: .
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "8080:8080"
+    environment:
+      # Development: Swagger on, demo data seeded, plain HTTP
+      ASPNETCORE_ENVIRONMENT: Development
+      Swagger__Enabled: "true"
+      Security__UseHttpsRedirection: "false"
+      Database__SeedDemoData: "true"
+
+      ConnectionStrings__Default: "Host=db;Database=educationplatform;Username=postgres;Password=${POSTGRES_PASSWORD:-postgres-dev-only}"
+
+      JwtSettings__SecretKey: ${JWT_SECRET:-dev-only-jwt-secret-key-change-me-0123456789}
+      JwtSettings__Issuer: EducationPlatform
+      JwtSettings__Audience: Educators
+
+      # First administrator (a real deployment must choose its own)
+      Admin__Email: ${ADMIN_EMAIL:-admin@example.com}
+      Admin__Password: ${ADMIN_PASSWORD:-Admin-dev-only-1}
+
+      Storage__RootPath: /app/storage
+
+      # Mailpit catches every e-mail, nothing leaves the machine
+      EmailSettings__SmtpHost: mailpit
+      EmailSettings__SmtpPort: "1025"
+      EmailSettings__From: noreply@educationplatform.local
+      EmailSettings__EnableSSL: "false"
+
+      # PayOS needs real credentials to take payments; these placeholders only let the application start
+      PayOS__ClientId: ${PAYOS_CLIENT_ID:-dev-client-id}
+      PayOS__ApiKey: ${PAYOS_API_KEY:-dev-api-key}
+      PayOS__ChecksumKey: ${PAYOS_CHECKSUM_KEY:-dev-checksum-key}
+      PayOS__ReturnUrl: http://localhost:8080/api/orders/return
+      PayOS__CancelUrl: http://localhost:3000/student?payment=cancelled
+      PayOS__FrontendUrl: http://localhost:3000
+
+      CorsSettings__AllowedOrigins__0: http://localhost:3000
+    volumes:
+      - storage:/app/storage
+
+volumes:
+  pgdata:
+  storage:

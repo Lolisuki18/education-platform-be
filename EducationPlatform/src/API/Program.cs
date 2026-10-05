@@ -10,6 +10,12 @@ using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.Extensions.FileProviders;
 using Serilog;
 
+// Container health probe (the image has no curl): `dotnet API.dll --healthcheck`
+if (args.Contains("--healthcheck"))
+{
+    return await API.Helpers.HealthProbe.RunAsync(Environment.GetEnvironmentVariable("ASPNETCORE_URLS"));
+}
+
 var builder = WebApplication.CreateBuilder(args);
 
 // 1. Core Configuration
@@ -51,6 +57,7 @@ builder.Services.AddAuthorization(options =>
 
 builder.Services.AddForwardedHeadersSupport(builder.Configuration);
 builder.Services.AddApiRateLimiting(builder.Configuration);
+builder.Services.AddResponseOptimizations(builder.Configuration);
 
 builder.Services.AddHttpClient("PayOSClient")
     .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
@@ -64,6 +71,10 @@ builder.Services.AddFrontendCors(builder.Configuration, builder.Environment);
 // 4. Dependency Injection (Layered)
 builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddApplication();
+
+builder.Services.AddOptions<Application.Options.NotificationOptions>()
+    .Bind(builder.Configuration.GetSection(Application.Options.NotificationOptions.SectionName));
+builder.Services.AddScoped<Domain.Common.Interfaces.INotificationService, API.Services.HubNotificationService>();
 builder.Services.AddAutoMapper(cfg => cfg.AddMaps(typeof(API.Helpers.MappingProfile).Assembly));
 
 // "ready" checks decide whether the instance can serve traffic; liveness (/healthz) deliberately checks nothing
@@ -87,7 +98,7 @@ var logger = app.Services.GetRequiredService<ILogger<Program>>();
 if (args.Contains("--migrate"))
 {
     await DatabaseInitializer.InitializeAsync(app.Services, logger);
-    return;
+    return 0;
 }
 
 if (app.Configuration.GetValue("Database:AutoMigrate", true))
@@ -101,6 +112,9 @@ app.UseMiddleware<CorrelationIdMiddleware>();
 app.UseSerilogRequestLogging();
 
 app.UseExceptionHandler();
+
+// Before the static files and the output cache, so everything text-like leaves compressed
+app.UseResponseCompression();
 
 if (app.Configuration.GetValue("Swagger:Enabled", app.Environment.IsDevelopment()))
 {
@@ -133,6 +147,9 @@ if (!Directory.Exists(storageRootPath))
 }
 
 app.UseStaticFiles();
+
+// Uploaded lesson videos need a signed link; everything else under /media stays public
+app.UseMiddleware<ProtectedMediaMiddleware>();
 app.UseStaticFiles(new StaticFileOptions
 {
     FileProvider = new PhysicalFileProvider(storageRootPath),
@@ -151,6 +168,9 @@ app.UseRateLimiter();
 app.UseMiddleware<API.Helpers.UserActiveMiddleware>();
 app.UseAuthorization();
 
+// After CORS, routing and authentication: the cache policy needs to know whether the caller is signed in
+app.UseOutputCache();
+
 // 9. Endpoints & Hubs
 app.MapControllers();
 app.MapHub<AuthHub>("/authHub");
@@ -164,5 +184,6 @@ app.MapHealthChecks("/healthz", new HealthCheckOptions { Predicate = _ => false 
 app.MapHealthChecks("/readiness", new HealthCheckOptions { Predicate = check => check.Tags.Contains("ready") }).AllowAnonymous();
 
 app.Run();
+return 0;
 
 public partial class Program { }

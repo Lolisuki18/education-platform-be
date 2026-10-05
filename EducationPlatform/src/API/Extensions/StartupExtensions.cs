@@ -203,6 +203,7 @@ namespace API.Extensions
                     .AddHttpClientInstrumentation()
                     .AddOtlpExporter(o => o.Endpoint = otlpEndpoint))
                 .WithMetrics(metrics => metrics
+                    .AddMeter(Application.Common.PlatformMetrics.MeterName)
                     .AddAspNetCoreInstrumentation()
                     .AddHttpClientInstrumentation()
                     .AddOtlpExporter(o => o.Endpoint = otlpEndpoint));
