@@ -4,7 +4,7 @@ using Domain.Common.Interfaces;
 using AutoMapper;
 using Domain.OrderManagement.Enum;
 using Domain.IdentityManagement.Enum;
-using Application.BusinessException;
+using Application.Exceptions;
 using Application.Interface;
 using Domain.OrderManagement.Aggregate;
 
@@ -13,8 +13,18 @@ namespace Application.Features.Orders.Queries.GetOrders
     public class GetOrdersQuery : IRequest<IEnumerable<OrderDTO>>
     {
         public OrderStatus? OrderStatus { get; set; }
-        public int PageIndex { get; set; }
-        public int PageSize { get; set; }
+        private int _pageIndex = 1;
+        public int PageIndex
+        {
+            get => _pageIndex;
+            set => _pageIndex = Application.Common.Paging.NormalizePageIndex(value);
+        }
+        private int _pageSize = Application.Common.Paging.DefaultPageSize;
+        public int PageSize
+        {
+            get => _pageSize;
+            set => _pageSize = Application.Common.Paging.NormalizePageSize(value);
+        }
     }
 
     public class GetOrdersQueryHandler : IRequestHandler<GetOrdersQuery, IEnumerable<OrderDTO>>
@@ -55,9 +65,17 @@ namespace Application.Features.Orders.Queries.GetOrders
                     studentId);
 
             if (list == null || !list.Any())
-                throw new NotFound("Order list is not found or empty");
+                throw new NotFoundException("Order list is not found or empty");
 
-            return _mapper.Map<IEnumerable<OrderDTO>>(list);
+            var orders = _mapper.Map<IEnumerable<OrderDTO>>(list).ToList();
+
+            // Teachers and admins also see these orders; the payment link belongs to the student who created it
+            foreach (var order in orders)
+            {
+                order.CheckoutUrl = null;
+            }
+
+            return orders;
         }
     }
 }

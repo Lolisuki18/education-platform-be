@@ -1,5 +1,5 @@
 
-using Application.BusinessException;
+using Application.Exceptions;
 using Application.Interface;
 using Application.Results;
 using AutoMapper;
@@ -59,16 +59,16 @@ namespace Application.Features.StudentReview.Command
                 .HasStudentReviewedCourseAsync(request.CourseId, currentStudentId);
             if (hasReviewed)
             {
-                throw new Conflict("You have already reviewed this course.");
+                throw new ConflictException("You have already reviewed this course.");
             }
 
             //3. Find the course by courseId
             var course = await _unitOfWork.GetRepository<ICourseRepository>().GetByIdAsync(request.CourseId);
-            if (course == null) throw new NotFound("Course not found.");
+            if (course == null) throw new NotFoundException("Course not found.");
 
             //4. Find the student by studentId
             var student = await _unitOfWork.GetRepository<IUserRepository>().GetByIdAsync(currentStudentId);
-            if (student == null) throw new NotFound("Student not found.");
+            if (student == null) throw new NotFoundException("Student not found.");
 
             //5. Create a new review and add it to the CourseReview 
 

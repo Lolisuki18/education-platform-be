@@ -1,12 +1,11 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
-using Application.BusinessException;
+using Application.Exceptions;
 using Application.Interface;
 using Domain.Common.Interfaces;
 using Domain.IdentityManagement.Aggregate;
 using MediatR;
-using Microsoft.Extensions.Caching.Memory;
 
 namespace Application.Features.Users.Commands
 {
@@ -20,13 +19,13 @@ namespace Application.Features.Users.Commands
     {
         private readonly IUnitOfWork _unitOfWork;
         private readonly ICurrentUser _currentUser;
-        private readonly IMemoryCache _memoryCache;
+        private readonly IUserActivityCache _activityCache;
 
-        public UpdateUserStatusCommandHandler(IUnitOfWork unitOfWork, ICurrentUser currentUser, IMemoryCache memoryCache)
+        public UpdateUserStatusCommandHandler(IUnitOfWork unitOfWork, ICurrentUser currentUser, IUserActivityCache activityCache)
         {
             _unitOfWork = unitOfWork;
             _currentUser = currentUser;
-            _memoryCache = memoryCache;
+            _activityCache = activityCache;
         }
 
         public async Task Handle(UpdateUserStatusCommand request, CancellationToken cancellationToken)
@@ -35,13 +34,13 @@ namespace Application.Features.Users.Commands
                 throw new AuthenticateException("User must be authenticated.");
 
             if (request.UserId == _currentUser.Id.Value)
-                throw new BadRequest("Cannot deactivate your own account.");
+                throw new BadRequestException("Cannot deactivate your own account.");
 
             var userRepo = _unitOfWork.GetRepository<IUserRepository>();
             var user = await userRepo.GetByIdAsync(request.UserId);
 
             if (user == null)
-                throw new NotFound("User not found.");
+                throw new NotFoundException("User not found.");
 
             if (request.IsActive)
             {
@@ -52,10 +51,10 @@ namespace Application.Features.Users.Commands
                 user.Deactivate();
             }
 
-            // Invalidate the active status cache key
-            _memoryCache.Remove($"UserActive:{request.UserId}");
-
             await _unitOfWork.CommitAsync(_currentUser.Id.Value.ToString());
+
+            // Only after the commit: invalidating earlier lets a concurrent request re-cache the old status
+            _activityCache.Invalidate(request.UserId);
         }
     }
 }

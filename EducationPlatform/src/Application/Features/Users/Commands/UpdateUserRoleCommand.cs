@@ -1,7 +1,7 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
-using Application.BusinessException;
+using Application.Exceptions;
 using Application.Interface;
 using Domain.Common.Interfaces;
 using Domain.IdentityManagement.Aggregate;
@@ -33,13 +33,13 @@ namespace Application.Features.Users.Commands
                 throw new AuthenticateException("User must be authenticated.");
 
             if (request.UserId == _currentUser.Id.Value)
-                throw new BadRequest("Cannot change your own role.");
+                throw new BadRequestException("Cannot change your own role.");
 
             var userRepo = _unitOfWork.GetRepository<IUserRepository>();
             var user = await userRepo.GetByIdAsync(request.UserId);
 
             if (user == null)
-                throw new NotFound("User not found.");
+                throw new NotFoundException("User not found.");
 
             user.ChangeRole(request.Role);
 

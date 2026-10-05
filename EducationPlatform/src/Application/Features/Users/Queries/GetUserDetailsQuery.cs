@@ -1,4 +1,4 @@
-﻿using Application.BusinessException;
+﻿using Application.Exceptions;
 using Application.Interface;
 using Application.Results;
 using AutoMapper;
@@ -36,7 +36,7 @@ namespace Application.Features.Users.Queries
             var user = await _unitOfWork.GetRepository<IUserRepository>().GetByIdAsync(userId);
 
             if (user == null)
-                throw new NotFound("User detail not found");
+                throw new NotFoundException("User detail not found");
 
             var dto = _mapper.Map<UserDTO>(user);
 

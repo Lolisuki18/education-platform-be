@@ -10,7 +10,7 @@ using Domain.EnrollmentManagement.Entity;
 using Domain.IdentityManagement.Aggregate;
 using Domain.OrderManagement.Aggregate;
 
-namespace Application.Helper
+namespace Application.Helpers
 {
     public class Mapper : AutoMapper.Profile
     {

@@ -3,7 +3,7 @@ using MediatR;
 using Domain.Common.Interfaces;
 using Application.Interface;
 using Microsoft.EntityFrameworkCore;
-using Application.BusinessException;
+using Application.Exceptions;
 using System.Linq;
 
 namespace Application.Features.Statistics.Queries.GetSummaryStatistic

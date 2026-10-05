@@ -1,4 +1,4 @@
-﻿using Application.BusinessException;
+﻿using Application.Exceptions;
 using Application.Interface;
 using Application.Results;
 using AutoMapper;
@@ -45,7 +45,7 @@ namespace Application.Features.Users.Commands
             var user = await _unitOfWork.GetRepository<IUserRepository>().GetByIdAsync(userId);
 
             if (user == null)
-                throw new NotFound($"User with ID: {userId} not found.");
+                throw new NotFoundException($"User with ID: {userId} not found.");
 
             user.UpdateProfile(request.Name, request.Phone, request.Bio);
 

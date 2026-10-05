@@ -1,9 +1,9 @@
 using System;
 using System.IO;
 using System.Linq;
-using Application.BusinessException;
+using Application.Exceptions;
 
-namespace Application.Helper
+namespace Application.Helpers
 {
     public static class FileValidator
     {
@@ -16,11 +16,11 @@ namespace Application.Helper
                 return;
 
             if (length > MaxFileSize)
-                throw new BadRequest($"File size exceeds the limit of {MaxFileSize / 1024 / 1024}MB.");
+                throw new BadRequestException($"File size exceeds the limit of {MaxFileSize / 1024 / 1024}MB.");
 
             var extension = Path.GetExtension(fileName).ToLowerInvariant();
             if (string.IsNullOrEmpty(extension) || !AllowedExtensions.Contains(extension))
-                throw new BadRequest("Invalid file type.");
+                throw new BadRequestException("Invalid file type.");
 
             // Verify magic bytes (signature check)
             if (stream.CanSeek)
@@ -48,7 +48,7 @@ namespace Application.Helper
                     else if (bytesRead >= 8 && header[4] == 0x66 && header[5] == 0x74 && header[6] == 0x79 && header[7] == 0x70) isValid = true;
 
                     if (!isValid)
-                        throw new BadRequest("File content does not match the allowed extension types.");
+                        throw new BadRequestException("File content does not match the allowed extension types.");
                 }
             }
         }
