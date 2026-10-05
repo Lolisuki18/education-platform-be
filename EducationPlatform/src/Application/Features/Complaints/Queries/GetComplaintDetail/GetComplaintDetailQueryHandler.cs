@@ -1,4 +1,4 @@
-using Application.BusinessException;
+using Application.Exceptions;
 using Application.Interface;
 using Application.Results;
 using AutoMapper;
@@ -29,7 +29,7 @@ namespace Application.Features.Complaints.Queries.GetComplaintDetail
 
             if (complaint == null)
             {
-                throw new NotFound($"Complaint with ID: {request.ComplaintID} is not found");
+                throw new NotFoundException($"Complaint with ID: {request.ComplaintID} is not found");
             }
 
             // Authorization check: Teacher can only view complaints of their own courses

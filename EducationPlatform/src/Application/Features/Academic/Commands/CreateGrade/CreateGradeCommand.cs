@@ -2,7 +2,7 @@ using System;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Application.BusinessException;
+using Application.Exceptions;
 using Application.Interface;
 using Domain.AcademicManagement.Aggregate;
 using Domain.Common.Interfaces;
@@ -37,7 +37,7 @@ namespace Application.Features.Academic.Commands.CreateGrade
             var trimmedName = request.Name.Trim();
             if (allGrades.Any(g => string.Equals(g.Name, trimmedName, StringComparison.OrdinalIgnoreCase)))
             {
-                throw new Conflict($"Grade with name '{trimmedName}' already exists.");
+                throw new ConflictException($"Grade with name '{trimmedName}' already exists.");
             }
 
             var newGrade = new Grade(Guid.NewGuid(), trimmedName);

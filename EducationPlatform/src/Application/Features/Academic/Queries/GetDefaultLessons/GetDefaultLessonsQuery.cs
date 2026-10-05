@@ -1,7 +1,7 @@
 using Application.Results;
 using MediatR;
 using Domain.Common.Interfaces;
-using Application.BusinessException;
+using Application.Exceptions;
 using Domain.AcademicManagement.Aggregate;
 using AutoMapper;
 
@@ -31,7 +31,7 @@ namespace Application.Features.Academic.Queries.GetDefaultLessons
                 .GetDefaultLessons(request.SubjectId, request.GradeId);
 
             if (list == null || !list.Any())
-                throw new NotFound("Default lessons list is empty or was not found");
+                throw new NotFoundException("Default lessons list is empty or was not found");
 
             return _mapper.Map<IEnumerable<DefaultLessonDTO>>(list);
         }

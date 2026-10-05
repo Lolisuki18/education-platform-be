@@ -2,7 +2,7 @@ using System;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Application.BusinessException;
+using Application.Exceptions;
 using Application.Interface;
 using Domain.AcademicManagement.Aggregate;
 using Domain.Common.Interfaces;
@@ -40,7 +40,7 @@ namespace Application.Features.Academic.Commands.CreateSubject
 
             if (allSubjects.Any(s => string.Equals(s.Code, trimmedCode, StringComparison.OrdinalIgnoreCase)))
             {
-                throw new Conflict($"Subject with code '{trimmedCode}' already exists.");
+                throw new ConflictException($"Subject with code '{trimmedCode}' already exists.");
             }
 
             var newSubject = new Subject(Guid.NewGuid(), trimmedCode, trimmedName, Guid.Empty);

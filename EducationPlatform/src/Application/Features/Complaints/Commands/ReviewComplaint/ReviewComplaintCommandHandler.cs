@@ -1,4 +1,4 @@
-using Application.BusinessException;
+using Application.Exceptions;
 using Application.Features.Complaints.Commands.ReviewComplaint;
 using Domain.CourseManagement.Aggregate;
 using Domain.Common.Interfaces;
@@ -28,7 +28,7 @@ namespace Application.Features.Complaints.Commands.ReviewComplaint
 
             if (complaint == null)
             {
-                throw new NotFound($"Complaint with ID: {request.ComplaintID} is not found");
+                throw new NotFoundException($"Complaint with ID: {request.ComplaintID} is not found");
             }
 
             // 1. Domain logic: Update status and trigger event if approved

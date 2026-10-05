@@ -1,7 +1,7 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
-using Application.BusinessException;
+using Application.Exceptions;
 using Application.Interface;
 using Domain.AcademicManagement.Aggregate;
 using Domain.Common.Interfaces;
@@ -34,11 +34,11 @@ namespace Application.Features.Academic.Commands.DeactivateSubject
             var subject = await subjectRepo.GetByIdAsync(request.SubjectID);
 
             if (subject == null)
-                throw new NotFound("Subject not found.");
+                throw new NotFoundException("Subject not found.");
 
             if (await subjectRepo.IsInUse(request.SubjectID))
             {
-                throw new Conflict("Cannot deactivate subject because it is currently in use by courses or lessons.");
+                throw new ConflictException("Cannot deactivate subject because it is currently in use by courses or lessons.");
             }
 
             subject.Deactivate();

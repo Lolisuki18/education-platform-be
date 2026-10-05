@@ -1,8 +1,8 @@
-namespace Application.BusinessException
+namespace Application.Exceptions
 {
-    public class NotFound : Exception
+    public class NotFoundException : Exception
     {
-        public NotFound(string message) : base(message) { }
+        public NotFoundException(string message) : base(message) { }
     }
 }
 

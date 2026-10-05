@@ -2,7 +2,7 @@ using System;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Application.BusinessException;
+using Application.Exceptions;
 using Application.Interface;
 using Domain.AcademicManagement.Aggregate;
 using Domain.Common.Interfaces;
@@ -38,7 +38,7 @@ namespace Application.Features.Academic.Commands.UpdateSubject
             var subject = await subjectRepo.GetByIdAsync(request.SubjectID);
 
             if (subject == null)
-                throw new NotFound("Subject not found.");
+                throw new NotFoundException("Subject not found.");
 
             var trimmedCode = request.Code.Trim();
             var trimmedName = request.Name.Trim();
@@ -46,7 +46,7 @@ namespace Application.Features.Academic.Commands.UpdateSubject
             var allSubjects = await subjectRepo.GetAllAsync();
             if (allSubjects.Any(s => s.SubjectID != request.SubjectID && string.Equals(s.Code, trimmedCode, StringComparison.OrdinalIgnoreCase)))
             {
-                throw new Conflict($"Subject with code '{trimmedCode}' already exists.");
+                throw new ConflictException($"Subject with code '{trimmedCode}' already exists.");
             }
 
             subject.Update(trimmedCode, trimmedName);
@@ -59,7 +59,7 @@ namespace Application.Features.Academic.Commands.UpdateSubject
             {
                 if (await subjectRepo.IsInUse(request.SubjectID))
                 {
-                    throw new Conflict("Cannot deactivate subject because it is currently in use.");
+                    throw new ConflictException("Cannot deactivate subject because it is currently in use.");
                 }
                 subject.Deactivate();
             }

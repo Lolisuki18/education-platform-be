@@ -1,4 +1,4 @@
-using Application.BusinessException;
+using Application.Exceptions;
 using Application.Features.Complaints.Commands.CreateComplaint;
 using Domain.CourseManagement.Aggregate;
 using Domain.Common.Interfaces;
@@ -38,7 +38,7 @@ namespace Application.Features.Complaints.Commands.CreateComplaint
             var isEnrolled = enrollments.Any(e => e.CourseID == request.CourseID);
             if (!isEnrolled)
             {
-                throw new Conflict("You can only submit complaints for courses you have enrolled in.");
+                throw new ConflictException("You can only submit complaints for courses you have enrolled in.");
             }
 
             // 2. Handle image upload if provided
@@ -48,10 +48,10 @@ namespace Application.Features.Complaints.Commands.CreateComplaint
                 var allowedImageExtensions = new[] { ".jpg", ".jpeg", ".png" };
                 var ext = "." + request.EvidenceFileExtension.TrimStart('.').ToLowerInvariant();
                 if (!allowedImageExtensions.Contains(ext))
-                    throw new BadRequest("Evidence file must be an image (.jpg, .jpeg, .png).");
+                    throw new BadRequestException("Evidence file must be an image (.jpg, .jpeg, .png).");
 
                 var length = request.EvidenceFileStream.CanSeek ? request.EvidenceFileStream.Length : 0;
-                Application.Helper.FileValidator.Validate(request.EvidenceFileStream, length, "evidence" + ext);
+                Application.Helpers.FileValidator.Validate(request.EvidenceFileStream, length, "evidence" + ext);
 
                 imagePath = await _storageService.SaveAsync(
                     request.EvidenceFileStream,

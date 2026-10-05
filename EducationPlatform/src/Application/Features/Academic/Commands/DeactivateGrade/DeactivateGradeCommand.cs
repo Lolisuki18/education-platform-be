@@ -1,7 +1,7 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
-using Application.BusinessException;
+using Application.Exceptions;
 using Application.Interface;
 using Domain.AcademicManagement.Aggregate;
 using Domain.Common.Interfaces;
@@ -34,11 +34,11 @@ namespace Application.Features.Academic.Commands.DeactivateGrade
             var grade = await gradeRepo.GetByIdAsync(request.GradeID);
 
             if (grade == null)
-                throw new NotFound("Grade not found.");
+                throw new NotFoundException("Grade not found.");
 
             if (await gradeRepo.IsInUse(request.GradeID))
             {
-                throw new Conflict("Cannot deactivate grade because it is currently in use by courses or lessons.");
+                throw new ConflictException("Cannot deactivate grade because it is currently in use by courses or lessons.");
             }
 
             grade.Deactivate();

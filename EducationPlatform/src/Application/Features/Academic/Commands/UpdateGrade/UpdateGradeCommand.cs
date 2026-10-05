@@ -2,7 +2,7 @@ using System;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Application.BusinessException;
+using Application.Exceptions;
 using Application.Interface;
 using Domain.AcademicManagement.Aggregate;
 using Domain.Common.Interfaces;
@@ -37,13 +37,13 @@ namespace Application.Features.Academic.Commands.UpdateGrade
             var grade = await gradeRepo.GetByIdAsync(request.GradeID);
 
             if (grade == null)
-                throw new NotFound("Grade not found.");
+                throw new NotFoundException("Grade not found.");
 
             var trimmedName = request.Name.Trim();
             var allGrades = await gradeRepo.GetAllAsync();
             if (allGrades.Any(g => g.GradeID != request.GradeID && string.Equals(g.Name, trimmedName, StringComparison.OrdinalIgnoreCase)))
             {
-                throw new Conflict($"Grade with name '{trimmedName}' already exists.");
+                throw new ConflictException($"Grade with name '{trimmedName}' already exists.");
             }
 
             grade.Update(trimmedName);
@@ -56,7 +56,7 @@ namespace Application.Features.Academic.Commands.UpdateGrade
             {
                 if (await gradeRepo.IsInUse(request.GradeID))
                 {
-                    throw new Conflict("Cannot deactivate grade because it is currently in use.");
+                    throw new ConflictException("Cannot deactivate grade because it is currently in use.");
                 }
                 grade.Deactivate();
             }
