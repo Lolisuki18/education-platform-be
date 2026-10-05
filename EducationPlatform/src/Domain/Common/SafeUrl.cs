@@ -27,7 +27,11 @@ namespace Domain.Common
             if (url.StartsWith("//", StringComparison.Ordinal))
                 return false; // protocol-relative: the scheme would be inherited from the page
 
-            if (Uri.TryCreate(url, UriKind.Absolute, out var absolute))
+            // "/videos/a.mp4" is a path inside the storage. Do not hand it to Uri: on Linux .NET reads it as the
+            // absolute URI file:///videos/a.mp4, on Windows it is not absolute at all.
+            var isStoragePath = url.StartsWith('/');
+
+            if (!isStoragePath && Uri.TryCreate(url, UriKind.Absolute, out var absolute))
             {
                 return absolute.Scheme == Uri.UriSchemeHttps
                        && string.IsNullOrEmpty(absolute.UserInfo)
@@ -44,7 +48,14 @@ namespace Domain.Common
         /// <summary>The host of an absolute URL, or null for a storage path.</summary>
         public static string? HostOf(string value)
         {
-            return Uri.TryCreate(value.Trim(), UriKind.Absolute, out var uri) ? uri.Host : null;
+            var url = value.Trim();
+
+            // Only real web addresses have a host; a storage path such as /videos/a.mp4 must not (on Linux Uri
+            // would parse it as file:///videos/a.mp4 with an empty host)
+            if (!url.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
+                return null;
+
+            return Uri.TryCreate(url, UriKind.Absolute, out var uri) ? uri.Host : null;
         }
     }
 }

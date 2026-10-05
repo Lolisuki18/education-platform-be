@@ -259,6 +259,29 @@ namespace UnitTests.InfrastructureTests
             SafeUrl.IsSafe(url).Should().BeFalse();
         }
 
+        [Theory]
+        [InlineData("/videos/lesson.mp4")]
+        [InlineData("/videos/default.mp4")]
+        public void RootedStoragePaths_AreAcceptedOnEveryOperatingSystem(string url)
+        {
+            // Uri.TryCreate treats these as file:// URIs on Linux; the CI runner caught it, Windows did not
+            SafeUrl.IsSafe(url).Should().BeTrue();
+        }
+
+        [Theory]
+        [InlineData("/videos/lesson.mp4")]
+        [InlineData("videos/lesson.mp4")]
+        public void StoragePathsHaveNoHost(string url)
+        {
+            SafeUrl.HostOf(url).Should().BeNull();
+        }
+
+        [Fact]
+        public void HttpsUrlsReportTheirHost()
+        {
+            SafeUrl.HostOf("https://res.cloudinary.com/demo/a.mp4").Should().Be("res.cloudinary.com");
+        }
+
         [Fact]
         public void OverlongValues_AreRefused()
         {
@@ -368,6 +391,7 @@ namespace UnitTests.InfrastructureTests
             validator.Validate(Command("https://res.cloudinary.com/a.mp4")).IsValid.Should().BeTrue();
             validator.Validate(Command("https://cloudinary.com/a.mp4")).IsValid.Should().BeTrue();
             validator.Validate(Command("videos/a.mp4")).IsValid.Should().BeTrue(); // storage paths are always fine
+            validator.Validate(Command("/videos/a.mp4")).IsValid.Should().BeTrue();
             validator.Validate(Command("https://evil-cloudinary.com/a.mp4")).IsValid.Should().BeFalse();
             validator.Validate(Command("https://example.com/a.mp4")).IsValid.Should().BeFalse();
         }
