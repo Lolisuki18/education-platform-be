@@ -8,6 +8,9 @@ namespace Domain.EnrollmentManagement.Aggregate
         // Get all enrollments for a student
         Task<IEnumerable<Enrollment>> GetStudentEnrollments(Guid studentId, int pageIndex = 1, int pageSize = 10, CancellationToken cancellationToken = default);
 
+        // Cheap existence check, not limited by paging
+        Task<bool> IsStudentEnrolled(Guid studentId, Guid courseId, CancellationToken cancellationToken = default);
+
         // Get detailed enrollment with course, chapters, lessons, progress, quizzes
         Task<Enrollment?> GetEnrollmentDetailByID(Guid enrollmentId);
 

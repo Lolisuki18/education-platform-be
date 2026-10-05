@@ -1,5 +1,5 @@
 using Domain.CourseManagement.Aggregate;
-using Domain.DomainExceptions;
+using Domain.Exceptions;
 using Domain.IdentityManagement.Aggregate;
 
 namespace Domain.OrderManagement.Aggregate

@@ -11,13 +11,10 @@ namespace Domain.IdentityManagement.Aggregate
     {
         Task<User?> GetUserByEmail(string email, CancellationToken cancellationToken = default);
         Task<User?> GetUserByPhone(string phone, CancellationToken cancellationToken = default);
-        Task<User?> GetUserForLogin(string email, string password, CancellationToken cancellationToken = default);
-        Task<User?> GetUserForRefreshToken(string refreshToken, CancellationToken cancellationToken = default);
-        Task<User?> GetUserForVerification(string email, string verificationCode, CancellationToken cancellationToken = default);
 
-        // Aliases for Application layer consistency
-        Task<User?> GetUserByOTP(string otp, CancellationToken cancellationToken = default);
+        /// <summary>Finds the user that owns a refresh token, whether the session is still active or not.</summary>
         Task<User?> GetByRefreshToken(string refreshToken, CancellationToken cancellationToken = default);
+        Task<User?> GetByIdWithSessions(Guid userId, CancellationToken cancellationToken = default);
 
         Task<(int TotalUsers, int TotalTeachers, int TotalStudents)> Summary(
             DateTime? from,

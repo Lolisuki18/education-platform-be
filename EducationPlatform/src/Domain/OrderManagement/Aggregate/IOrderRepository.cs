@@ -27,6 +27,20 @@ namespace Domain.OrderManagement.Aggregate
         Task<Coupon?> GetCouponDetailById(
             Guid couponId);
 
+        /// <summary>Loads (tracked) every coupon in one query.</summary>
+        Task<List<Coupon>> GetCouponsByIds(
+            IEnumerable<Guid> couponIds);
+
+        /// <summary>The order of this student for this course that is still waiting for payment, if any.</summary>
+        Task<Order?> GetAwaitingPaymentOrder(
+            Guid studentId,
+            Guid courseId);
+
+        /// <summary>Unpaid orders created before <paramref name="createdBefore"/>.</summary>
+        Task<List<Order>> GetUnpaidOrdersCreatedBefore(
+            DateTime createdBefore,
+            int take);
+
         void CreateCoupons(
             IEnumerable<Coupon> coupons);
 

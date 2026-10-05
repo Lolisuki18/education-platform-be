@@ -1,4 +1,4 @@
-using Domain.DomainExceptions;
+using Domain.Exceptions;
 using Domain.OrderManagement.Enum;
 
 namespace Domain.OrderManagement.Aggregate
@@ -168,11 +168,23 @@ namespace Domain.OrderManagement.Aggregate
 
         public void MarkAsUsed()
         {
-            if (IsUsed || CurrentUsage >= MaxUsage)
+            if (CurrentUsage >= MaxUsage)
                 throw new DomainException("Coupon already used");
 
-            IsUsed = true;
             CurrentUsage++;
+            IsUsed = CurrentUsage >= MaxUsage;
+            UpdatedAt = DateTime.UtcNow;
+            Version++;
+        }
+
+        /// <summary>Gives back one use, e.g. when the order that consumed it was never paid.</summary>
+        public void Release()
+        {
+            if (CurrentUsage <= 0)
+                return;
+
+            CurrentUsage--;
+            IsUsed = CurrentUsage >= MaxUsage;
             UpdatedAt = DateTime.UtcNow;
             Version++;
         }

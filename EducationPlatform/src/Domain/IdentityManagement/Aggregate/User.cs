@@ -1,4 +1,5 @@
-using Domain.DomainExceptions;
+using Domain.Exceptions;
+using Domain.IdentityManagement.Entity;
 using Domain.IdentityManagement.ValueObject;
 using Domain.IdentityManagement.Enum;
 
@@ -7,13 +8,15 @@ namespace Domain.IdentityManagement.Aggregate
     public class User
     {
         #region Attributes
+        public const int MaxActiveSessions = 10;
+
+        private readonly List<RefreshSession> _refreshSessions = new();
         #endregion
 
         #region Properties
         public Guid UserID { get; private set; }
         public string Email { get; private set; }
         public Password Password { get; private set; }
-        public RefreshToken? RefreshToken { get; private set; }
         public string Phone { get; private set; }
         public string Name { get; private set; }
         public string? Bio { get; private set; }
@@ -23,6 +26,7 @@ namespace Domain.IdentityManagement.Aggregate
         public DateTime? EmailOtpExpiresAt { get; private set; }
         public bool IsActive { get; private set; }
         public DateTime CreatedAt { get; private set; }
+        public IReadOnlyCollection<RefreshSession> RefreshSessions => _refreshSessions.AsReadOnly();
         #endregion
 
         protected User() { }
@@ -107,19 +111,69 @@ namespace Domain.IdentityManagement.Aggregate
             return IsVerified && Password.Verify(plainPassword);
         }
 
-        public void IssueRefreshToken(string rawToken, TimeSpan lifetime)
+        /// <summary>Starts a new session (one per device) and returns it.</summary>
+        public RefreshSession IssueRefreshToken(string rawToken, TimeSpan lifetime)
         {
-            RefreshToken = RefreshToken.Create(rawToken, lifetime);
+            var session = new RefreshSession(UserID, rawToken, lifetime);
+
+            // Drop sessions that can no longer be used, then cap the number of devices.
+            _refreshSessions.RemoveAll(s => s.IsExpired);
+
+            var active = _refreshSessions.Where(s => s.IsActive).OrderBy(s => s.CreatedAt).ToList();
+            for (var i = 0; i <= active.Count - MaxActiveSessions; i++)
+                active[i].Revoke();
+
+            _refreshSessions.Add(session);
+            return session;
         }
 
         public bool CanRefresh(string rawToken)
         {
-            return RefreshToken != null && RefreshToken.Verify(rawToken);
+            return _refreshSessions.Any(s => s.IsActive && s.Matches(rawToken));
         }
 
-        public void RevokeRefreshToken()
+        /// <summary>
+        /// Rotates the session that owns <paramref name="oldToken"/>. If the token was already rotated
+        /// (a replay) every session of the user is revoked, since the token family may be stolen.
+        /// </summary>
+        public RefreshResult RotateRefreshToken(string oldToken, string newToken, TimeSpan lifetime)
         {
-            RefreshToken = null;
+            var session = _refreshSessions.FirstOrDefault(s => s.Matches(oldToken));
+            if (session == null)
+                return RefreshResult.Invalid;
+
+            if (session.IsRevoked)
+            {
+                if (!session.IsReplay)
+                    return RefreshResult.Invalid;
+
+                RevokeAllRefreshTokens();
+                return RefreshResult.ReuseDetected;
+            }
+
+            if (session.IsExpired)
+                return RefreshResult.Expired;
+
+            session.Revoke();
+            IssueRefreshToken(newToken, lifetime);
+            return RefreshResult.Rotated;
+        }
+
+        /// <summary>Revokes the session of a single device. Returns false when no such session exists.</summary>
+        public bool RevokeRefreshToken(string rawToken)
+        {
+            var session = _refreshSessions.FirstOrDefault(s => s.Matches(rawToken));
+            if (session == null)
+                return false;
+
+            session.Revoke();
+            return true;
+        }
+
+        public void RevokeAllRefreshTokens()
+        {
+            foreach (var session in _refreshSessions)
+                session.Revoke();
         }
 
         public void UpdateProfile(string? name, string? phone, string? bio)
