@@ -18,7 +18,7 @@ RUN mkdir -p /app/storage/temp /app/storage/videos
 
 # "Chiseled" image: no shell, no package manager, no curl, runs as the non-root "app" user (uid 1654).
 # Far smaller attack surface and image size than the full aspnet image.
-FROM mcr.microsoft.com/dotnet/aspnet:9.0-noble-chiseled AS final
+FROM mcr.microsoft.com/dotnet/aspnet:10.0-noble-chiseled AS final
 WORKDIR /app
 
 COPY --from=build /app/publish .
