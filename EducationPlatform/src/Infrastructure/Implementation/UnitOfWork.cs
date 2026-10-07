@@ -66,6 +66,7 @@ namespace Infrastructure.Implementation
             try
             {
                 await AddAuditLogsAsync(performedBy);
+                InvalidateChangedUserStatuses();
 
                 changed = await context.SaveChangesAsync();
 
@@ -94,6 +95,36 @@ namespace Infrastructure.Implementation
             await afterCommit.RunAsync();
 
             return changed;
+        }
+
+        /// <summary>
+        /// What the API caches about an account (active, role, token validity) must be dropped when it changes,
+        /// whichever handler changed it, and only once the change is committed.
+        /// </summary>
+        private void InvalidateChangedUserStatuses()
+        {
+            var cache = provider.GetService<Application.Interface.IUserActivityCache>();
+            if (cache == null)
+                return;
+
+            var changedUsers = context.ChangeTracker.Entries<Domain.IdentityManagement.Aggregate.User>()
+                .Where(e => e.State == EntityState.Modified &&
+                            (e.Property(u => u.IsActive).IsModified ||
+                             e.Property(u => u.Role).IsModified ||
+                             e.Property(u => u.TokensValidFrom).IsModified))
+                .Select(e => e.Entity.UserID)
+                .ToList();
+
+            if (changedUsers.Count == 0)
+                return;
+
+            afterCommit.Enqueue(() =>
+            {
+                foreach (var id in changedUsers)
+                    cache.Invalidate(id);
+
+                return Task.CompletedTask;
+            });
         }
 
         private async Task RollbackAsync()

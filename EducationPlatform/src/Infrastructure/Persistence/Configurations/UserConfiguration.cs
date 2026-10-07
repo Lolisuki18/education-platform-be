@@ -45,6 +45,8 @@ namespace Infrastructure.Persistence.Configurations
 
             entity.Property(u => u.DeletedAt);
 
+            entity.Property(u => u.TokensValidFrom);
+
             entity.Property(u => u.IsActive)
                   .HasDefaultValue(true);
 
