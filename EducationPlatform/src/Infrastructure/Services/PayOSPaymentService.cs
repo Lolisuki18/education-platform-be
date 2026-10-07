@@ -83,7 +83,10 @@ namespace Infrastructure.Services
                 return checkoutUrl.GetString()!;
             }
 
-            throw new Exception("Failed to get checkout URL from PayOS");
+            // PayOS answers some refusals (duplicate order code, bad amount) with HTTP 200 and a code/desc: keep them for the log
+            var code = document.RootElement.TryGetProperty("code", out var codeElement) ? codeElement.ToString() : "?";
+            var desc = document.RootElement.TryGetProperty("desc", out var descElement) ? descElement.ToString() : string.Empty;
+            throw new Exception($"Failed to get checkout URL from PayOS (code {code}): {desc}");
         }
 
         private static string GenerateSignature(
