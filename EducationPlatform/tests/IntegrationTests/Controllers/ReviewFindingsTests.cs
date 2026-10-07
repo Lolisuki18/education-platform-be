@@ -784,6 +784,45 @@ namespace IntegrationTests.Controllers
             });
         }
 
+        [Fact]
+        public async Task ACourseCreatedWithMaterialsAndAssignments_ComesBackWithThemForItsTeacher()
+        {
+            var teacher = await CreateAuthenticatedClientAsync("teacher@example.com", "Password123!");
+            var (gradeId, subjectId) = await ExecuteDbContextAsync(async db =>
+                ((await db.Set<Domain.AcademicManagement.Aggregate.Grade>().FirstAsync()).GradeID,
+                 (await db.Set<Domain.AcademicManagement.Aggregate.Subject>().FirstAsync()).SubjectID));
+
+            var fields = new Dictionary<string, string>
+            {
+                { "Title", "Full course" }, { "Description", "d" }, { "Price", "0" }, { "ThumbnailName", "t.png" }, { "Slug", "full-course" },
+                { "Prerequisites", "p" }, { "LearningOutcomes", "l" },
+                { "GradeID", gradeId.ToString() }, { "SubjectID", subjectId.ToString() },
+                { "Chapters[0].Title", "C1" }, { "Chapters[0].Description", "d" }, { "Chapters[0].Order", "1" },
+                { "Chapters[0].Lessons[0].Title", "L1" }, { "Chapters[0].Lessons[0].Objectives", "o" }, { "Chapters[0].Lessons[0].Description", "d" },
+                { "Chapters[0].Lessons[0].VideoUrl", "videos/clip.mp4" }, { "Chapters[0].Lessons[0].Order", "1" },
+                { "Chapters[0].Lessons[0].Materials[0].Name", "Slides" }, { "Chapters[0].Lessons[0].Materials[0].Description", "d" },
+                { "Chapters[0].Lessons[0].Materials[0].Url", "https://example.com/slides.pdf" }, { "Chapters[0].Lessons[0].Materials[0].Type", "2" },
+                { "Chapters[0].Lessons[0].Assignments[0].Title", "Homework" }, { "Chapters[0].Lessons[0].Assignments[0].Description", "d" },
+                { "Chapters[0].Lessons[0].Assignments[0].MaxScore", "10" }
+            };
+
+            var created = await teacher.PostAsync("/api/courses", CreateMultipartFormContent(fields));
+            created.StatusCode.Should().Be(HttpStatusCode.OK, await created.Content.ReadAsStringAsync());
+            var courseId = (await created.Content.ReadFromJsonAsync<ApiResponse<Guid>>())!.Data;
+
+            var detail = await teacher.GetAsync($"/api/courses/{courseId}");
+            detail.StatusCode.Should().Be(HttpStatusCode.OK);
+            var course = (await detail.Content.ReadFromJsonAsync<ApiResponse<CourseDetailDTO>>())!.Data!;
+
+            course.Price.Should().Be(0m);
+            var lesson = course.Chapters.Should().ContainSingle().Which.Lessons.Should().ContainSingle().Which;
+            lesson.Materials.Should().ContainSingle().Which.Name.Should().Be("Slides");
+            lesson.Assignments.Should().ContainSingle().Which.Title.Should().Be("Homework");
+
+            // The owner may watch: a storage path comes back as a signed, expiring link (relative to /media/, like thumbnails)
+            lesson.VideoUrl.Should().StartWith("videos/clip.mp4?exp=").And.Contain("&sig=");
+        }
+
         // ---------- helpers ----------
 
         private async Task<Guid> EnrollStudentAsync()
