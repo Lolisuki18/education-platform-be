@@ -55,15 +55,21 @@ namespace Domain.CourseManagement.Entity
             IEnumerable<string>? options = null,
             bool? trueFalseValue = null)
         {
+            // A true/false question is answered by its value alone: it has no list of answers and no options
+            if (type == QuizType.TrueFalse)
+            {
+                Answer = QuizAnswer.TrueFalse(trueFalseValue ?? false);
+                return;
+            }
+
             if (answers == null || !answers.Any() || options == null || !options.Any())
                 throw new DomainException(
                     "Quiz must have answer and options");
 
             Answer = type switch
             {
-                QuizType.SingleChoice => QuizAnswer.SingleChoice(answers?.FirstOrDefault() ?? "", options),
-                QuizType.MultipleChoice => QuizAnswer.MultipleChoice(answers ?? new List<string>(), options),
-                QuizType.TrueFalse => QuizAnswer.TrueFalse(trueFalseValue ?? false),
+                QuizType.SingleChoice => QuizAnswer.SingleChoice(answers.First(), options),
+                QuizType.MultipleChoice => QuizAnswer.MultipleChoice(answers, options),
 
                 _ => throw new DomainException("Unsupported quiz type")
             };

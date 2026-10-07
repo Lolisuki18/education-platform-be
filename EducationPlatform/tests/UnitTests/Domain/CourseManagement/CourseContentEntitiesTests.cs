@@ -71,10 +71,46 @@ namespace UnitTests.DomainTests.CourseManagement
         {
             var quiz = NewQuiz();
 
-            quiz.AddAnswer(QuizType.TrueFalse, new[] { "x" }, new[] { "True", "False" }, trueFalseValue: true);
+            quiz.AddAnswer(QuizType.TrueFalse, trueFalseValue: true);
 
             quiz.Answer.Type.Should().Be(QuizType.TrueFalse);
             quiz.Answer.CorrectAnswers.Should().Equal("True");
+            quiz.Answer.Options.Should().BeNull();
+        }
+
+        [Fact]
+        public void AddAnswer_TrueFalse_NeedsNeitherAnswersNorOptions_AndIgnoresThemWhenGiven()
+        {
+            var bare = NewQuiz();
+            var padded = NewQuiz();
+
+            bare.AddAnswer(QuizType.TrueFalse, null, null, false);
+            padded.AddAnswer(QuizType.TrueFalse, new[] { "ignored" }, new[] { "ignored" }, false);
+
+            bare.Answer.CorrectAnswers.Should().Equal("False");
+            padded.Answer.CorrectAnswers.Should().Equal("False");
+        }
+
+        [Fact]
+        public void AddAnswer_TrueFalse_WithoutAValue_DefaultsToFalse()
+        {
+            var quiz = NewQuiz();
+
+            quiz.AddAnswer(QuizType.TrueFalse);
+
+            quiz.Answer.CorrectAnswers.Should().Equal("False");
+        }
+
+        [Theory]
+        [InlineData(QuizType.SingleChoice)]
+        [InlineData(QuizType.MultipleChoice)]
+        public void AddAnswer_ChoiceQuestions_StillNeedAnswersAndOptions(QuizType type)
+        {
+            var quiz = NewQuiz();
+
+            ((Action)(() => quiz.AddAnswer(type))).Should().Throw<DomainException>().WithMessage("Quiz must have answer and options");
+            ((Action)(() => quiz.AddAnswer(type, new[] { "a" }))).Should().Throw<DomainException>();
+            ((Action)(() => quiz.AddAnswer(type, null, new[] { "a", "b" }))).Should().Throw<DomainException>();
         }
 
         [Fact]
