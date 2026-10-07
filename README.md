@@ -112,7 +112,12 @@ File trong `Storage/videos` không còn phục vụ công khai. `GET /media/vide
 - `POST /api/auth/forgot-password` `{ "email" }`: gửi mã 6 số (hiệu lực 10 phút, chỉ lưu dạng băm, gửi lại cách nhau ≥ 60 giây). Luôn trả `202` với cùng một nội dung dù email có tồn tại hay không, để không lộ ai đã đăng ký. Chỉ tài khoản đã xác thực, đang hoạt động mới nhận được mã.
 - `POST /api/auth/reset-password` `{ "email", "otp", "newPassword" }`: đặt mật khẩu mới bằng mã trên. Mã dùng một lần; đoán sai nhiều lần thì khoá theo email một thời gian. Thành công thì **đăng xuất mọi thiết bị**.
 - `POST /api/auth/change-password` `{ "currentPassword", "newPassword" }` (cần đăng nhập): đổi mật khẩu, đăng xuất các thiết bị khác và trả token mới cho thiết bị đang dùng. Nhập sai mật khẩu hiện tại nhiều lần thì bị khoá tạm.
-- Lưu ý: access token đã cấp cho các thiết bị khác vẫn dùng được đến khi hết hạn (`JwtSettings:ExpiryMinutes`); refresh token của chúng thì đã bị thu hồi.
+- Mỗi lần kết thúc mọi phiên (đổi / đặt lại mật khẩu, đăng xuất mọi thiết bị, phát hiện dùng lại refresh token, xoá tài khoản) cả **access token đã cấp trước đó cũng bị từ chối ngay** (`401`), không đợi hết hạn: access token mang thời điểm cấp (`iat`) và bị so với cột `Users.TokensValidFrom`. Chỉ so theo giây, nên token cấp trong cùng giây với thao tác vẫn được chấp nhận (token mới của `change-password` cần điều đó). Endpoint `refresh-token` và `logout` được miễn kiểm tra này để client luôn tự phục hồi được.
+- Chủ tài khoản nhận email "Your password was changed" sau mỗi lần đổi hoặc đặt lại mật khẩu, để biết nếu không phải mình làm.
+
+### 🛡️ Sự kiện bảo mật
+
+Các sự kiện sau được ghi log có cấu trúc (`Security event {SecurityEvent}`, mức Warning cho thất bại, email luôn được che) và đếm bằng metric `education.security.events` với tag `event`: `login_failed`, `login_locked_out`, `login_succeeded`, `password_reset_requested`, `password_reset_completed`, `password_reset_failed`, `password_changed`, `password_change_failed`, `account_deleted`, `account_deleted_by_admin`, `account_deletion_refused`, `all_sessions_revoked`. Có thể đặt cảnh báo trên đột biến của `login_failed` / `login_locked_out` (cùng `education.auth.lockouts` và `education.auth.refresh_token_replays` có sẵn). Chỉ tính các lần ứng dụng từ chối, không tính lỗi hạ tầng.
 
 ### 🔒 Dữ liệu cá nhân (xuất dữ liệu & xoá tài khoản)
 

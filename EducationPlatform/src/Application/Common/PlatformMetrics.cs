@@ -40,6 +40,13 @@ namespace Application.Common
         public static readonly Counter<long> RefreshTokenReplays =
             Meter.CreateCounter<long>("education.auth.refresh_token_replays", description: "Replayed refresh tokens detected");
 
+        /// <summary>
+        /// Security-relevant events, tagged <c>event</c> = login_failed | login_locked_out | password_reset_requested |
+        /// password_reset_completed | password_changed | account_deleted | ... (see SecurityEventBehavior).
+        /// </summary>
+        public static readonly Counter<long> SecurityEvents =
+            Meter.CreateCounter<long>("education.security.events", description: "Security-relevant events");
+
         /// <summary>E-mails handed to SMTP, tagged <c>result</c> = sent | failed (failed = gave up after the retries).</summary>
         public static readonly Counter<long> EmailsSent =
             Meter.CreateCounter<long>("education.emails", description: "E-mails processed by the background sender");

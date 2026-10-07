@@ -31,7 +31,7 @@ namespace API.Helpers
                 if (!activityCache.TryGet(userId, out var status))
                 {
                     var user = await unitOfWork.GetRepository<IUserRepository>().GetByIdAsync(userId);
-                    status = new UserStatus(user != null && user.IsActive, user?.Role.ToString() ?? string.Empty);
+                    status = new UserStatus(user != null && user.IsActive, user?.Role.ToString() ?? string.Empty, user?.TokensValidFrom);
 
                     activityCache.Set(userId, status);
                 }
@@ -43,10 +43,19 @@ namespace API.Helpers
                     return;
                 }
 
-                // A role change only reaches a token when it is reissued, so make the client do that now
-                // (except on the endpoints that do the reissuing, or the client could never recover)
                 var allowsStaleRole = context.GetEndpoint()?.Metadata.GetMetadata<AllowStaleRoleAttribute>() != null;
 
+                // Every session was ended (password changed or reset, "log out everywhere", account deleted) after this
+                // token was issued. The endpoints that renew or end a session are exempt, as for the role below.
+                if (!allowsStaleRole && IsIssuedBefore(context, status.TokensValidFrom))
+                {
+                    await WriteProblemAsync(context, HttpStatusCode.Unauthorized, "Unauthorized",
+                        "Your session has ended. Please sign in again.");
+                    return;
+                }
+
+                // A role change only reaches a token when it is reissued, so make the client do that now
+                // (except on the endpoints that do the reissuing, or the client could never recover)
                 if (!allowsStaleRole && !string.Equals(status.Role, currentUser.Role, StringComparison.Ordinal))
                 {
                     await WriteProblemAsync(context, HttpStatusCode.Unauthorized, "Unauthorized",
@@ -56,6 +65,25 @@ namespace API.Helpers
             }
 
             await _next(context);
+        }
+
+        /// <summary>
+        /// True when the token's <c>iat</c> (whole seconds) is earlier than the moment all sessions were ended. A token
+        /// without <c>iat</c> predates the check, so it counts as issued before. Comparing whole seconds means a
+        /// token issued within the same second as the change is still accepted, which is what the fresh token of
+        /// a password change needs.
+        /// </summary>
+        public static bool IsIssuedBefore(HttpContext context, DateTime? validFrom)
+        {
+            if (validFrom == null)
+                return false;
+
+            var issuedAt = context.User.FindFirst("iat")?.Value;
+            if (!long.TryParse(issuedAt, out var issuedAtSeconds))
+                return true;
+
+            var validFromSeconds = new DateTimeOffset(DateTime.SpecifyKind(validFrom.Value, DateTimeKind.Utc)).ToUnixTimeSeconds();
+            return issuedAtSeconds < validFromSeconds;
         }
 
         private static Task WriteProblemAsync(HttpContext context, HttpStatusCode status, string title, string detail)

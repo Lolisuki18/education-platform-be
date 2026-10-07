@@ -18,6 +18,7 @@ namespace Application
                 cfg.RegisterServicesFromAssembly(typeof(ApplicationDI).Assembly);
                 cfg.AddOpenBehavior(typeof(Common.Behaviors.ValidationBehavior<,>));
                 cfg.AddOpenBehavior(typeof(Common.Behaviors.CachingBehavior<,>));
+                cfg.AddOpenBehavior(typeof(Common.Behaviors.SecurityEventBehavior<,>));
             });
 
             // Register FluentValidation
