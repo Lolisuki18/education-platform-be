@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Net.Http.Json;
@@ -643,6 +644,144 @@ namespace IntegrationTests.Controllers
             response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
             (await ExecuteDbContextAsync(db => db.Set<Course>().AsNoTracking().FirstAsync(c => c.CourseID == courseId))).Status
                 .Should().Be(CourseStatus.InReview);
+        }
+
+        // ---------- Read endpoints nobody had called against a real database ----------
+
+        [Fact]
+        public async Task TheRemainingReadEndpoints_Answer()
+        {
+            var student = await CreateAuthenticatedClientAsync("student@example.com", "Password123!");
+            var admin = await CreateAuthenticatedClientAsync("admin@example.com", "Password123!");
+
+            var (courseId, gradeId, subjectId) = await ExecuteDbContextAsync(async db =>
+            {
+                var course = await db.Set<Course>().FirstAsync(c => c.Title == "Math algebra");
+                db.Set<Domain.AcademicManagement.Entity.DefaultLesson>().Add(
+                    new Domain.AcademicManagement.Entity.DefaultLesson(Guid.NewGuid(), "Objectives", "Description", "Intro", course.GradeID, course.SubjectID));
+                await db.SaveChangesAsync();
+                return (course.CourseID, course.GradeID, course.SubjectID);
+            });
+
+            (await student.GetAsync($"/api/orders/course/{courseId}")).StatusCode.Should().Be(HttpStatusCode.OK);
+            (await student.GetAsync("/api/orders/coupons")).StatusCode.Should().Be(HttpStatusCode.OK);
+            (await Client.GetAsync("/api/academic/subjects")).StatusCode.Should().Be(HttpStatusCode.OK);
+            (await admin.GetAsync("/api/academic/subjects?includeInactive=true")).StatusCode.Should().Be(HttpStatusCode.OK);
+            (await admin.GetAsync($"/api/courses/review/{courseId}")).StatusCode.Should().Be(HttpStatusCode.OK);
+
+            var lessons = await Client.GetAsync($"/api/courses/default-lessons?subjectId={subjectId}&gradeId={gradeId}");
+            lessons.StatusCode.Should().Be(HttpStatusCode.OK);
+            (await lessons.Content.ReadAsStringAsync()).Should().Contain("Intro");
+
+            var none = await Client.GetAsync($"/api/courses/default-lessons?subjectId={Guid.NewGuid()}&gradeId={gradeId}");
+            none.StatusCode.Should().Be(HttpStatusCode.OK);
+        }
+
+        [Fact]
+        public async Task AStudentWithManyEnrollments_CanStillReviewAndComplainAboutTheOldestCourse()
+        {
+            var student = await CreateAuthenticatedClientAsync("student@example.com", "Password123!");
+
+            var oldestCourse = await ExecuteDbContextAsync(async db =>
+            {
+                var user = await db.Set<User>().FirstAsync(u => u.Email == "student@example.com");
+                var template = await db.Set<Course>().FirstAsync(c => c.Title == "Math algebra");
+
+                // Enrolled first: with 12 newer enrollments it falls off the first page of any enrollment list
+                db.Set<Enrollment>().Add(new Enrollment(Guid.NewGuid(), user.UserID, template.CourseID, DateTime.UtcNow.AddDays(-100)));
+
+                for (var i = 0; i < 12; i++)
+                {
+                    var course = new Course(Guid.NewGuid(), $"Extra {i}", "d", 1000m, "t.png", $"extra-{i}", "p", "l",
+                        template.TeacherID, template.GradeID, template.SubjectID, null);
+                    course.MarkAsPublished(DateTime.UtcNow);
+                    db.Set<Course>().Add(course);
+                    db.Set<Enrollment>().Add(new Enrollment(Guid.NewGuid(), user.UserID, course.CourseID, DateTime.UtcNow.AddDays(-i)));
+                }
+
+                await db.SaveChangesAsync();
+                return template.CourseID;
+            });
+
+            var review = await student.PostAsJsonAsync($"/api/courses/{oldestCourse}/reviews", new { Rating = 5, Comment = "Still great" });
+            review.StatusCode.Should().Be(HttpStatusCode.OK, await review.Content.ReadAsStringAsync());
+
+            var complaint = await student.PostAsync("/api/courses/complaints", CreateMultipartFormContent(new Dictionary<string, string>
+            {
+                { "CourseId", oldestCourse.ToString() },
+                { "Reason", "The audio is bad" }
+            }));
+            complaint.StatusCode.Should().Be(HttpStatusCode.OK, await complaint.Content.ReadAsStringAsync());
+
+            // ...but not twice while the first one waits for an admin
+            var again = await student.PostAsync("/api/courses/complaints", CreateMultipartFormContent(new Dictionary<string, string>
+            {
+                { "CourseId", oldestCourse.ToString() },
+                { "Reason", "Still bad" }
+            }));
+            again.StatusCode.Should().Be(HttpStatusCode.Conflict);
+        }
+
+        [Fact]
+        public async Task UpheldComplaints_TakeTheCourseDown_AndCompensateTheStudents()
+        {
+            var admin = await CreateAuthenticatedClientAsync("admin@example.com", "Password123!");
+            var first = await CreateAuthenticatedClientAsync("student@example.com", "Password123!");
+
+            var (courseId, teacherId, firstStudent) = await ExecuteDbContextAsync(async db =>
+            {
+                var student = await db.Set<User>().FirstAsync(u => u.Email == "student@example.com");
+                var course = await db.Set<Course>().FirstAsync(c => c.Title == "Math algebra");
+                db.Set<Enrollment>().Add(new Enrollment(Guid.NewGuid(), student.UserID, course.CourseID, null));
+
+                var other = new User(Guid.NewGuid(), "second.student@example.com", "Password123!", "0955555555", "Second Student", null,
+                    Domain.IdentityManagement.Enum.Role.Student, null, true);
+                db.Set<User>().Add(other);
+                await db.SaveChangesAsync();
+                db.Set<Enrollment>().Add(new Enrollment(Guid.NewGuid(), other.UserID, course.CourseID, null));
+                await db.SaveChangesAsync();
+                return (course.CourseID, course.TeacherID, student.UserID);
+            });
+            var second = await CreateAuthenticatedClientAsync("second.student@example.com", "Password123!");
+
+            async Task ComplainAndUpholdAsync(HttpClient who)
+            {
+                (await who.PostAsync("/api/courses/complaints", CreateMultipartFormContent(new Dictionary<string, string>
+                {
+                    { "CourseId", courseId.ToString() }, { "Reason", "Not what was promised" }
+                }))).StatusCode.Should().Be(HttpStatusCode.OK);
+
+                var complaintId = await ExecuteDbContextAsync(async db =>
+                    (await db.Set<Complaint>().Where(c => c.CourseID == courseId && c.Status == ComplaintStatus.Pending).OrderByDescending(c => c.CreatedAt).FirstAsync()).ComplaintID);
+
+                (await admin.PostAsJsonAsync("/api/courses/complaints/review", new { ComplaintID = complaintId, IsApproved = true, AdminNote = "Upheld" }))
+                    .StatusCode.Should().Be(HttpStatusCode.OK);
+            }
+
+            // One upheld complaint: the course is taken down for a revision
+            await ComplainAndUpholdAsync(first);
+            await ExecuteDbContextAsync(async db =>
+            {
+                (await db.Set<Course>().AsNoTracking().FirstAsync(c => c.CourseID == courseId)).Status.Should().Be(CourseStatus.Rejected);
+                (await db.Notifications.Where(n => n.UserID == teacherId).Select(n => n.Title).ToListAsync())
+                    .Should().Contain("Course rejected after a complaint");
+            });
+
+            // A second one: the course is removed, every enrolled student is compensated and the teacher pays
+            await ComplainAndUpholdAsync(second);
+            await ExecuteDbContextAsync(async db =>
+            {
+                var coupons = await db.Coupons.Where(c => c.StudentID != null && c.Code.StartsWith("CMP-")).ToListAsync();
+                coupons.Should().HaveCount(2).And.OnlyContain(c => c.DiscountAmount == 3750m);
+
+                var penalty = await db.Penalties.SingleAsync(p => p.CourseID == courseId);
+                penalty.PenaltyAmount.Should().Be(7500m);
+                penalty.TeacherID.Should().Be(teacherId);
+
+                (await db.Set<Complaint>().AnyAsync(c => c.CourseID == courseId)).Should().BeFalse();
+                (await db.Notifications.Where(n => n.UserID == teacherId).Select(n => n.Title).ToListAsync()).Should().Contain("Course removed");
+                (await db.Notifications.Where(n => n.UserID == firstStudent).Select(n => n.Title).ToListAsync()).Should().Contain("Compensation coupon");
+            });
         }
 
         // ---------- helpers ----------

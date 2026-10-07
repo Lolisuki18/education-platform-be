@@ -87,12 +87,23 @@ namespace Infrastructure.Implementation
 
         public void RemoveComplaints(IEnumerable<Complaint> complaints)
         {
-            foreach (var c in complaints)
+            foreach (var complaint in complaints.ToList())
             {
-                context.Complaints.Attach(c);
-            }
+                // The complaint being reviewed is already tracked, and a second copy of it (the handler reads it again)
+                // cannot be attached: remove the tracked one. Copies read without tracking are attached first.
+                var tracked = context.ChangeTracker.Entries<Complaint>()
+                    .Select(e => e.Entity)
+                    .FirstOrDefault(c => c.ComplaintID == complaint.ComplaintID);
 
-            context.Complaints.RemoveRange(complaints);
+                if (tracked != null)
+                {
+                    context.Complaints.Remove(tracked);
+                    continue;
+                }
+
+                context.Complaints.Attach(complaint);
+                context.Complaints.Remove(complaint);
+            }
         }
     }
 }

@@ -241,6 +241,10 @@ namespace API.Controllers
         [HttpPost("complaints/review")]
         public async Task<ActionResult<ApiResponse<ReviewComplaintResponseDto>>> ReviewComplaint([FromBody] ReviewComplaintRequestDto request)
         {
+            // Upholding the complaint that tips a course over the removal threshold deletes the complaints along with the
+            // course's content, so the reviewed one is read first to still have something to answer with
+            var before = await mediator.Send(new GetComplaintDetailQuery { ComplaintID = request.ComplaintID }, HttpContext.RequestAborted);
+
             await mediator.Send(new ReviewComplaintCommand
             {
                 ComplaintID = request.ComplaintID,
@@ -248,7 +252,11 @@ namespace API.Controllers
                 AdminNote = request.AdminNote
             });
 
-            var response = await BuildComplaintReviewResponse(request.ComplaintID, "Complaint reviewed successfully.");
+            before.Status = request.IsApproved ? Domain.CourseManagement.Enum.ComplaintStatus.Approved : Domain.CourseManagement.Enum.ComplaintStatus.Rejected;
+            before.AdminNote = request.AdminNote;
+            before.ReviewedAt = DateTime.UtcNow;
+
+            var response = await BuildComplaintReviewResponse(request.ComplaintID, "Complaint reviewed successfully.", removedFallback: before);
             return Ok(ApiResponse<ReviewComplaintResponseDto>.Success(response));
         }
 
@@ -273,9 +281,19 @@ namespace API.Controllers
             return Ok(ApiResponse<ReviewCourseResponseDto>.Success(response));
         }
 
-        private async Task<ReviewComplaintResponseDto> BuildComplaintReviewResponse(Guid complaintId, string message)
+        private async Task<ReviewComplaintResponseDto> BuildComplaintReviewResponse(Guid complaintId, string message, ComplaintDetailDTO? removedFallback = null)
         {
-            var complaint = await mediator.Send(new GetComplaintDetailQuery { ComplaintID = complaintId }, HttpContext.RequestAborted);
+            ComplaintDetailDTO complaint;
+            try
+            {
+                complaint = await mediator.Send(new GetComplaintDetailQuery { ComplaintID = complaintId }, HttpContext.RequestAborted);
+            }
+            catch (Application.Exceptions.NotFoundException) when (removedFallback != null)
+            {
+                complaint = removedFallback;
+                message = "Complaint reviewed successfully. The course was removed after repeated complaints.";
+            }
+
             var course = await mediator.Send(new GetCourseDetailQuery { CourseID = complaint.CourseID }, HttpContext.RequestAborted);
 
             return new ReviewComplaintResponseDto
