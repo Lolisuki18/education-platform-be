@@ -53,10 +53,13 @@ namespace Application.Features.Statistics.Queries.GetTeacherSummary
                 .AsNoTracking()
                 .CountAsync(c => c.TeacherID == teacherId, cancellationToken);
 
-            // 2. Active Students (Enrollments on courses created by this teacher)
+            // 2. Students of this teacher: people, not enrollments (one student in three courses counts once)
             var activeStudents = await _context.Enrollments
                 .AsNoTracking()
-                .CountAsync(e => e.Course.TeacherID == teacherId, cancellationToken);
+                .Where(e => e.Course.TeacherID == teacherId)
+                .Select(e => e.StudentID)
+                .Distinct()
+                .CountAsync(cancellationToken);
 
             // 3. Average Rating (from CourseReviews where the course belongs to the teacher)
             var reviewRatings = await _context.CourseReviews

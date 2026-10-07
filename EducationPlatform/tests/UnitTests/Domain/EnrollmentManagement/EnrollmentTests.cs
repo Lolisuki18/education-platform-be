@@ -62,6 +62,7 @@ namespace UnitTests.DomainTests.EnrollmentManagement
             enrollment.CompleteEnrollment(completedAt);
 
             enrollment.CompletedAt.Should().Be(completedAt);
+            enrollment.Status.Should().Be(EnrollmentStatus.Completed);
         }
 
         // ======================= COURSE PROGRESS LOGIC TESTS =======================

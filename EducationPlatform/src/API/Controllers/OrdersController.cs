@@ -69,7 +69,8 @@ namespace API.Controllers
             return Ok(ApiResponse<CourseDetailDTO>.Success(course));
         }
 
-        [Authorize]
+        // Only students can study (the enrollment endpoints are student-only), so anyone else would pay for a course they can never open
+        [Authorize(Roles = "Student")]
         [HttpPost]
         public async Task<ActionResult<ApiResponse<CreateOrderResponseDto>>> CreateOrder([FromBody] CreateOrderRequestDto request)
         {

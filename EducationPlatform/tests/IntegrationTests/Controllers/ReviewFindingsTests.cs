@@ -153,6 +153,36 @@ namespace IntegrationTests.Controllers
         }
 
         [Fact]
+        public async Task FinishingTheLastLesson_CompletesTheEnrollment_AndTheAdminDashboardCountsIt()
+        {
+            var student = await CreateAuthenticatedClientAsync("student@example.com", "Password123!");
+            var enrollmentId = await EnrollStudentAsync();
+
+            // The seeded course has a single lesson
+            (await student.PostAsJsonAsync("/api/enrollments/progress/lesson", new
+            {
+                EnrollmentID = enrollmentId,
+                ChapterID = SeededChapterId,
+                LessonID = SeededLessonId,
+                IsCompleted = true
+            })).StatusCode.Should().Be(HttpStatusCode.OK);
+
+            await ExecuteDbContextAsync(async db =>
+            {
+                var enrollment = await db.Set<Enrollment>().FindAsync(enrollmentId);
+                enrollment!.CompletedAt.Should().NotBeNull();
+                enrollment.Status.Should().Be(Domain.EnrollmentManagement.Enum.EnrollmentStatus.Completed);
+            });
+
+            var admin = await CreateAuthenticatedClientAsync("admin@example.com", "Password123!");
+            var summary = await admin.GetAsync("/api/statistics/summary");
+            summary.StatusCode.Should().Be(HttpStatusCode.OK);
+
+            using var json = System.Text.Json.JsonDocument.Parse(await summary.Content.ReadAsStringAsync());
+            json.RootElement.GetProperty("data").GetProperty("summary").GetProperty("enrollment").GetProperty("completed").GetInt32().Should().Be(1);
+        }
+
+        [Fact]
         public async Task OpeningALesson_WithoutCompletingIt_DoesNotCompleteIt()
         {
             var client = await CreateAuthenticatedClientAsync("student@example.com", "Password123!");
@@ -280,6 +310,20 @@ namespace IntegrationTests.Controllers
 
             response.StatusCode.Should().Be(HttpStatusCode.NotFound);
             (await ExecuteDbContextAsync(db => db.Orders.AnyAsync(o => o.CourseID == inReviewId))).Should().BeFalse();
+        }
+
+        [Theory]
+        [InlineData("teacher@example.com")]
+        [InlineData("admin@example.com")]
+        public async Task OnlyStudentsCanBuyACourse(string email)
+        {
+            var client = await CreateAuthenticatedClientAsync(email, "Password123!");
+            var published = await ExecuteDbContextAsync(async db =>
+                (await db.Set<Course>().FirstAsync(c => c.Title == "Math algebra")).CourseID);
+
+            var response = await client.PostAsJsonAsync("/api/orders", new { CourseId = published });
+
+            response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
         }
 
         // ---------- Deactivated accounts cannot sign in ----------

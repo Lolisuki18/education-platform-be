@@ -127,6 +127,10 @@ Các sự kiện sau được ghi log có cấu trúc (`Security event {Security
 - Không cho xoá khi: còn đơn đang chờ thanh toán, giáo viên còn khoá học đã xuất bản (admin phải gỡ trước), hoặc là admin cuối cùng (HTTP 409).
 - Còn được giữ lại có chủ đích: đơn hàng (nghĩa vụ kế toán), nội dung đánh giá và khiếu nại (hiển thị dưới tên "Deleted user").
 
+### 🧭 Tích hợp frontend
+
+Hình dạng response, luồng token/refresh, upload video theo chunk, tính tiến độ học, thanh toán PayOS và các điểm dễ vấp khác: xem [docs/frontend-integration.md](docs/frontend-integration.md).
+
 ### 🔀 Phiên bản API
 
 Mọi endpoint truy cập được qua cả `/api/...` (như trước đây) và `/api/v1/...`. Swagger chỉ liệt kê các route `/api/v1/...`. Frontend nên chuyển dần sang `/api/v1`.

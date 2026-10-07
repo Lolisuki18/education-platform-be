@@ -97,6 +97,20 @@ namespace UnitTests.Application.Features.Statistics
         }
 
         [Fact]
+        public async Task CountsAStudentOnceEvenWhenTheyTakeSeveralCoursesOfTheTeacher()
+        {
+            var first = AddCourse(_teacherId, "First", CourseStatus.Published);
+            var second = AddCourse(_teacherId, "Second", CourseStatus.Published);
+            var student = Guid.NewGuid();
+            _db.Enrollments.Add(new Enrollment(Guid.NewGuid(), student, first.CourseID, null));
+            _db.Enrollments.Add(new Enrollment(Guid.NewGuid(), student, second.CourseID, null));
+
+            var result = await Run();
+
+            result.ActiveStudents.Should().Be(1);
+        }
+
+        [Fact]
         public async Task AveragesTheRatings_IgnoringDeletedReviewsAndOtherTeachers()
         {
             var mine = AddCourse(_teacherId, "Mine", CourseStatus.Published);

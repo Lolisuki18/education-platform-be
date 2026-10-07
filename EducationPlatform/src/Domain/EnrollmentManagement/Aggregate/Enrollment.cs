@@ -59,6 +59,10 @@ namespace Domain.EnrollmentManagement.Aggregate
         public void CompleteEnrollment(DateTime? completedAt)
         {
             CompletedAt = completedAt ?? DateTime.UtcNow;
+
+            // A revoked enrollment stays revoked; every other one is finished now (the admin dashboard counts this status)
+            if (Status == EnrollmentStatus.Active)
+                Status = EnrollmentStatus.Completed;
         }
         #endregion
     }
