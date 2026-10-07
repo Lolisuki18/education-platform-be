@@ -107,7 +107,7 @@ namespace UnitTests.Application.Features.Identity.Commands
 
         // ------------------------------------------------------------------ reset
 
-        private ResetPasswordCommandHandler ResetHandler() => new(_unitOfWork.Object, _tracker.Object);
+        private ResetPasswordCommandHandler ResetHandler() => new(_unitOfWork.Object, _tracker.Object, _email.Object);
 
         [Fact]
         public async Task Reset_WithTheRightCode_ChangesThePassword_AndClearsTheCounters()
@@ -121,6 +121,7 @@ namespace UnitTests.Application.Features.Identity.Commands
             _unitOfWork.Verify(u => u.CommitAsync(It.IsAny<string?>()), Times.Once);
             _tracker.Verify(t => t.Reset($"reset:{Email}"), Times.Once);
             _tracker.Verify(t => t.Reset(Email), Times.Once);
+            _email.Verify(e => e.SendPasswordChangedEmailAsync(Email), Times.Once);
         }
 
         [Fact]
@@ -135,6 +136,7 @@ namespace UnitTests.Application.Features.Identity.Commands
             await act.Should().ThrowAsync<DomainException>();
             _tracker.Verify(t => t.RegisterFailure($"reset:{Email}"), Times.Once);
             _unitOfWork.Verify(u => u.CommitAsync(It.IsAny<string?>()), Times.Never);
+            _email.Verify(e => e.SendPasswordChangedEmailAsync(It.IsAny<string>()), Times.Never);
         }
 
         [Fact]
@@ -172,7 +174,7 @@ namespace UnitTests.Application.Features.Identity.Commands
 
         // ------------------------------------------------------------------ change
 
-        private ChangePasswordCommandHandler ChangeHandler() => new(_unitOfWork.Object, _currentUser.Object, _tokens.Object, _tracker.Object);
+        private ChangePasswordCommandHandler ChangeHandler() => new(_unitOfWork.Object, _currentUser.Object, _tokens.Object, _tracker.Object, _email.Object);
 
         [Fact]
         public async Task Change_WithTheRightPassword_SignsOutOtherDevices_AndHandsOutFreshTokens()
@@ -191,6 +193,7 @@ namespace UnitTests.Application.Features.Identity.Commands
             user.VerifyLogin(NewPassword).Should().BeTrue();
             user.CanRefresh("other-device").Should().BeFalse();
             user.CanRefresh("fresh-refresh").Should().BeTrue();
+            _email.Verify(e => e.SendPasswordChangedEmailAsync(Email), Times.Once);
         }
 
         [Fact]

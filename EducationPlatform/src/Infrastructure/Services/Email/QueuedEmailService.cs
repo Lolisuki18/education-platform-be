@@ -27,10 +27,34 @@ namespace Infrastructure.Services.Email
             return Task.CompletedTask;
         }
 
+        public Task SendPasswordChangedEmailAsync(string toEmail)
+        {
+            _queue.Enqueue(new EmailMessage(toEmail, "Your password was changed", BuildPasswordChangedTemplate(DateTime.UtcNow)));
+            return Task.CompletedTask;
+        }
+
         public Task SendEmailAsync(string toEmail, string subject, string body)
         {
             _queue.Enqueue(new EmailMessage(toEmail, subject, body));
             return Task.CompletedTask;
+        }
+
+        internal static string BuildPasswordChangedTemplate(DateTime whenUtc)
+        {
+            return $@"
+            <!DOCTYPE html>
+            <html>
+            <body style='font-family:Segoe UI;background:#f9f9f9;padding:40px'>
+                <div style='max-width:600px;margin:auto;background:#fff;
+                            padding:20px;border-radius:10px'>
+                    <h2 style='color:#2a7ae2'>Your password was changed</h2>
+                    <p>The password of your account was changed on {whenUtc:yyyy-MM-dd HH:mm} UTC and you were signed out on all devices.</p>
+                    <p><b>If this was you, nothing more is needed.</b></p>
+                    <p>If it was not you, someone else may have access to your account: use ""Forgot password"" right away
+                       to choose a new password, and contact support.</p>
+                </div>
+            </body>
+            </html>";
         }
 
         internal static string BuildOtpTemplate(string otp, string title = "Verify Your Email", int validMinutes = 5)

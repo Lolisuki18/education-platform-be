@@ -47,6 +47,12 @@ namespace IntegrationTests
             return Task.CompletedTask;
         }
 
+        public Task SendPasswordChangedEmailAsync(string toEmail)
+        {
+            TestEmailCapture.Record(toEmail, "Your password was changed", string.Empty);
+            return Task.CompletedTask;
+        }
+
         public Task SendEmailAsync(string toEmail, string subject, string body)
         {
             TestEmailCapture.Record(toEmail, subject, body);
