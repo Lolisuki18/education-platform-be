@@ -146,13 +146,26 @@ namespace Infrastructure.Implementation
         }
 
 
+        public async Task<Course?> GetCourseForReview(Guid courseId, CancellationToken cancellationToken = default)
+        {
+            return await context.Courses
+                .Include(c => c.Chapters)
+                .FirstOrDefaultAsync(c => c.CourseID == courseId, cancellationToken);
+        }
+
         public async Task ReplaceViolatedPolicies(
             Guid courseId,
             IEnumerable<ViolatedPolicy> newViolatedPolicies,
             CancellationToken cancellationToken = default)
         {
-            if (newViolatedPolicies == null)
-                newViolatedPolicies = Enumerable.Empty<ViolatedPolicy>();
+            // A snapshot: loading the old rows below can add them to a tracked course's own collection
+            newViolatedPolicies = newViolatedPolicies?.ToList() ?? new List<ViolatedPolicy>();
+
+            // An unknown policy id would fail on the foreign key with a 500: it is the caller's mistake
+            var policyIds = newViolatedPolicies.Select(vp => vp.PolicyID).Distinct().ToList();
+            if (policyIds.Count > 0 &&
+                await context.Policies.CountAsync(p => policyIds.Contains(p.PolicyID), cancellationToken) != policyIds.Count)
+                throw new Application.Exceptions.BadRequestException("One or more of the violated policies do not exist.");
 
             // Remove existing policies for the course
             var existingPolicies = await context.ViolatedPolicies

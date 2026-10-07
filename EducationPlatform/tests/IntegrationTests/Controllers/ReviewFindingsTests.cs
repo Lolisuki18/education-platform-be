@@ -528,6 +528,123 @@ namespace IntegrationTests.Controllers
             orders.Should().ContainSingle().Which.CourseTitle.Should().Be("Math algebra");
         }
 
+        // ---------- Course review ----------
+
+        [Fact]
+        public async Task RejectingACourse_KeepsTheAdminsNotesOnTheChaptersThatBrokeAPolicy()
+        {
+            var admin = await CreateAuthenticatedClientAsync("admin@example.com", "Password123!");
+
+            var (courseId, policyId) = await ExecuteDbContextAsync(async db =>
+            {
+                var policy = new Policy(Guid.NewGuid(), "Content Quality Policy");
+                db.Set<Policy>().Add(policy);
+                await db.SaveChangesAsync();
+                return ((await db.Set<Course>().FirstAsync(c => c.Title == "Math algebra")).CourseID, policy.PolicyID);
+            });
+
+            var response = await admin.PostAsJsonAsync("/api/courses/review", new
+            {
+                CourseID = courseId,
+                ViolatedPolicyIDs = new[] { policyId },
+                ViolatedChapters = new[] { new { ViolatedChapterId = SeededChapterId, AdminNote = "The intro video is blank" } },
+                AdminNote = "Please fix the intro"
+            });
+            response.StatusCode.Should().Be(HttpStatusCode.OK, await response.Content.ReadAsStringAsync());
+
+            await ExecuteDbContextAsync(async db =>
+            {
+                var chapter = await db.Set<Chapter>().AsNoTracking().FirstAsync(c => c.ChapterID == SeededChapterId);
+                chapter.IsViolated.Should().BeTrue();
+                chapter.AdminNote.Should().Be("The intro video is blank");
+
+                var course = await db.Set<Course>().AsNoTracking().FirstAsync(c => c.CourseID == courseId);
+                course.Status.Should().Be(CourseStatus.Rejected);
+                course.AdminNote.Should().Be("Please fix the intro");
+            });
+        }
+
+        [Theory]
+        [InlineData(false, "Course approved!")]
+        [InlineData(true, "Course rejected")]
+        public async Task ReviewingACourse_NotifiesItsTeacher(bool reject, string expectedTitle)
+        {
+            var admin = await CreateAuthenticatedClientAsync("admin@example.com", "Password123!");
+
+            var (courseId, teacherId, policyId) = await ExecuteDbContextAsync(async db =>
+            {
+                var policy = new Policy(Guid.NewGuid(), "Content Quality Policy");
+                db.Set<Policy>().Add(policy);
+                await db.SaveChangesAsync();
+                var course = await db.Set<Course>().FirstAsync(c => c.Title == "Math geometry"); // still in review
+                return (course.CourseID, course.TeacherID, policy.PolicyID);
+            });
+
+            var response = await admin.PostAsJsonAsync("/api/courses/review", new
+            {
+                CourseID = courseId,
+                ViolatedPolicyIDs = reject ? new[] { policyId } : Array.Empty<Guid>(),
+                AdminNote = "note"
+            });
+            response.StatusCode.Should().Be(HttpStatusCode.OK, await response.Content.ReadAsStringAsync());
+
+            var titles = await ExecuteDbContextAsync(db => db.Notifications
+                .Where(n => n.UserID == teacherId)
+                .Select(n => n.Title)
+                .ToListAsync());
+
+            titles.Should().Contain(expectedTitle);
+        }
+
+        [Fact]
+        public async Task ReviewingACourseAgain_ReplacesTheEarlierVerdict()
+        {
+            var admin = await CreateAuthenticatedClientAsync("admin@example.com", "Password123!");
+
+            var (courseId, first, second) = await ExecuteDbContextAsync(async db =>
+            {
+                var a = new Policy(Guid.NewGuid(), "Policy A");
+                var b = new Policy(Guid.NewGuid(), "Policy B");
+                db.Set<Policy>().AddRange(a, b);
+                await db.SaveChangesAsync();
+                return ((await db.Set<Course>().FirstAsync(c => c.Title == "Math geometry")).CourseID, a.PolicyID, b.PolicyID);
+            });
+
+            (await admin.PostAsJsonAsync("/api/courses/review", new { CourseID = courseId, ViolatedPolicyIDs = new[] { first, first }, AdminNote = "1" }))
+                .StatusCode.Should().Be(HttpStatusCode.OK);
+            (await admin.PostAsJsonAsync("/api/courses/review", new { CourseID = courseId, ViolatedPolicyIDs = new[] { second }, AdminNote = "2" }))
+                .StatusCode.Should().Be(HttpStatusCode.OK);
+
+            await ExecuteDbContextAsync(async db =>
+            {
+                var violated = await db.Set<ViolatedPolicy>().Where(v => v.CourseID == courseId).Select(v => v.PolicyID).ToListAsync();
+                violated.Should().Equal(second);
+            });
+
+            (await admin.PostAsJsonAsync("/api/courses/review", new { CourseID = courseId, AdminNote = "fixed" }))
+                .StatusCode.Should().Be(HttpStatusCode.OK);
+
+            await ExecuteDbContextAsync(async db =>
+            {
+                (await db.Set<ViolatedPolicy>().AnyAsync(v => v.CourseID == courseId)).Should().BeFalse();
+                (await db.Set<Course>().AsNoTracking().FirstAsync(c => c.CourseID == courseId)).Status.Should().Be(CourseStatus.Published);
+            });
+        }
+
+        [Fact]
+        public async Task AReviewNamingAnUnknownPolicy_IsABadRequest()
+        {
+            var admin = await CreateAuthenticatedClientAsync("admin@example.com", "Password123!");
+            var courseId = await ExecuteDbContextAsync(async db =>
+                (await db.Set<Course>().FirstAsync(c => c.Title == "Math geometry")).CourseID);
+
+            var response = await admin.PostAsJsonAsync("/api/courses/review", new { CourseID = courseId, ViolatedPolicyIDs = new[] { Guid.NewGuid() } });
+
+            response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+            (await ExecuteDbContextAsync(db => db.Set<Course>().AsNoTracking().FirstAsync(c => c.CourseID == courseId))).Status
+                .Should().Be(CourseStatus.InReview);
+        }
+
         // ---------- helpers ----------
 
         private async Task<Guid> EnrollStudentAsync()

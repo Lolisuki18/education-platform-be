@@ -26,7 +26,7 @@ namespace Application.Features.Courses.ReviewCourse
             // ---------- 1. Load the Aggregate ----------
             var course = await _unitOfWork
                 .GetRepository<ICourseRepository>()
-                .GetCourseDetailByID(request.CourseID, cancellationToken);
+                .GetCourseForReview(request.CourseID, cancellationToken);
 
             if (course == null)
                 throw new NotFoundException($"Course with ID: {request.CourseID} is not found");
@@ -38,7 +38,7 @@ namespace Application.Features.Courses.ReviewCourse
 
             // ---------- 3. Delegate ALL business logic to the Domain Aggregate ----------
             var violatedPolicies = course.ReviewCourse(
-                request.ViolatedPolicyIDs,
+                request.ViolatedPolicyIDs?.Distinct().ToList(),
                 violatedChapters,
                 request.AdminNote,
                 _currentUser.Id.Value);
@@ -46,9 +46,8 @@ namespace Application.Features.Courses.ReviewCourse
             // ---------- 4. Persist ----------
             await _unitOfWork.BeginTransactionAsync();
 
-            await _unitOfWork.GetRepository<ICourseRepository>()
-                       .UpdateAsync(course.CourseID, course, cancellationToken);
-
+            // The course was loaded tracked, so its new status, the chapter notes and the pending domain event are
+            // all saved by the commit below
             await _unitOfWork.GetRepository<ICourseRepository>()
                        .ReplaceViolatedPolicies(course.CourseID, violatedPolicies, cancellationToken);
 

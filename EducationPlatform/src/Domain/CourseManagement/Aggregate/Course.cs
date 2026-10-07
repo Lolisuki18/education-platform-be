@@ -186,7 +186,8 @@ namespace Domain.CourseManagement.Aggregate
             }
             AddDomainEvent(new Events.CourseReviewedEvent(CourseID, Title, Status, adminId, TeacherID));
 
-            return violatedPolicies;
+            // A copy: the field itself is the collection EF fills in when it loads the old rows, which must not be mistaken for new ones
+            return violatedPolicies.ToList();
         }
 
         public void RejectByComplaint(string adminNote)

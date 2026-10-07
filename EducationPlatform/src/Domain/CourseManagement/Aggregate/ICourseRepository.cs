@@ -39,6 +39,15 @@ namespace Domain.CourseManagement.Aggregate
             Guid courseId,
             CancellationToken cancellationToken = default);
 
+        /// <summary>
+        /// The course with its chapters, <b>tracked</b>: what an admin review changes (the course, the chapter notes)
+        /// is saved with the unit of work and the domain event the review raises is dispatched. The read models above
+        /// are no-tracking copies, so changes made to them are silently lost.
+        /// </summary>
+        Task<Course?> GetCourseForReview(
+            Guid courseId,
+            CancellationToken cancellationToken = default);
+
 
         Task ReplaceViolatedPolicies(
             Guid courseId,

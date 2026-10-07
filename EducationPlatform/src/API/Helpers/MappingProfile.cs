@@ -9,6 +9,10 @@ namespace API.Helpers
         public MappingProfile()
         {
             CreateMap<ReviewCourseRequestDto, ReviewCourseCommand>();
+
+            // Without this map a review that names violated chapters failed with a 500 (AutoMapper had no rule for the items)
+            CreateMap<ViolatedChapterRequestItem, ViolatedChapterItem>()
+                .ForMember(d => d.AdminNote, opt => opt.MapFrom(s => s.AdminNote ?? string.Empty));
         }
     }
 }
