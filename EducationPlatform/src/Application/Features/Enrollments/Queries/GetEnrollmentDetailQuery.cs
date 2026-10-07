@@ -53,30 +53,51 @@ namespace Application.Features.Enrollments.Queries.GetEnrollmentDetail
 
             var dto = _mapper.Map<EnrollmentDetailDTO>(enrollment);
 
-            // Logic to hide quiz answers from student view
-            if (dto.CourseProgress?.ChapterProgresses != null)
-            {
-                foreach (var chapter in dto.CourseProgress.ChapterProgresses)
-                {
-                    if (chapter.LessonProgresses == null) continue;
-
-                    foreach (var lesson in chapter.LessonProgresses)
-                    {
-                        if (lesson.QuizProgresses == null) continue;
-
-                        foreach (var quizProgress in lesson.QuizProgresses)
-                        {
-                            if (quizProgress.Quiz?.Answer != null)
-                            {
-                                quizProgress.Quiz.Answer.CorrectAnswers = new List<string>();
-                            }
-                        }
-                    }
-                }
-            }
+            HideQuizAnswers(dto);
 
             // The caller owns this enrollment (or is an admin), so they may watch: hand out expiring video links
             return dto.ProtectVideos(_mediaUrlSigner);
+        }
+
+        /// <summary>
+        /// The student needs each question and its options, never the answers. That holds for the quizzes listed under the
+        /// course as well as the ones under the progress: both would give the answers away. The explanation of a
+        /// quiz usually does too, so it is only shown once the student has attempted that quiz.
+        /// </summary>
+        private static void HideQuizAnswers(EnrollmentDetailDTO dto)
+        {
+            var attempted = (dto.CourseProgress?.ChapterProgresses ?? new List<ChapterProgressDTO>())
+                .SelectMany(c => c.LessonProgresses ?? new List<LessonProgressDTO>())
+                .SelectMany(l => l.QuizProgresses ?? new List<QuizProgressDTO>())
+                .Where(q => q.AttemptCount > 0)
+                .Select(q => q.QuizID)
+                .ToHashSet();
+
+            void Hide(QuizDTO? quiz)
+            {
+                if (quiz == null)
+                    return;
+
+                if (quiz.Answer != null)
+                    quiz.Answer.CorrectAnswers = new List<string>();
+
+                if (!attempted.Contains(quiz.QuizID))
+                    quiz.Note = null;
+            }
+
+            foreach (var quiz in (dto.Course?.Chapters ?? new List<ChapterDTO>())
+                         .SelectMany(c => c.Lessons ?? new List<LessonDTO>())
+                         .SelectMany(l => l.Quizzes ?? new List<QuizDTO>()))
+            {
+                Hide(quiz);
+            }
+
+            foreach (var quizProgress in (dto.CourseProgress?.ChapterProgresses ?? new List<ChapterProgressDTO>())
+                         .SelectMany(c => c.LessonProgresses ?? new List<LessonProgressDTO>())
+                         .SelectMany(l => l.QuizProgresses ?? new List<QuizProgressDTO>()))
+            {
+                Hide(quizProgress.Quiz);
+            }
         }
     }
 }

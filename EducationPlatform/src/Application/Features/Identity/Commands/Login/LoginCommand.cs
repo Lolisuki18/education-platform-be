@@ -50,6 +50,11 @@ namespace Application.Features.Identity.Commands.Login
 
             _attemptTracker.Reset(request.Email);
 
+            // The password was right, so saying why the account cannot be used leaks nothing. Without this check a
+            // deactivated account would still receive tokens that are rejected on every request afterwards.
+            if (!user.IsActive)
+                throw new ForbiddenException("Your account is inactive or has been locked.");
+
             // Generate token
             var token = _tokenService.GenerateToken(user);
 

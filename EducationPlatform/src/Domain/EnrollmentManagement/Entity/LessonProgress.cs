@@ -60,27 +60,19 @@ namespace Domain.EnrollmentManagement.Entity
             CompletedAt = DateTime.UtcNow;
         }
 
-        public void RecalculateCompletion()
+        /// <summary>
+        /// A lesson with quizzes is finished once every one of them (not only the ones attempted so far) has been
+        /// answered correctly. A lesson without quizzes is finished only when the student marks it so.
+        /// </summary>
+        public void RecalculateCompletion(int totalQuizzes)
         {
             if (IsCompleted) return;
 
-            if (CalculateCorrectQuizRate() >= 100m)
+            if (totalQuizzes > 0 && quizProgresses.Count(q => q.IsCorrect) >= totalQuizzes)
             {
                 IsCompleted = true;
                 CompletedAt = DateTime.UtcNow;
             }
-        }
-
-        public decimal CalculateCorrectQuizRate()
-        {
-            // No quizzes ? lesson is fully complete
-            if (!quizProgresses.Any())
-                return 100m;
-
-            var total = quizProgresses.Count;
-            var correct = quizProgresses.Count(q => q.IsCorrect);
-
-            return Math.Round((decimal)correct * 100 / total, 2);
         }
 
         public QuizProgress AddQuizProgress(Guid quizId)

@@ -18,6 +18,7 @@ namespace Application.Helpers
         {
             // ----- Identity Domain -----
             CreateMap<User, UserDTO>();
+            CreateMap<User, CourseTeacherDTO>();
 
             // ----- Academic Domain -----
             CreateMap<Subject, SubjectDTO>();

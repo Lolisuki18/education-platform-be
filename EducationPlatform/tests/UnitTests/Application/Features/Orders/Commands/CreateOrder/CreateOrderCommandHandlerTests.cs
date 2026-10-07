@@ -338,9 +338,30 @@ namespace UnitTests.Application.Features.Orders.Commands.CreateOrder
             _mockOrderRepository.Verify(r => r.Add(It.IsAny<Order>()), Times.Once);
         }
 
-        private Course CreateCourseInstance(Guid courseId, decimal priceAmount)
+        [Theory]
+        [InlineData(false)]
+        [InlineData(true)]
+        public async Task Handle_CourseNotPublished_ShouldBehaveAsIfItDidNotExist(bool rejected)
         {
-            return new Course(
+            var studentId = Guid.NewGuid();
+            var courseId = Guid.NewGuid();
+            _mockCurrentUser.Setup(u => u.Id).Returns(studentId);
+
+            var course = CreateCourseInstance(courseId, 100m, published: false);
+            if (rejected)
+                course.MarkAsRejected(DateTime.UtcNow, "Not good enough");
+            _mockCourseRepository.Setup(r => r.GetByIdAsync(courseId)).ReturnsAsync(course);
+
+            Func<Task> act = async () => await _handler.Handle(new CreateOrderCommand { CourseID = courseId }, CancellationToken.None);
+
+            await act.Should().ThrowAsync<NotFoundException>();
+            _mockOrderRepository.Verify(r => r.Add(It.IsAny<Order>()), Times.Never);
+            _mockPaymentService.Verify(p => p.CreatePaymentLinkAsync(It.IsAny<long>(), It.IsAny<decimal>(), It.IsAny<string>()), Times.Never);
+        }
+
+        private Course CreateCourseInstance(Guid courseId, decimal priceAmount, bool published = true)
+        {
+            var course = new Course(
                 courseId,
                 "Purchase Course",
                 "Description",
@@ -354,6 +375,11 @@ namespace UnitTests.Application.Features.Orders.Commands.CreateOrder
                 Guid.NewGuid(),
                 DateTime.UtcNow
             );
+
+            if (published)
+                course.MarkAsPublished(DateTime.UtcNow);
+
+            return course;
         }
     }
 }

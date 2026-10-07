@@ -4,6 +4,17 @@ using Domain.IdentityManagement.Aggregate;
 
 namespace Application.Results
 {
+    /// <summary>
+    /// What anybody who can see a course may know about its teacher. Contact details (e-mail, phone) stay out of
+    /// it because course listings are public; an admin reads the full profile through the user endpoints.
+    /// </summary>
+    public class CourseTeacherDTO
+    {
+        public Guid UserID { get; set; }
+        public string Name { get; set; } = string.Empty;
+        public string? Bio { get; set; }
+    }
+
     // View DTO
     public class CourseDTO
     {
@@ -18,7 +29,7 @@ namespace Application.Results
         public string? LearningOutcomes { get; set; } = string.Empty;
         public DateTime? RejectedAt { get; set; }
         public DateTime? PublishedAt { get; set; }
-        public UserDTO Teacher { get; set; } = new UserDTO();
+        public CourseTeacherDTO Teacher { get; set; } = new CourseTeacherDTO();
         public GradeDTO Grade { get; set; } = new GradeDTO();
         public SubjectDTO Subject { get; set; } = new SubjectDTO();
     }
@@ -37,7 +48,7 @@ namespace Application.Results
         public DateTime? RejectedAt { get; set; }
         public string? AdminNote { get; set; }
         public DateTime? PublishedAt { get; set; }
-        public UserDTO Teacher { get; set; } = new UserDTO();
+        public CourseTeacherDTO Teacher { get; set; } = new CourseTeacherDTO();
         public GradeDTO Grade { get; set; } = new GradeDTO();
         public SubjectDTO Subject { get; set; } = new SubjectDTO();
         public List<ViolatedPolicyDTO> ViolatedPolicies { get; set; } = new List<ViolatedPolicyDTO>();

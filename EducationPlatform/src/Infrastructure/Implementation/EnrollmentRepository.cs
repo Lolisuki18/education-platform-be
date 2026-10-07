@@ -1,4 +1,5 @@
 using System.Text;
+using Application.Exceptions;
 using Domain.Common.Interfaces;
 using Infrastructure.Persistence;
 using Domain.EnrollmentManagement.Aggregate;
@@ -99,22 +100,15 @@ namespace Infrastructure.Implementation
 
         public async Task UpsertLessonProgress(Guid enrollmentId, Guid chapterId, Guid lessonId, bool isCompleted, CancellationToken cancellationToken = default)
         {
-            // Load CourseProgress with ChapterProgresses
-            var cp = await context.CourseProgresses
-                .Include(x => x.ChapterProgresses)
-                    .ThenInclude(chp => chp.LessonProgresses)
-                .FirstOrDefaultAsync(x => x.EnrollmentID == enrollmentId, cancellationToken);
+            var enrollment = await context.Enrollments.FirstOrDefaultAsync(e => e.EnrollmentID == enrollmentId, cancellationToken)
+                ?? throw new NotFoundException("Enrollment not found");
 
-            if (cp == null)
-            {
-                var enrollment = await context.Enrollments.FirstOrDefaultAsync(e => e.EnrollmentID == enrollmentId, cancellationToken);
-                if (enrollment == null) throw new InvalidOperationException("Enrollment not found");
+            // Only lessons the enrolled course really has can be recorded, and progress is measured against all of them
+            var outline = await GetCourseOutline(enrollment.CourseID, cancellationToken);
+            if (!outline.Any(o => o.LessonID == lessonId && o.ChapterID == chapterId))
+                throw new NotFoundException("Lesson not found in this course");
 
-                cp = new CourseProgress(Guid.NewGuid(), enrollmentId);
-                context.CourseProgresses.Add(cp);
-            }
-
-            // Load or create ChapterProgress
+            var cp = await LoadOrCreateCourseProgress(enrollmentId, cancellationToken);
             var chp = cp.ChapterProgresses.FirstOrDefault(x => x.ChapterID == chapterId);
             if (chp == null)
             {
@@ -122,7 +116,6 @@ namespace Infrastructure.Implementation
                 context.ChapterProgresses.Add(chp);
             }
 
-            // Load or create LessonProgress
             var lp = chp.LessonProgresses.FirstOrDefault(x => x.LessonID == lessonId);
             if (lp == null)
             {
@@ -130,21 +123,13 @@ namespace Infrastructure.Implementation
                 context.LessonProgresses.Add(lp);
             }
 
-            // Mark as completed if needed
             if (isCompleted && !lp.IsCompleted)
                 lp.MarkCompleted();
 
-            // Recalculate all progress
-            chp.RecalculateCompletion();
-            cp.RecalculateCompletion();
+            cp.RecalculateCompletion(outline);
 
-            // Update Enrollment CompletedAt if course finished
-            if (cp.IsCompleted)
-            {
-                var enrollment = await context.Enrollments.FirstOrDefaultAsync(e => e.EnrollmentID == enrollmentId, cancellationToken);
-                if (enrollment != null && enrollment.CompletedAt == null)
-                    enrollment.CompleteEnrollment(null);
-            }
+            if (cp.IsCompleted && enrollment.CompletedAt == null)
+                enrollment.CompleteEnrollment(null);
         }
 
         public async Task<(bool isCorrect, List<string> correctAnswers, string explanation)> UpsertQuizProgress(
@@ -155,24 +140,20 @@ namespace Infrastructure.Implementation
             List<string> submittedAnswers,
             CancellationToken cancellationToken = default)
         {
-            // Load CourseProgress
-            var cp = await context.CourseProgresses
-                .Include(x => x.ChapterProgresses)
-                    .ThenInclude(chp => chp.LessonProgresses)
-                        .ThenInclude(lp => lp.QuizProgresses)
-                .FirstOrDefaultAsync(x => x.EnrollmentID == enrollmentId, cancellationToken);
+            var enrollment = await context.Enrollments.FirstOrDefaultAsync(e => e.EnrollmentID == enrollmentId, cancellationToken)
+                ?? throw new NotFoundException("Enrollment not found");
 
-            if (cp == null)
-            {
-                var enrollment = await context.Enrollments.FirstOrDefaultAsync(e => e.EnrollmentID == enrollmentId, cancellationToken);
-                if (enrollment == null)
-                    throw new InvalidOperationException("Enrollment not found");
+            var outline = await GetCourseOutline(enrollment.CourseID, cancellationToken);
+            if (!outline.Any(o => o.LessonID == lessonId && o.ChapterID == chapterId))
+                throw new NotFoundException("Lesson not found in this course");
 
-                cp = new CourseProgress(Guid.NewGuid(), enrollmentId);
-                context.CourseProgresses.Add(cp);
-            }
+            // The quiz must belong to that lesson, otherwise the answer check would work for any quiz on the platform
+            var quiz = await context.Quizzes
+                .Include(q => q.Answer)
+                .FirstOrDefaultAsync(q => q.QuizID == quizId && q.LessonID == lessonId, cancellationToken)
+                ?? throw new NotFoundException("Quiz not found in this lesson");
 
-            // ChapterProgress
+            var cp = await LoadOrCreateCourseProgress(enrollmentId, cancellationToken);
             var chp = cp.ChapterProgresses.FirstOrDefault(x => x.ChapterID == chapterId);
             if (chp == null)
             {
@@ -180,21 +161,12 @@ namespace Infrastructure.Implementation
                 context.ChapterProgresses.Add(chp);
             }
 
-            // LessonProgress
             var lp = chp.LessonProgresses.FirstOrDefault(x => x.LessonID == lessonId);
             if (lp == null)
             {
                 lp = chp.AddLessonProgress(lessonId);
                 context.LessonProgresses.Add(lp);
             }
-
-            // Load Quiz with Answer
-            var quiz = await context.Quizzes
-                .Include(q => q.Answer)
-                .FirstOrDefaultAsync(q => q.QuizID == quizId, cancellationToken);
-
-            if (quiz == null)
-                throw new InvalidOperationException("Quiz not found");
 
             // Normalize submitted answers
             var submitted = submittedAnswers?
@@ -223,7 +195,6 @@ namespace Infrastructure.Implementation
                     submitted.All(correct.Contains);
             }
 
-            // QuizProgress
             var qp = lp.QuizProgresses.FirstOrDefault(x => x.QuizID == quizId);
             if (qp == null)
             {
@@ -233,24 +204,44 @@ namespace Infrastructure.Implementation
 
             qp.RegisterAttempt(isCorrect);
 
-            // Recalculate completion
-            lp.RecalculateCompletion();
-            chp.RecalculateCompletion();
-            cp.RecalculateCompletion();
+            cp.RecalculateCompletion(outline);
 
-            // Mark enrollment completed
-            if (cp.IsCompleted)
-            {
-                var enrollment = await context.Enrollments.FirstOrDefaultAsync(e => e.EnrollmentID == enrollmentId, cancellationToken);
-                if (enrollment != null && enrollment.CompletedAt == null)
-                {
-                    enrollment.GetType()
-                        .GetProperty("CompletedAt")?
-                        .SetValue(enrollment, DateTime.UtcNow);
-                }
-            }
+            if (cp.IsCompleted && enrollment.CompletedAt == null)
+                enrollment.CompleteEnrollment(null);
 
             return (isCorrect, correct, quiz.Note ?? "No explanation provided.");
+        }
+
+        /// <summary>Every lesson the course has (with its chapter and quiz count): the yardstick for progress.</summary>
+        private async Task<List<LessonOutline>> GetCourseOutline(Guid courseId, CancellationToken cancellationToken)
+        {
+            return await (
+                from lesson in context.Lessons.AsNoTracking()
+                join chapter in context.Chapters.AsNoTracking() on lesson.ChapterID equals chapter.ChapterID
+                where chapter.CourseID == courseId
+                select new LessonOutline(
+                    lesson.LessonID,
+                    lesson.ChapterID,
+                    context.Quizzes.Count(q => q.LessonID == lesson.LessonID)))
+                .ToListAsync(cancellationToken);
+        }
+
+        private async Task<CourseProgress> LoadOrCreateCourseProgress(Guid enrollmentId, CancellationToken cancellationToken)
+        {
+            var query = context.CourseProgresses
+                .Include(x => x.ChapterProgresses)
+                    .ThenInclude(chp => chp.LessonProgresses)
+                        .ThenInclude(lp => lp.QuizProgresses)
+                .AsQueryable();
+
+            var cp = await query.FirstOrDefaultAsync(x => x.EnrollmentID == enrollmentId, cancellationToken);
+            if (cp == null)
+            {
+                cp = new CourseProgress(Guid.NewGuid(), enrollmentId);
+                context.CourseProgresses.Add(cp);
+            }
+
+            return cp;
         }
 
         public async Task<Enrollment?> GetEnrollmentStatistic(Guid enrollmentId, CancellationToken cancellationToken = default)

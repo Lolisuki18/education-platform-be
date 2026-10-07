@@ -143,39 +143,38 @@ namespace UnitTests.DomainTests.EnrollmentManagement
         }
 
         [Fact]
-        public void LessonProgress_CalculateCorrectQuizRate_WithNoQuizzes_ShouldReturn100()
+        public void LessonProgress_RecalculateCompletion_WithoutQuizzes_DoesNotCompleteTheLesson()
         {
+            // A lesson without quizzes is finished when the student says so, never by merely being opened
             var lessonProgress = new LessonProgress(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid());
-            lessonProgress.CalculateCorrectQuizRate().Should().Be(100m);
+
+            lessonProgress.RecalculateCompletion(totalQuizzes: 0);
+
+            lessonProgress.IsCompleted.Should().BeFalse();
         }
 
         [Fact]
-        public void LessonProgress_CalculateCorrectQuizRate_WithQuizzes_ShouldReturnCorrectPercentage()
+        public void LessonProgress_RecalculateCompletion_NeedsEveryQuizOfTheLessonToBeCorrect()
         {
             var lessonProgress = new LessonProgress(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid());
             var quiz1 = lessonProgress.AddQuizProgress(Guid.NewGuid());
             var quiz2 = lessonProgress.AddQuizProgress(Guid.NewGuid());
 
-            quiz1.RegisterAttempt(true); // correct
-            quiz2.RegisterAttempt(false); // incorrect
-
-            lessonProgress.CalculateCorrectQuizRate().Should().Be(50m);
-        }
-
-        [Fact]
-        public void LessonProgress_RecalculateCompletion_ShouldMarkCompletedOnlyIfRateIs100()
-        {
-            var lessonProgress = new LessonProgress(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid());
-            var quiz = lessonProgress.AddQuizProgress(Guid.NewGuid());
-
-            // Case 1: Rate is 0% -> Should not complete
-            lessonProgress.RecalculateCompletion();
+            // Case 1: nothing correct yet
+            quiz1.RegisterAttempt(false);
+            lessonProgress.RecalculateCompletion(totalQuizzes: 3);
             lessonProgress.IsCompleted.Should().BeFalse();
 
-            // Case 2: Rate is 100% -> Should complete
-            quiz.RegisterAttempt(true);
-            lessonProgress.RecalculateCompletion();
+            // Case 2: both attempted quizzes are correct, but the lesson has a third one nobody tried
+            quiz1.RegisterAttempt(true);
+            quiz2.RegisterAttempt(true);
+            lessonProgress.RecalculateCompletion(totalQuizzes: 3);
+            lessonProgress.IsCompleted.Should().BeFalse();
+
+            // Case 3: the lesson only has those two quizzes
+            lessonProgress.RecalculateCompletion(totalQuizzes: 2);
             lessonProgress.IsCompleted.Should().BeTrue();
+            lessonProgress.CompletedAt.Should().NotBeNull();
         }
 
         [Fact]
@@ -214,44 +213,88 @@ namespace UnitTests.DomainTests.EnrollmentManagement
             var enrollment = new Enrollment(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), DateTime.UtcNow);
             var progress = enrollment.CourseProgress;
 
-            // Setup: 2 chapters, 3 lessons total
-            var chapter1 = progress.AddChapterProgress(Guid.NewGuid());
-            var chapter2 = progress.AddChapterProgress(Guid.NewGuid());
+            // The course: 2 chapters, 3 lessons
+            var chapterId1 = Guid.NewGuid();
+            var chapterId2 = Guid.NewGuid();
+            var lessonId1_1 = Guid.NewGuid();
+            var lessonId1_2 = Guid.NewGuid();
+            var lessonId2_1 = Guid.NewGuid();
+            var outline = new[]
+            {
+                new LessonOutline(lessonId1_1, chapterId1, 0),
+                new LessonOutline(lessonId1_2, chapterId1, 0),
+                new LessonOutline(lessonId2_1, chapterId2, 0)
+            };
 
-            var lesson1_1 = chapter1.AddLessonProgress(Guid.NewGuid());
-            var lesson1_2 = chapter1.AddLessonProgress(Guid.NewGuid());
-            var lesson2_1 = chapter2.AddLessonProgress(Guid.NewGuid());
-
-            // Add quizzes to prevent automatic completion (since lessons without quizzes are considered complete by default)
-            lesson1_1.AddQuizProgress(Guid.NewGuid());
-            lesson1_2.AddQuizProgress(Guid.NewGuid());
-            lesson2_1.AddQuizProgress(Guid.NewGuid());
+            var chapter1 = progress.AddChapterProgress(chapterId1);
+            var chapter2 = progress.AddChapterProgress(chapterId2);
+            var lesson1_1 = chapter1.AddLessonProgress(lessonId1_1);
+            var lesson1_2 = chapter1.AddLessonProgress(lessonId1_2);
+            var lesson2_1 = chapter2.AddLessonProgress(lessonId2_1);
 
             // Initial: 0 completed lessons -> Rate = 0%
-            progress.RecalculateCompletion();
+            progress.RecalculateCompletion(outline);
             progress.CompletionRate.Should().Be(0m);
             progress.IsCompleted.Should().BeFalse();
 
             // Complete 1 lesson -> Rate = 1/3 * 100 = 33.33%
             lesson1_1.MarkCompleted();
-            progress.RecalculateCompletion();
+            progress.RecalculateCompletion(outline);
             progress.CompletionRate.Should().Be(33.33m);
             progress.IsCompleted.Should().BeFalse();
             chapter1.IsCompleted.Should().BeFalse(); // Not all lessons in chapter 1 are completed
 
             // Complete second lesson in chapter 1 -> Chapter 1 should be completed, Rate = 2/3 * 100 = 66.67%
             lesson1_2.MarkCompleted();
-            progress.RecalculateCompletion();
+            progress.RecalculateCompletion(outline);
             progress.CompletionRate.Should().Be(66.67m);
             progress.IsCompleted.Should().BeFalse();
             chapter1.IsCompleted.Should().BeTrue();
 
             // Complete last lesson in chapter 2 -> Course progress should be fully completed, Rate = 100%
             lesson2_1.MarkCompleted();
-            progress.RecalculateCompletion();
+            progress.RecalculateCompletion(outline);
             progress.CompletionRate.Should().Be(100m);
             progress.IsCompleted.Should().BeTrue();
             chapter2.IsCompleted.Should().BeTrue();
+        }
+
+        [Fact]
+        public void CourseProgress_RecalculateCompletion_CountsLessonsTheStudentHasNotTouched()
+        {
+            var enrollment = new Enrollment(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), DateTime.UtcNow);
+            var progress = enrollment.CourseProgress;
+
+            var chapterId = Guid.NewGuid();
+            var firstLesson = Guid.NewGuid();
+            var outline = new[]
+            {
+                new LessonOutline(firstLesson, chapterId, 0),
+                new LessonOutline(Guid.NewGuid(), chapterId, 0),
+                new LessonOutline(Guid.NewGuid(), chapterId, 0),
+                new LessonOutline(Guid.NewGuid(), chapterId, 0)
+            };
+
+            // Only the first lesson has any progress record at all
+            var chapter = progress.AddChapterProgress(chapterId);
+            chapter.AddLessonProgress(firstLesson).MarkCompleted();
+
+            progress.RecalculateCompletion(outline);
+
+            progress.CompletionRate.Should().Be(25m);
+            progress.IsCompleted.Should().BeFalse();
+            chapter.IsCompleted.Should().BeFalse();
+        }
+
+        [Fact]
+        public void CourseProgress_RecalculateCompletion_OfACourseWithoutLessons_IsNeverComplete()
+        {
+            var enrollment = new Enrollment(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), DateTime.UtcNow);
+
+            enrollment.CourseProgress.RecalculateCompletion(Array.Empty<LessonOutline>());
+
+            enrollment.CourseProgress.CompletionRate.Should().Be(0m);
+            enrollment.CourseProgress.IsCompleted.Should().BeFalse();
         }
     }
 }

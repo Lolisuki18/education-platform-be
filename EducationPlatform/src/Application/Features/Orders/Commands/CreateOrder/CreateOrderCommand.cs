@@ -56,7 +56,8 @@ namespace Application.Features.Orders.Commands.CreateOrder
                 .GetRepository<ICourseRepository>()
                 .GetByIdAsync(request.CourseID, cancellationToken);
 
-            if (course == null)
+            // Only a published course is for sale: one still in review (or rejected) is invisible to students
+            if (course == null || course.Status != Domain.CourseManagement.Enum.CourseStatus.Published)
                 throw new NotFoundException($"Course with ID: {request.CourseID} not found.");
 
             // Check if student is already enrolled in this course

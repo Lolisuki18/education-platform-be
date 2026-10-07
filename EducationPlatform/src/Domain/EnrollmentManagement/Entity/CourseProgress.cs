@@ -42,32 +42,29 @@ namespace Domain.EnrollmentManagement.Entity
             return chapterProgress;
         }
 
-        public void RecalculateCompletion()
+        /// <summary>
+        /// Progress is measured against every lesson the course has, not only the ones the student has touched:
+        /// finishing the first of ten lessons is 10%, not 100%.
+        /// </summary>
+        public void RecalculateCompletion(IReadOnlyCollection<LessonOutline> outline)
         {
-            if (!chapterProgresses.Any())
-            {
-                CompletionRate = 0;
-                IsCompleted = false;
-                return;
-            }
-
             foreach (var chapter in chapterProgresses)
             {
-                chapter.RecalculateCompletion();
+                chapter.RecalculateCompletion(outline);
             }
 
-            var completedLessons = chapterProgresses.Sum(c => c.LessonProgresses.Count(l => l.IsCompleted));
-            var totalLessons = chapterProgresses.Sum(c => c.LessonProgresses.Count);
-
-            if (totalLessons == 0)
+            if (outline.Count == 0)
             {
                 CompletionRate = 0;
                 IsCompleted = false;
                 return;
             }
 
-            CompletionRate = Math.Round((decimal)completedLessons * 100 / totalLessons, 2);
-            IsCompleted = completedLessons == totalLessons;
+            var completedLessons = outline.Count(o => chapterProgresses.Any(c =>
+                c.LessonProgresses.Any(l => l.LessonID == o.LessonID && l.IsCompleted)));
+
+            CompletionRate = Math.Round((decimal)completedLessons * 100 / outline.Count, 2);
+            IsCompleted = completedLessons == outline.Count;
         }
         #endregion
     }

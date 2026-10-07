@@ -50,20 +50,18 @@ namespace Domain.EnrollmentManagement.Entity
             return lessonProgress;
         }
 
-        public void RecalculateCompletion()
+        /// <summary>The chapter is finished when every lesson the course has in it is finished.</summary>
+        public void RecalculateCompletion(IReadOnlyCollection<LessonOutline> outline)
         {
-            if (!lessonProgresses.Any())
-            {
-                IsCompleted = false;
-                return;
-            }
+            var chapterLessons = outline.Where(o => o.ChapterID == ChapterID).ToList();
 
             foreach (var lesson in lessonProgresses)
             {
-                lesson.RecalculateCompletion();
+                lesson.RecalculateCompletion(chapterLessons.FirstOrDefault(o => o.LessonID == lesson.LessonID)?.QuizCount ?? 0);
             }
 
-            IsCompleted = lessonProgresses.All(l => l.IsCompleted);
+            IsCompleted = chapterLessons.Count > 0 &&
+                          chapterLessons.All(o => lessonProgresses.Any(l => l.LessonID == o.LessonID && l.IsCompleted));
         }
     }
 
