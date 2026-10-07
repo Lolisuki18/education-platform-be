@@ -52,8 +52,9 @@ namespace API.ExceptionHandlers
                 problemDetails.Status = (int)HttpStatusCode.NotFound;
                 problemDetails.Title = "Not Found";
             }
-            else if (exception is BadRequestException)
+            else if (exception is BadRequestException or Domain.Exceptions.DomainException)
             {
+                // A broken business rule (wrong code, weak password, invalid state change) is the caller's problem, not a server fault
                 problemDetails.Status = (int)HttpStatusCode.BadRequest;
                 problemDetails.Title = "Bad Request";
             }

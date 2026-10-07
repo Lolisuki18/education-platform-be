@@ -129,6 +129,10 @@ namespace API.Extensions
             {
                 c.SwaggerDoc("v1", new OpenApiInfo { Title = "Education Platform API", Version = "v1" });
                 c.EnableAnnotations();
+
+                var xmlDocs = Path.Combine(AppContext.BaseDirectory, "API.xml");
+                if (File.Exists(xmlDocs))
+                    c.IncludeXmlComments(xmlDocs);
                 c.DocInclusionPredicate((_, api) => api.RelativePath?.StartsWith("api/v1/", StringComparison.OrdinalIgnoreCase) == true);
 
                 // JWT Configuration for Swagger

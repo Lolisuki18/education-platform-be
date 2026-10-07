@@ -12,7 +12,16 @@ namespace IntegrationTests
         private static readonly ConcurrentDictionary<string, string> LastOtpByEmail = new(StringComparer.OrdinalIgnoreCase);
         private static readonly ConcurrentQueue<(string To, string Subject, string Body)> Sent = new();
 
+        private static readonly ConcurrentDictionary<string, string> LastResetOtpByEmail = new(StringComparer.OrdinalIgnoreCase);
+
         public static void RecordOtp(string email, string otp) => LastOtpByEmail[email] = otp;
+
+        public static void RecordResetOtp(string email, string otp) => LastResetOtpByEmail[email] = otp;
+
+        public static string GetResetOtp(string email) =>
+            LastResetOtpByEmail.TryGetValue(email, out var otp)
+                ? otp
+                : throw new InvalidOperationException($"No password reset code was e-mailed to {email}.");
 
         public static void Record(string to, string subject, string body) => Sent.Enqueue((to, subject, body));
 
@@ -29,6 +38,12 @@ namespace IntegrationTests
         public Task SendVerificationEmailAsync(string toEmail, string otp)
         {
             TestEmailCapture.RecordOtp(toEmail, otp);
+            return Task.CompletedTask;
+        }
+
+        public Task SendPasswordResetEmailAsync(string toEmail, string otp)
+        {
+            TestEmailCapture.RecordResetOtp(toEmail, otp);
             return Task.CompletedTask;
         }
 

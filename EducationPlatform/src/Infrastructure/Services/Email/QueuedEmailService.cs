@@ -21,13 +21,19 @@ namespace Infrastructure.Services.Email
             return Task.CompletedTask;
         }
 
+        public Task SendPasswordResetEmailAsync(string toEmail, string otp)
+        {
+            _queue.Enqueue(new EmailMessage(toEmail, "Password Reset", BuildOtpTemplate(otp, "Reset Your Password", 10)));
+            return Task.CompletedTask;
+        }
+
         public Task SendEmailAsync(string toEmail, string subject, string body)
         {
             _queue.Enqueue(new EmailMessage(toEmail, subject, body));
             return Task.CompletedTask;
         }
 
-        internal static string BuildOtpTemplate(string otp)
+        internal static string BuildOtpTemplate(string otp, string title = "Verify Your Email", int validMinutes = 5)
         {
             return $@"
             <!DOCTYPE html>
@@ -35,7 +41,7 @@ namespace Infrastructure.Services.Email
             <body style='font-family:Segoe UI;background:#f9f9f9;padding:40px'>
                 <div style='max-width:600px;margin:auto;background:#fff;
                             padding:20px;border-radius:10px;text-align:center'>
-                    <h2 style='color:#2a7ae2'>Verify Your Email</h2>
+                    <h2 style='color:#2a7ae2'>{title}</h2>
                     <p>Your OTP code:</p>
                     <div style='font-size:24px;font-weight:bold;
                                 padding:10px 20px;
@@ -44,7 +50,7 @@ namespace Infrastructure.Services.Email
                         {otp}
                     </div>
                     <p style='font-size:13px;color:#888'>
-                        This code expires in 5 minutes
+                        This code expires in {validMinutes} minutes
                     </p>
                 </div>
             </body>

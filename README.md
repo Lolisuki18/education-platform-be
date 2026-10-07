@@ -107,6 +107,13 @@ File trong `Storage/videos` không còn phục vụ công khai. `GET /media/vide
 
 `GET /api/notifications?unreadOnly=&pageIndex=&pageSize=`, `GET /api/notifications/unread-count`, `POST /api/notifications/{id}/read`, `POST /api/notifications/read-all`. Thông báo mới cũng được đẩy realtime tới mọi kết nối `/courseHub` của người nhận qua sự kiện `Notification`. Tắt email đi kèm bằng `Notifications:EmailEnabled=false`. Thông báo tự xoá sau `Retention:NotificationDays` ngày.
 
+### 🔐 Quên mật khẩu & đổi mật khẩu
+
+- `POST /api/auth/forgot-password` `{ "email" }`: gửi mã 6 số (hiệu lực 10 phút, chỉ lưu dạng băm, gửi lại cách nhau ≥ 60 giây). Luôn trả `202` với cùng một nội dung dù email có tồn tại hay không, để không lộ ai đã đăng ký. Chỉ tài khoản đã xác thực, đang hoạt động mới nhận được mã.
+- `POST /api/auth/reset-password` `{ "email", "otp", "newPassword" }`: đặt mật khẩu mới bằng mã trên. Mã dùng một lần; đoán sai nhiều lần thì khoá theo email một thời gian. Thành công thì **đăng xuất mọi thiết bị**.
+- `POST /api/auth/change-password` `{ "currentPassword", "newPassword" }` (cần đăng nhập): đổi mật khẩu, đăng xuất các thiết bị khác và trả token mới cho thiết bị đang dùng. Nhập sai mật khẩu hiện tại nhiều lần thì bị khoá tạm.
+- Lưu ý: access token đã cấp cho các thiết bị khác vẫn dùng được đến khi hết hạn (`JwtSettings:ExpiryMinutes`); refresh token của chúng thì đã bị thu hồi.
+
 ### 🔒 Dữ liệu cá nhân (xuất dữ liệu & xoá tài khoản)
 
 - `GET /api/user/me/export`: tải bản sao dữ liệu của chính mình (hồ sơ, ghi danh, đơn hàng, đánh giá, khiếu nại, thông báo, khoá học đang dạy) dưới dạng JSON. Không bao giờ có hash mật khẩu, mã OTP hay token.

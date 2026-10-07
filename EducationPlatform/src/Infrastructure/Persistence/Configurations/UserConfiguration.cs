@@ -37,6 +37,10 @@ namespace Infrastructure.Persistence.Configurations
 
             entity.Property(u => u.EmailOtpExpiresAt);
 
+            entity.Property(u => u.PasswordResetOtp);
+
+            entity.Property(u => u.PasswordResetOtpExpiresAt);
+
             entity.Property(u => u.CreatedAt);
 
             entity.Property(u => u.DeletedAt);

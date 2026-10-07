@@ -18,6 +18,9 @@ if (args.Contains("--healthcheck"))
 
 var builder = WebApplication.CreateBuilder(args);
 
+// The server software and version are nobody's business
+builder.WebHost.ConfigureKestrel(options => options.AddServerHeader = false);
+
 // 1. Core Configuration
 AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
 
@@ -109,6 +112,7 @@ if (app.Configuration.GetValue("Database:AutoMigrate", true))
 // 7. Middleware Pipeline
 app.UseForwardedHeaders();
 app.UseMiddleware<CorrelationIdMiddleware>();
+app.UseMiddleware<SecurityHeadersMiddleware>();
 app.UseSerilogRequestLogging();
 
 app.UseExceptionHandler();

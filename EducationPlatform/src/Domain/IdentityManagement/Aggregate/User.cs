@@ -25,6 +25,8 @@ namespace Domain.IdentityManagement.Aggregate
         public bool IsVerified { get; private set; }
         public string? EmailOtp { get; private set; }
         public DateTime? EmailOtpExpiresAt { get; private set; }
+        public string? PasswordResetOtp { get; private set; }
+        public DateTime? PasswordResetOtpExpiresAt { get; private set; }
         public bool IsActive { get; private set; }
         public DateTime CreatedAt { get; private set; }
         /// <summary>When the account was erased. The row stays (orders and enrollments point to it) but holds no personal data.</summary>
@@ -162,6 +164,85 @@ namespace Domain.IdentityManagement.Aggregate
             Role = role;
         }
 
+        /// <summary>Only verified, active and not erased accounts can recover their password by e-mail.</summary>
+        public bool CanResetPassword => IsVerified && IsActive && !IsDeleted;
+
+        /// <summary>
+        /// Creates a one-time code for "forgot password" and returns it so it can be e-mailed. Like the
+        /// verification code it is stored hashed, and it is a separate secret so one cannot be used for the other.
+        /// </summary>
+        public string GeneratePasswordResetOtp(TimeSpan lifetime)
+        {
+            if (!CanResetPassword)
+                throw new DomainException("This account cannot reset its password.");
+
+            var otp = System.Security.Cryptography.RandomNumberGenerator.GetInt32(100000, 999999).ToString();
+
+            PasswordResetOtp = HashResetOtp(otp);
+            PasswordResetOtpExpiresAt = DateTime.UtcNow.Add(lifetime);
+
+            return otp;
+        }
+
+        /// <summary>False while the last reset code is still younger than <paramref name="cooldown"/>.</summary>
+        public bool CanRequestPasswordReset(TimeSpan lifetime, TimeSpan cooldown)
+        {
+            if (PasswordResetOtpExpiresAt == null)
+                return true;
+
+            var generatedAt = PasswordResetOtpExpiresAt.Value - lifetime;
+            return DateTime.UtcNow - generatedAt >= cooldown;
+        }
+
+        /// <summary>
+        /// Sets a new password when <paramref name="otp"/> is the code that was e-mailed. Every session is
+        /// revoked: whoever knew the old password (or stole a token) must sign in again.
+        /// </summary>
+        public void ResetPassword(string otp, string newPlainPassword)
+        {
+            // One message for every failure, so a caller cannot tell "no code was requested" from "wrong code"
+            const string invalid = "Invalid or expired code.";
+
+            if (!CanResetPassword || PasswordResetOtp == null || PasswordResetOtpExpiresAt == null)
+                throw new DomainException(invalid);
+
+            if (DateTime.UtcNow > PasswordResetOtpExpiresAt)
+                throw new DomainException(invalid);
+
+            var expected = System.Text.Encoding.UTF8.GetBytes(PasswordResetOtp);
+            var actual = System.Text.Encoding.UTF8.GetBytes(HashResetOtp(otp ?? string.Empty));
+            if (!System.Security.Cryptography.CryptographicOperations.FixedTimeEquals(expected, actual))
+                throw new DomainException(invalid);
+
+            Password = Password.Create(newPlainPassword);
+            PasswordResetOtp = null;
+            PasswordResetOtpExpiresAt = null;
+            RevokeAllRefreshTokens();
+        }
+
+        /// <summary>Changes the password of a signed-in user. Every session is revoked; the caller starts a new one.</summary>
+        public void ChangePassword(string currentPlainPassword, string newPlainPassword)
+        {
+            if (!Password.Verify(currentPlainPassword))
+                throw new DomainException("The current password is incorrect.");
+
+            if (Password.Verify(newPlainPassword))
+                throw new DomainException("The new password must be different from the current one.");
+
+            Password = Password.Create(newPlainPassword);
+            PasswordResetOtp = null;
+            PasswordResetOtpExpiresAt = null;
+            RevokeAllRefreshTokens();
+        }
+
+        private string HashResetOtp(string otp)
+        {
+            // A different purpose string, so a verification code never matches a reset code
+            var bytes = System.Security.Cryptography.SHA256.HashData(
+                System.Text.Encoding.UTF8.GetBytes($"{UserID:N}:reset:{otp}"));
+            return Convert.ToHexString(bytes);
+        }
+
         private string HashOtp(string otp)
         {
             // Bound to the user so identical codes of different users do not share a hash
@@ -278,6 +359,8 @@ namespace Domain.IdentityManagement.Aggregate
             Bio = null;
             EmailOtp = null;
             EmailOtpExpiresAt = null;
+            PasswordResetOtp = null;
+            PasswordResetOtpExpiresAt = null;
 
             // Nobody knows this password, so the credentials of the old account are gone for good
             Password = Password.Create($"{Guid.NewGuid():N}Aa1");

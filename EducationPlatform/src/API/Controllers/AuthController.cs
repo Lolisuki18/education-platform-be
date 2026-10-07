@@ -11,7 +11,10 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.AspNetCore.RateLimiting;
+using Application.Features.Identity.Commands.ChangePassword;
+using Application.Features.Identity.Commands.ForgotPassword;
 using Application.Features.Identity.Commands.Login;
+using Application.Features.Identity.Commands.ResetPassword;
 using Application.Features.Identity.Commands.Register;
 using Application.Features.Identity.Commands.VerifyEmail;
 using Application.Features.Identity.Commands.RefreshToken;
@@ -82,6 +85,50 @@ namespace API.Controllers
                 Otp = request.Otp
             });
             return Ok(ApiResponse.Success("Email verified successfully."));
+        }
+
+        /// <summary>Sends a 6-digit code to the e-mail address when it belongs to an account. The answer never says whether it does.</summary>
+        [EnableRateLimiting(RateLimitPolicies.PasswordReset)]
+        [AllowAnonymous]
+        [HttpPost("forgot-password")]
+        public async Task<ActionResult<ApiResponse>> ForgotPassword([FromBody] ForgotPasswordRequestDto request)
+        {
+            await mediator.Send(new ForgotPasswordCommand { Email = request.Email });
+            return Accepted(ApiResponse.Success("If the email belongs to an account, a verification code has been sent.", 202));
+        }
+
+        /// <summary>Sets a new password with the code from "forgot-password". Every device is signed out.</summary>
+        [EnableRateLimiting(RateLimitPolicies.VerifyEmail)]
+        [AllowAnonymous]
+        [HttpPost("reset-password")]
+        public async Task<ActionResult<ApiResponse>> ResetPassword([FromBody] ResetPasswordRequestDto request)
+        {
+            await mediator.Send(new ResetPasswordCommand
+            {
+                Email = request.Email,
+                Otp = request.Otp,
+                NewPassword = request.NewPassword
+            });
+            return Ok(ApiResponse.Success("Password has been reset. Please sign in with the new password."));
+        }
+
+        /// <summary>Changes the password of the signed-in user. Other devices are signed out; the response holds new tokens for this one.</summary>
+        [EnableRateLimiting(RateLimitPolicies.Account)]
+        [Authorize]
+        [HttpPost("change-password")]
+        public async Task<ActionResult<ApiResponse<LoginResponseDto>>> ChangePassword([FromBody] ChangePasswordRequestDto request)
+        {
+            var token = await mediator.Send(new ChangePasswordCommand
+            {
+                CurrentPassword = request.CurrentPassword,
+                NewPassword = request.NewPassword
+            });
+
+            return Ok(ApiResponse<LoginResponseDto>.Success(new LoginResponseDto
+            {
+                AccessToken = token.Token,
+                RefreshToken = token.RefreshToken
+            }, "Password changed successfully"));
         }
 
         [AllowStaleRole]

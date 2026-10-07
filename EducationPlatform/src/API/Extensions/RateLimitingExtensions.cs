@@ -15,6 +15,7 @@ namespace API.Extensions
         public const string RefreshToken = "refresh-token";
         public const string Upload = "upload";
         public const string Account = "account";
+        public const string PasswordReset = "password-reset";
     }
 
     public class RateLimitingOptions
@@ -65,6 +66,10 @@ namespace API.Extensions
 
                 options.AddPolicy(RateLimitPolicies.RefreshToken, context =>
                     Partition(IsEnabled(context), ClientKey(context), 30, TimeSpan.FromMinutes(1)));
+
+                // "Forgot password" sends an e-mail, so it is limited like registration
+                options.AddPolicy(RateLimitPolicies.PasswordReset, context =>
+                    Partition(IsEnabled(context), ClientKey(context), 5, TimeSpan.FromMinutes(10)));
 
                 // Re-entering the password to delete an account, and the personal data download
                 options.AddPolicy(RateLimitPolicies.Account, context =>
