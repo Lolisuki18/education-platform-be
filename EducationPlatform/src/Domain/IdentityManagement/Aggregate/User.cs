@@ -31,6 +31,8 @@ namespace Domain.IdentityManagement.Aggregate
         public DateTime CreatedAt { get; private set; }
         /// <summary>When the account was erased. The row stays (orders and enrollments point to it) but holds no personal data.</summary>
         public DateTime? DeletedAt { get; private set; }
+        /// <summary>Access tokens issued before this moment are no longer accepted (set whenever all sessions are revoked).</summary>
+        public DateTime? TokensValidFrom { get; private set; }
         public bool IsDeleted => DeletedAt.HasValue;
         public IReadOnlyCollection<RefreshSession> RefreshSessions => _refreshSessions.AsReadOnly();
         #endregion
@@ -315,10 +317,16 @@ namespace Domain.IdentityManagement.Aggregate
             return true;
         }
 
+        /// <summary>
+        /// Ends every session. Refresh tokens are revoked, and access tokens issued until now stop working too,
+        /// otherwise a stolen access token would outlive a password change or a "log out everywhere".
+        /// </summary>
         public void RevokeAllRefreshTokens()
         {
             foreach (var session in _refreshSessions)
                 session.Revoke();
+
+            TokensValidFrom = DateTime.UtcNow;
         }
 
         public void UpdateProfile(string? name, string? phone, string? bio)

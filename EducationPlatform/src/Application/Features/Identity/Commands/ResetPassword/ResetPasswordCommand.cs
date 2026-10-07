@@ -37,11 +37,13 @@ namespace Application.Features.Identity.Commands.ResetPassword
     {
         private readonly IUnitOfWork _unitOfWork;
         private readonly ILoginAttemptTracker _attemptTracker;
+        private readonly IEmailService _emailService;
 
-        public ResetPasswordCommandHandler(IUnitOfWork unitOfWork, ILoginAttemptTracker attemptTracker)
+        public ResetPasswordCommandHandler(IUnitOfWork unitOfWork, ILoginAttemptTracker attemptTracker, IEmailService emailService)
         {
             _unitOfWork = unitOfWork;
             _attemptTracker = attemptTracker;
+            _emailService = emailService;
         }
 
         public async Task<Unit> Handle(ResetPasswordCommand request, CancellationToken cancellationToken)
@@ -78,6 +80,9 @@ namespace Application.Features.Identity.Commands.ResetPassword
 
             // Failed sign-ins before the reset must not keep a person who just proved ownership of the mailbox locked out
             _attemptTracker.Reset(request.Email);
+
+            // The owner of the mailbox learns about it, which matters most when the reset was not theirs
+            await _emailService.SendPasswordChangedEmailAsync(user.Email);
 
             return Unit.Value;
         }

@@ -38,13 +38,16 @@ namespace Application.Features.Identity.Commands.ChangePassword
         private readonly ICurrentUser _currentUser;
         private readonly ITokenService _tokenService;
         private readonly ILoginAttemptTracker _attemptTracker;
+        private readonly IEmailService _emailService;
 
         public ChangePasswordCommandHandler(
             IUnitOfWork unitOfWork,
             ICurrentUser currentUser,
             ITokenService tokenService,
-            ILoginAttemptTracker attemptTracker)
+            ILoginAttemptTracker attemptTracker,
+            IEmailService emailService)
         {
+            _emailService = emailService;
             _unitOfWork = unitOfWork;
             _currentUser = currentUser;
             _tokenService = tokenService;
@@ -81,6 +84,8 @@ namespace Application.Features.Identity.Commands.ChangePassword
 
             await _unitOfWork.BeginTransactionAsync();
             await _unitOfWork.CommitAsync(user.UserID.ToString());
+
+            await _emailService.SendPasswordChangedEmailAsync(user.Email);
 
             return new TokenDTO
             {
