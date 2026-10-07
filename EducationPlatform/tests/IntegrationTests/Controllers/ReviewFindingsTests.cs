@@ -384,6 +384,65 @@ namespace IntegrationTests.Controllers
             response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
         }
 
+        // ---------- Chunked video upload ----------
+
+        private static readonly byte[] Mp4Header = { 0, 0, 0, 0x18, 0x66, 0x74, 0x79, 0x70, 0x69, 0x73, 0x6F, 0x6D };
+
+        private async Task<HttpResponseMessage> SendChunkAsync(HttpClient client, string uploadId, int index, byte[] bytes, string fileName = "blob")
+        {
+            var content = new MultipartFormDataContent
+            {
+                { new StringContent(uploadId), "UploadId" },
+                { new StringContent(index.ToString()), "Index" }
+            };
+            content.Add(new ByteArrayContent(bytes), "Chunk", fileName);
+            return await client.PostAsync("/api/courses/upload-chunk", content);
+        }
+
+        private static async Task<HttpResponseMessage> CompleteUploadAsync(HttpClient client, string uploadId) =>
+            await client.PostAsync("/api/courses/complete-upload", new MultipartFormDataContent
+            {
+                { new StringContent(uploadId), "UploadId" },
+                { new StringContent("mp4"), "Extension" }
+            });
+
+        [Fact]
+        public async Task AVideo_SentInSeveralChunks_CanBeUploaded()
+        {
+            var teacher = await CreateAuthenticatedClientAsync("teacher@example.com", "Password123!");
+            var uploadId = Guid.NewGuid().ToString();
+
+            // Only the first chunk of a video starts with the file signature; the others are raw slices of it
+            (await SendChunkAsync(teacher, uploadId, 0, Mp4Header.Concat(new byte[] { 1, 2, 3 }).ToArray())).StatusCode.Should().Be(HttpStatusCode.OK);
+            (await SendChunkAsync(teacher, uploadId, 1, new byte[] { 9, 8, 7, 6, 5, 4 })).StatusCode.Should().Be(HttpStatusCode.OK);
+            (await SendChunkAsync(teacher, uploadId, 2, new byte[] { 0x25, 0x50, 0x44, 0x46, 1 })).StatusCode.Should().Be(HttpStatusCode.OK);
+
+            var complete = await CompleteUploadAsync(teacher, uploadId);
+
+            complete.StatusCode.Should().Be(HttpStatusCode.OK, await complete.Content.ReadAsStringAsync());
+            (await complete.Content.ReadAsStringAsync()).Should().Contain($"videos/{uploadId}.mp4");
+        }
+
+        [Fact]
+        public async Task ACourseThumbnail_MustBeAnImage()
+        {
+            var teacher = await CreateAuthenticatedClientAsync("teacher@example.com", "Password123!");
+            var (gradeId, subjectId) = await ExecuteDbContextAsync(async db =>
+                ((await db.Set<Domain.AcademicManagement.Aggregate.Grade>().FirstAsync()).GradeID,
+                 (await db.Set<Domain.AcademicManagement.Aggregate.Subject>().FirstAsync()).SubjectID));
+
+            var content = CreateMultipartFormContent(new System.Collections.Generic.Dictionary<string, string>
+            {
+                { "Title", "Zip thumbnail" }, { "Description", "d" }, { "Price", "1000" }, { "Slug", "zip-thumb" },
+                { "Prerequisites", "p" }, { "LearningOutcomes", "l" },
+                { "GradeID", gradeId.ToString() }, { "SubjectID", subjectId.ToString() }
+            }, new byte[] { 0x50, 0x4B, 0x03, 0x04, 0, 0, 0, 0 }, "ThumbnailFile", "payload.zip", "application/zip");
+
+            var response = await teacher.PostAsync("/api/courses", content);
+
+            response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        }
+
         // ---------- helpers ----------
 
         private async Task<Guid> EnrollStudentAsync()

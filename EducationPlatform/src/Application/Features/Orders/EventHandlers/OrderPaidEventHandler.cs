@@ -64,7 +64,9 @@ namespace Application.Features.Orders.EventHandlers
                 {
                     var frontendUrl = _payOSOptions.FrontendUrl.TrimEnd('/');
                     string subject = "Payment Confirmation - " + course.Title;
-                    string amountStr = (course.Price?.Amount ?? 0).ToString("N0") + " VND";
+
+                    // What the student actually paid (coupons included), not the list price of the course
+                    string amountStr = order.TotalAmount.ToString("N0") + " VND";
                     string body = BuildPaymentSuccessEmailBody(student.Name, course.Title, order.OrderCode.ToString(), amountStr, frontendUrl);
                     var studentEmail = student.Email;
 
@@ -80,6 +82,10 @@ namespace Application.Features.Orders.EventHandlers
 
         private static string BuildPaymentSuccessEmailBody(string studentName, string courseTitle, string orderCode, string amount, string frontendUrl)
         {
+            // The name is typed by the student and the title by a teacher: neither may inject markup into the mail
+            studentName = System.Net.WebUtility.HtmlEncode(studentName);
+            courseTitle = System.Net.WebUtility.HtmlEncode(courseTitle);
+
             return $@"
             <!DOCTYPE html>
             <html>

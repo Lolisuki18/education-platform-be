@@ -41,6 +41,11 @@ namespace Application.Features.Courses.CreateCourse
             {
                 var length = request.ThumbnailFileStream.CanSeek ? request.ThumbnailFileStream.Length : 0;
                 var ext = "." + request.ThumbnailFileExtension.TrimStart('.').ToLowerInvariant();
+
+                // Thumbnails are served publicly: anything but a picture would turn the platform into a file host
+                if (ext is not (".jpg" or ".jpeg" or ".png"))
+                    throw new BadRequestException("Thumbnail must be an image (.jpg, .jpeg, .png).");
+
                 Application.Helpers.FileValidator.Validate(request.ThumbnailFileStream, length, "thumbnail" + ext);
 
                 thumbnailName = await _storageService.SaveAsync(

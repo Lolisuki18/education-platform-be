@@ -52,5 +52,30 @@ namespace Application.Helpers
                 }
             }
         }
+
+        /// <summary>
+        /// True when the first bytes of a finished upload are those of the video container its extension claims:
+        /// MP4/MOV have an atom name (usually <c>ftyp</c>) at offset 4, WebM/MKV start with the EBML marker.
+        /// Only the whole file can be judged this way; a single chunk is an arbitrary slice of it.
+        /// </summary>
+        public static bool HasVideoSignature(ReadOnlySpan<byte> header, string extension)
+        {
+            switch (extension.TrimStart('.').ToLowerInvariant())
+            {
+                case "mp4":
+                case "mov":
+                    if (header.Length < 8)
+                        return false;
+                    var atom = System.Text.Encoding.ASCII.GetString(header.Slice(4, 4));
+                    return atom is "ftyp" or "moov" or "mdat" or "wide" or "free" or "skip" or "pnot";
+
+                case "webm":
+                case "mkv":
+                    return header.Length >= 4 && header[0] == 0x1A && header[1] == 0x45 && header[2] == 0xDF && header[3] == 0xA3;
+
+                default:
+                    return false;
+            }
+        }
     }
 }

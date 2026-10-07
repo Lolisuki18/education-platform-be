@@ -62,6 +62,7 @@ namespace Application.Features.Courses.Queries.GetLandingPage
 
             var courses = await coursesQuery
                 .OrderByDescending(c => c.PublishedAt)
+                .ThenBy(c => c.CourseID) // courses approved in the same instant must still page deterministically
                 .Skip((request.PageIndex - 1) * request.PageSize)
                 .Take(request.PageSize)
                 .ProjectTo<CourseDTO>(_mapper.ConfigurationProvider)

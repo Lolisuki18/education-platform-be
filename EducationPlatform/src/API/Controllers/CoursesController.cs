@@ -157,8 +157,9 @@ namespace API.Controllers
             if (request.Chunk == null || request.Chunk.Length == 0)
                 return BadRequest(ApiResponse.Error("Empty chunk"));
 
+            // A chunk is an arbitrary slice of the video, so its name and bytes say nothing about the file type:
+            // size, ownership and count are enforced by the storage service, the video itself when the upload completes
             await using var stream = request.Chunk.OpenReadStream();
-            Application.Helpers.FileValidator.Validate(stream, request.Chunk.Length, request.Chunk.FileName);
             await storageService.SaveChunkAsync(stream, request.UploadId, request.Index, currentUser.Id!.Value, ct);
 
             return Ok(ApiResponse.Success("Chunk uploaded successfully."));
@@ -171,7 +172,6 @@ namespace API.Controllers
             CancellationToken ct)
         {
             var path = await storageService.CompleteUploadAsync(request.UploadId, request.Extension, currentUser.Id!.Value, ct);
-            var fullPath = storageService.GetFullPath(path);
 
             return Ok(ApiResponse<object>.Success(new
             {

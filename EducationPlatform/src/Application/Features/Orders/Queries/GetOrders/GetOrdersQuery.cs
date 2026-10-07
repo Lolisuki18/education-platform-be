@@ -64,8 +64,9 @@ namespace Application.Features.Orders.Queries.GetOrders
                     teacherId,
                     studentId, cancellationToken);
 
+            // No orders (yet) is a normal answer for a list, not an error: a new student must get an empty page
             if (list == null || !list.Any())
-                throw new NotFoundException("Order list is not found or empty");
+                return new List<OrderDTO>();
 
             var orders = _mapper.Map<IEnumerable<OrderDTO>>(list).ToList();
 

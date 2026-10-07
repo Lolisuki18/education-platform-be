@@ -213,6 +213,27 @@ namespace Infrastructure.Services
             );
 
             var finalFullPath = Path.Combine(root, finalRelativePath);
+
+            var chunks = Directory
+                .EnumerateFiles(tempDir)
+                .Select(f => new { Path = f, FileName = Path.GetFileName(f) })
+                .Where(x => int.TryParse(x.FileName, out _))
+                .OrderBy(x => int.Parse(x.FileName))
+                .Select(x => x.Path)
+                .ToList();
+
+            if (chunks.Count == 0)
+                throw new BadRequestException("The upload contains no data.");
+
+            // Chunks are raw slices, so the file can only be recognised as a video once it is whole: judge its first bytes
+            var header = new byte[16];
+            await using (var first = File.OpenRead(chunks[0]))
+            {
+                var read = await first.ReadAsync(header.AsMemory(0, header.Length), ct);
+                if (!Application.Helpers.FileValidator.HasVideoSignature(header.AsSpan(0, read), normalizedExtension))
+                    throw new BadRequestException("The uploaded file is not a valid video.");
+            }
+
             Directory.CreateDirectory(Path.GetDirectoryName(finalFullPath)!);
 
             await using var output = new FileStream(
@@ -223,13 +244,6 @@ namespace Infrastructure.Services
                 1024 * 1024,
                 true
             );
-
-            var chunks = Directory
-                .EnumerateFiles(tempDir)
-                .Select(f => new { Path = f, FileName = Path.GetFileName(f) })
-                .Where(x => int.TryParse(x.FileName, out _))
-                .OrderBy(x => int.Parse(x.FileName))
-                .Select(x => x.Path);
 
             foreach (var chunk in chunks)
             {

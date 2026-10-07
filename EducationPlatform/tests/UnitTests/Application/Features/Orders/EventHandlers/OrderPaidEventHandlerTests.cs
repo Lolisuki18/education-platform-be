@@ -121,5 +121,33 @@ namespace UnitTests.Application.Features.Orders.EventHandlers
             await _afterCommitActions[0]();
             _mockEmailService.Verify(e => e.SendEmailAsync("student@example.com", "Payment Confirmation - Algebra", It.IsAny<string>()), Times.Once);
         }
+
+        [Fact]
+        public async Task Handle_EmailShowsWhatWasPaid_AndCannotBeUsedToInjectMarkup()
+        {
+            var student = new User(Guid.NewGuid(), "student@example.com", "password123", "0123456789", "<b>Mallory</b>", null, Role.Student, DateTime.UtcNow, true);
+            var course = new Course(Guid.NewGuid(), "Algebra <a href='https://evil.example'>click</a>", "Description", 100000m, "thumb.png", "algebra", "pre", "outcomes",
+                Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), DateTime.UtcNow);
+
+            // 100,000 list price, 30,000 coupon: the student paid 70,000
+            var order = new Order(Guid.NewGuid(), Commission.Create(0.15m, 70000m), student.UserID, course.CourseID, null);
+
+            _mockUserRepository.Setup(r => r.GetByIdAsync(student.UserID, It.IsAny<CancellationToken>())).ReturnsAsync(student);
+            _mockCourseRepository.Setup(r => r.GetByIdAsync(course.CourseID, It.IsAny<CancellationToken>())).ReturnsAsync(course);
+            _mockOrderRepository.Setup(r => r.GetByIdAsync(order.OrderID, It.IsAny<CancellationToken>())).ReturnsAsync(order);
+
+            string? body = null;
+            _mockEmailService
+                .Setup(e => e.SendEmailAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
+                .Callback<string, string, string>((_, _, b) => body = b);
+
+            await _handler.Handle(new OrderPaidEvent(order.OrderID, student.UserID, course.CourseID, DateTime.UtcNow), CancellationToken.None);
+            await _afterCommitActions[0]();
+
+            body.Should().NotBeNull();
+            body.Should().NotContain("<b>Mallory</b>").And.NotContain("<a href='https://evil.example'>");
+            body.Should().Contain("&lt;b&gt;Mallory&lt;/b&gt;");
+            body.Should().Contain("70,000 VND").And.NotContain("100,000 VND");
+        }
     }
 }

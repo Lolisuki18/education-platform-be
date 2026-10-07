@@ -76,8 +76,10 @@ namespace UnitTests.Application.Features.Orders.Queries.GetOrders
                 .WithMessage("Invalid role");
         }
 
-        [Fact]
-        public async Task Handle_OrderListEmpty_ShouldThrowNotFoundException()
+        [Theory]
+        [InlineData(false)]
+        [InlineData(true)]
+        public async Task Handle_NoOrders_ShouldReturnAnEmptyList(bool repositoryReturnsNull)
         {
             // Arrange
             var adminId = Guid.NewGuid();
@@ -86,16 +88,15 @@ namespace UnitTests.Application.Features.Orders.Queries.GetOrders
 
             _mockOrderRepository
                 .Setup(r => r.GetOrders(null, 1, 10, null, null))
-                .ReturnsAsync((IEnumerable<Order>)null!);
+                .ReturnsAsync(repositoryReturnsNull ? (IEnumerable<Order>)null! : new List<Order>());
 
             var query = new GetOrdersQuery { PageIndex = 1, PageSize = 10 };
 
             // Act
-            Func<Task> act = async () => await _handler.Handle(query, CancellationToken.None);
+            var result = await _handler.Handle(query, CancellationToken.None);
 
             // Assert
-            await act.Should().ThrowAsync<NotFoundException>()
-                .WithMessage("Order list is not found or empty");
+            result.Should().BeEmpty();
         }
 
         [Fact]

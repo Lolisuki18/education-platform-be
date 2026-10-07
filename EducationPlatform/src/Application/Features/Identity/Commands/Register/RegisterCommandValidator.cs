@@ -21,6 +21,9 @@ namespace Application.Features.Identity.Commands.Register
             RuleFor(v => v.Name)
                 .NotEmpty().WithMessage("Name is required.")
                 .MaximumLength(100).WithMessage("Name must not exceed 100 characters.");
+
+            RuleFor(v => v.Bio)
+                .MaximumLength(1000).WithMessage("Bio must not exceed 1000 characters.");
         }
     }
 }

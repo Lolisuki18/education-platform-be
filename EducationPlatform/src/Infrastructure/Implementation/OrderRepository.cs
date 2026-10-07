@@ -58,6 +58,9 @@ namespace Infrastructure.Implementation
             // ---- Sorting + paging ----
             return await query
                 .OrderByDescending(o => o.PaidAt ?? DateTime.MinValue)
+                // Unpaid orders all tie on PaidAt: without a tiebreaker a row can show up on two pages or on none
+                .ThenByDescending(o => o.CreatedAt)
+                .ThenBy(o => o.OrderID)
                 .Skip((pageIndex - 1) * pageSize)
                 .Take(pageSize)
                 .ToListAsync(cancellationToken);

@@ -89,6 +89,7 @@ namespace Application.Features.Courses.Queries.GetCoursesPaged
 
             var items = await query
                 .OrderByDescending(c => c.CreatedAt)
+                .ThenBy(c => c.CourseID)
                 .Skip((request.PageIndex - 1) * request.PageSize)
                 .Take(request.PageSize)
                 .ProjectTo<CourseDTO>(_mapper.ConfigurationProvider)
