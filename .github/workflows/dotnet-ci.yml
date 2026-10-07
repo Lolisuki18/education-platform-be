@@ -13,7 +13,7 @@ jobs:
     env:
       # Throwaway database that only lives for this job; unique per run so no static password sits in the repo
       TEST_DB_PASSWORD: ci-${{ github.run_id }}-${{ github.run_attempt }}
-      MIN_LINE_COVERAGE: 65
+      MIN_LINE_COVERAGE: 80
 
     services:
       postgres:

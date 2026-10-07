@@ -204,7 +204,7 @@ dotnet test EducationPlatform/tests/IntegrationTests
 >
 > Chính sách mật khẩu: 8–72 byte, có ít nhất một chữ và một số. Mã OTP chỉ nằm trong email (DB lưu hash), gửi lại tối đa 1 lần/60 giây. Email được gửi nền qua hàng đợi có retry nên SMTP lỗi không làm chậm hay hỏng request.
 >
-> CI chạy unit test kèm coverage (tối thiểu 65% dòng cho Domain + Application, xem `.github/scripts/check-coverage.py`) rồi mới chạy integration test.
+> CI chạy unit test kèm coverage (tối thiểu 80% dòng cho Domain + Application, xem `.github/scripts/check-coverage.py`) rồi mới chạy integration test.
 
 > **Lưu ý bảo mật:** File `appsettings.json` đã được thêm vào `.gitignore`. Chỉ sử dụng `appsettings.Example.json` làm template.
 

@@ -17,10 +17,10 @@ namespace Application.Common.Behaviors
         {
             if (_validators.Any())
             {
-                var context = new ValidationContext<TRequest>(request);
-
+                // One context per validator: a shared one collects the failures of all of them, so with several
+                // validators every error would be reported once per validator
                 var validationResults = await Task.WhenAll(
-                    _validators.Select(v => v.ValidateAsync(context, cancellationToken)));
+                    _validators.Select(v => v.ValidateAsync(new ValidationContext<TRequest>(request), cancellationToken)));
 
                 var failures = validationResults
                     .SelectMany(r => r.Errors)
