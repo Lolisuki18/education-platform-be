@@ -32,7 +32,7 @@ namespace UnitTests.Application.Features.Academic.Queries.GetGrades
         }
 
         [Fact]
-        public async Task Handle_GradeListIsEmptyOrNull_ShouldThrowNotFoundException()
+        public async Task Handle_GradeListIsEmpty_ShouldReturnAnEmptyList()
         {
             //1.Arrange : prepare for query
             var query = new GetGradesQuery();
@@ -40,9 +40,9 @@ namespace UnitTests.Application.Features.Academic.Queries.GetGrades
             _mockIGradeRepository.Setup(r => r.GetAllAsync())
                                     .ReturnsAsync(new List<Grade>());
             //2.Act: call the handler to handle the query
-            Func<Task> act = async () => await _mockHandler.Handle(query, CancellationToken.None);
-            // 3. Assert: verify that the handler throws a NotFoundException when the list of grades is empty
-            await act.Should().ThrowAsync<NotFoundException>().WithMessage("Grade list is empty or was not found");
+            var result = await _mockHandler.Handle(query, CancellationToken.None);
+            // 3. Assert: no grades is an empty list, not an error
+            result.Should().BeEmpty();
         }
 
         [Fact]

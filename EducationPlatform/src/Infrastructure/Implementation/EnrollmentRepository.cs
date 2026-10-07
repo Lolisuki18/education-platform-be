@@ -26,7 +26,9 @@ namespace Infrastructure.Implementation
         {
             return await context.Enrollments
                 .AsNoTracking()
-                .Include(e => e.Course)
+                .Include(e => e.Course).ThenInclude(c => c.Teacher)
+                .Include(e => e.Course).ThenInclude(c => c.Grade)
+                .Include(e => e.Course).ThenInclude(c => c.Subject)
                 .Include(e => e.CourseProgress)
                 .Where(e => e.StudentID == studentId)
                 .OrderByDescending(e => e.EnrolledAt)

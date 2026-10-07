@@ -14,6 +14,10 @@ namespace Application.Results
         public DateTime? PaidAt { get; set; }
         public Guid StudentID { get; set; }
         public Guid CourseID { get; set; }
+
+        /// <summary>Filled in the order lists, so a client can show what was bought without a request per order.</summary>
+        public string? CourseTitle { get; set; }
+
         public string? CheckoutUrl { get; set; }
     }
 }

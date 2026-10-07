@@ -36,7 +36,7 @@ namespace UnitTests.Application.Features.Academic.Queries.GetDefaultLessons
         }
 
         [Fact]
-        public async Task Handle_DefaultLessonsListIsEmptyOrNull_ShouldThrowNotFoundException()
+        public async Task Handle_DefaultLessonsListIsEmpty_ShouldReturnAnEmptyList()
         {
             //1.Arrange : prepare for query
             // initialize subjectId and gradeId for request query
@@ -51,10 +51,10 @@ namespace UnitTests.Application.Features.Academic.Queries.GetDefaultLessons
                                     .ReturnsAsync(new List<DefaultLesson>());
 
             //2.Act: call the handler to handle the query
-            Func<Task> act = async () => await _mockHandler.Handle(query, CancellationToken.None);
+            var result = await _mockHandler.Handle(query, CancellationToken.None);
 
-            // 3. Assert: verify that the handler throws a NotFoundException when the list of default lessons is empty
-            await act.Should().ThrowAsync<NotFoundException>().WithMessage("Default lessons list is empty or was not found");
+            // 3. Assert: no template is an empty list, not an error
+            result.Should().BeEmpty();
         }
 
         [Fact]

@@ -443,6 +443,47 @@ namespace IntegrationTests.Controllers
             response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
         }
 
+        [Fact]
+        public async Task EnrollmentList_ShowsWhoTeachesTheCourseAndItsGradeAndSubject()
+        {
+            var client = await CreateAuthenticatedClientAsync("student@example.com", "Password123!");
+            await EnrollStudentAsync();
+
+            var response = await client.GetAsync("/api/enrollments");
+            var list = (await response.Content.ReadFromJsonAsync<ApiResponse<System.Collections.Generic.IEnumerable<EnrollmentDTO>>>())!.Data!.ToList();
+
+            list.Should().ContainSingle();
+            var course = list[0].Course;
+            course.Title.Should().Be("Math algebra");
+            course.Teacher.Name.Should().Be("Teacher User");
+            course.Grade.Name.Should().Be("Grade 10");
+            course.Subject.Name.Should().Be("Mathematics");
+        }
+
+        [Fact]
+        public async Task TheOrderList_NamesTheCourseThatWasBought_AndIsEmptyNotAnErrorWhenThereAreNone()
+        {
+            var client = await CreateAuthenticatedClientAsync("student@example.com", "Password123!");
+
+            var none = await client.GetAsync("/api/orders");
+            none.StatusCode.Should().Be(HttpStatusCode.OK);
+            (await none.Content.ReadFromJsonAsync<ApiResponse<API.Models.Orders.ListOrdersResponseDto>>())!.Data!.Orders.Should().BeEmpty();
+
+            await ExecuteDbContextAsync(async db =>
+            {
+                var student = await db.Set<User>().FirstAsync(u => u.Email == "student@example.com");
+                var course = await db.Set<Course>().FirstAsync(c => c.Title == "Math algebra");
+                db.Orders.Add(new Domain.OrderManagement.Aggregate.Order(
+                    Guid.NewGuid(), Domain.OrderManagement.ValueObject.Commission.Create(0.15m, 50000m), student.UserID, course.CourseID, null));
+                await db.SaveChangesAsync();
+            });
+
+            var response = await client.GetAsync("/api/orders");
+            var orders = (await response.Content.ReadFromJsonAsync<ApiResponse<API.Models.Orders.ListOrdersResponseDto>>())!.Data!.Orders.ToList();
+
+            orders.Should().ContainSingle().Which.CourseTitle.Should().Be("Math algebra");
+        }
+
         // ---------- helpers ----------
 
         private async Task<Guid> EnrollStudentAsync()

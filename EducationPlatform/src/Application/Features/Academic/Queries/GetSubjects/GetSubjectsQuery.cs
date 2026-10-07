@@ -34,8 +34,9 @@ namespace Application.Features.Academic.Queries.GetSubjects
                 list = list.Where(s => s.IsActive).ToList();
             }
 
+            // An empty catalogue is an answer, not an error: the client shows an empty dropdown
             if (list == null || !list.Any())
-                throw new NotFoundException("Subject list is empty or was not found");
+                return new List<SubjectDTO>();
 
             return _mapper.Map<IEnumerable<SubjectDTO>>(list);
         }

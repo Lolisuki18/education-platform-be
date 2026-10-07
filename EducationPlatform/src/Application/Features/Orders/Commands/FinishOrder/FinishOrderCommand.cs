@@ -51,7 +51,7 @@ namespace Application.Features.Orders.Commands.FinishOrder
                 return _mapper.Map<OrderDTO>(order);
             }
 
-            if (request.PaidAmount.HasValue && request.PaidAmount.Value != (long)Math.Round(order.TotalAmount))
+            if (request.PaidAmount.HasValue && request.PaidAmount.Value != (long)Math.Round(order.TotalAmount, MidpointRounding.AwayFromZero))
             {
                 throw new BadRequestException(
                     $"Paid amount {request.PaidAmount.Value} does not match the total of order {request.OrderCode}.");

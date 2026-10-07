@@ -7,6 +7,9 @@ namespace Application.Features.Courses.CreateCourse
 {
     public class CreateCourseCommandValidator : AbstractValidator<CreateCourseCommand>
     {
+        /// <summary>Well inside what the payment gateway accepts (its amounts are 32-bit integers).</summary>
+        public const decimal MaxPrice = 1_000_000_000m;
+
         public CreateCourseCommandValidator(IOptions<MediaOptions>? media = null)
         {
             var allowedHosts = media?.Value.AllowedExternalHosts ?? Array.Empty<string>();
@@ -15,8 +18,11 @@ namespace Application.Features.Courses.CreateCourse
                 .NotEmpty().WithMessage("Title is required.")
                 .MaximumLength(200).WithMessage("Title must not exceed 200 characters.");
 
+            // VND has no minor unit and the payment gateway takes whole amounts, so a fractional price could never be matched to its payment
             RuleFor(v => v.Price)
-                .GreaterThanOrEqualTo(0).WithMessage("Price must be a positive value.");
+                .GreaterThanOrEqualTo(0).WithMessage("Price must be a positive value.")
+                .LessThanOrEqualTo(MaxPrice).WithMessage($"Price must not exceed {MaxPrice:N0}.")
+                .Must(price => price is null || price == decimal.Truncate(price.Value)).WithMessage("Price must be a whole number.");
 
             RuleFor(v => v.Description)
                 .NotEmpty().WithMessage("Description is required.");

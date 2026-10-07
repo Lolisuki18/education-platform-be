@@ -37,7 +37,7 @@ namespace UnitTests.Application.Features.Academic.Queries.GetSubjects
         }
 
         [Fact]
-        public async Task Handle_SubjectListIsEmptyOrNull_ShouldThrowNotFoundException()
+        public async Task Handle_SubjectListIsEmpty_ShouldReturnAnEmptyList()
         {
             // 1. Arrange
             var query = new GetSubjectsQuery();
@@ -45,10 +45,10 @@ namespace UnitTests.Application.Features.Academic.Queries.GetSubjects
                                     .ReturnsAsync(new List<Subject>());
 
             // 2. Act
-            Func<Task> act = async () => await _mockHandler.Handle(query, CancellationToken.None);
+            var result = await _mockHandler.Handle(query, CancellationToken.None);
 
             // 3. Assert
-            await act.Should().ThrowAsync<NotFoundException>().WithMessage("Subject list is empty or was not found");
+            result.Should().BeEmpty();
         }
 
         [Fact]

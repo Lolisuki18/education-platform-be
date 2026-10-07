@@ -22,7 +22,8 @@ namespace Infrastructure.Services
 
         public async Task<string> CreatePaymentLinkAsync(long orderCode, decimal amount, string description)
         {
-            int intAmount = (int)amount;
+            // PayOS takes whole VND; FinishOrderCommand compares what it reports with the same rounding
+            int intAmount = checked((int)Math.Round(amount, MidpointRounding.AwayFromZero));
 
             // PayOS requires description to be max 25 characters, alphanumeric/spaces, and ASCII only.
             string safeDescription = $"Thanh toan DH{orderCode}";

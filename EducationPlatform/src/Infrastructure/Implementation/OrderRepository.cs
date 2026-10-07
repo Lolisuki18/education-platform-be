@@ -31,7 +31,8 @@ namespace Infrastructure.Implementation
             pageSize = pageSize <= 0 ? 10 : pageSize;
 
             IQueryable<Order> query = context.Orders
-                .AsNoTracking();
+                .AsNoTracking()
+                .Include(o => o.Course);
 
             // ---- Status filter ----
             if (!string.IsNullOrWhiteSpace(status)

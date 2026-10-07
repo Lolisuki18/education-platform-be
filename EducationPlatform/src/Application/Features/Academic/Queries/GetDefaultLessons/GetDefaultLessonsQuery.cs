@@ -30,8 +30,9 @@ namespace Application.Features.Academic.Queries.GetDefaultLessons
                 .GetRepository<ISubjectRepository>()
                 .GetDefaultLessons(request.SubjectId, request.GradeId, cancellationToken);
 
+            // A subject/grade without a template is normal: the teacher then writes the course from scratch
             if (list == null || !list.Any())
-                throw new NotFoundException("Default lessons list is empty or was not found");
+                return new List<DefaultLessonDTO>();
 
             return _mapper.Map<IEnumerable<DefaultLessonDTO>>(list);
         }

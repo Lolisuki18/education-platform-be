@@ -34,8 +34,9 @@ namespace Application.Features.Academic.Queries.GetGrades
                 list = list.Where(g => g.IsActive).ToList();
             }
 
+            // An empty catalogue is an answer, not an error: the client shows an empty dropdown
             if (list == null || !list.Any())
-                throw new NotFoundException("Grade list is empty or was not found");
+                return new List<GradeDTO>();
 
             return _mapper.Map<IEnumerable<GradeDTO>>(list);
         }
