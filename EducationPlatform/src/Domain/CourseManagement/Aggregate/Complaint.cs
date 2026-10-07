@@ -75,6 +75,9 @@ namespace Domain.CourseManagement.Aggregate
 
         public void Reject(string? adminNote)
         {
+            if (Status != ComplaintStatus.Pending)
+                throw new DomainException("Only pending complaints can be rejected.");
+
             Status = ComplaintStatus.Rejected;
             AdminNote = adminNote;
             ReviewedAt = DateTime.UtcNow;

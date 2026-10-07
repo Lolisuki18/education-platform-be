@@ -72,13 +72,10 @@ namespace UnitTests.Application.Features.Complaints.Commands.CreateComplaint
 
             _mockCurrentUser.Setup(u => u.Id).Returns(studentId);
 
-            // Giả lập student enroll ở khóa học khác, không phải khóa học muốn khiếu nại
-            var otherCourseEnrollment = new Enrollment(Guid.NewGuid(), studentId, Guid.NewGuid(), DateTime.UtcNow);
-            var enrollments = new List<Enrollment> { otherCourseEnrollment };
-
+            // The student is not enrolled in the course the complaint is about
             _mockEnrollmentRepository
-                .Setup(r => r.GetStudentEnrollments(studentId))
-                .ReturnsAsync(enrollments);
+                .Setup(r => r.IsStudentEnrolled(studentId, targetCourseId, It.IsAny<CancellationToken>()))
+                .ReturnsAsync(false);
 
             // Act
             Func<Task> act = async () => await _handler.Handle(command, CancellationToken.None);
@@ -86,6 +83,26 @@ namespace UnitTests.Application.Features.Complaints.Commands.CreateComplaint
             // Assert
             await act.Should().ThrowAsync<ConflictException>()
                 .WithMessage("You can only submit complaints for courses you have enrolled in.");
+        }
+
+        [Fact]
+        public async Task Handle_ComplaintAlreadyWaitingForReview_ShouldThrowConflictException()
+        {
+            var studentId = Guid.NewGuid();
+            var courseId = Guid.NewGuid();
+            _mockCurrentUser.Setup(u => u.Id).Returns(studentId);
+            _mockEnrollmentRepository
+                .Setup(r => r.IsStudentEnrolled(studentId, courseId, It.IsAny<CancellationToken>()))
+                .ReturnsAsync(true);
+            _mockComplaintRepository
+                .Setup(r => r.HasPendingComplaintAsync(studentId, courseId, It.IsAny<CancellationToken>()))
+                .ReturnsAsync(true);
+
+            Func<Task> act = async () => await _handler.Handle(
+                new CreateComplaintCommand { CourseID = courseId, Reason = "Again" }, CancellationToken.None);
+
+            await act.Should().ThrowAsync<ConflictException>();
+            _mockComplaintRepository.Verify(r => r.CreateComplaint(It.IsAny<Complaint>()), Times.Never);
         }
 
         [Fact]
@@ -98,12 +115,9 @@ namespace UnitTests.Application.Features.Complaints.Commands.CreateComplaint
 
             _mockCurrentUser.Setup(u => u.Id).Returns(studentId);
 
-            var enrollment = new Enrollment(Guid.NewGuid(), studentId, courseId, DateTime.UtcNow);
-            var enrollments = new List<Enrollment> { enrollment };
-
             _mockEnrollmentRepository
-                .Setup(r => r.GetStudentEnrollments(studentId))
-                .ReturnsAsync(enrollments);
+                .Setup(r => r.IsStudentEnrolled(studentId, courseId, It.IsAny<CancellationToken>()))
+                .ReturnsAsync(true);
 
             // Act
             var result = await _handler.Handle(command, CancellationToken.None);
@@ -137,12 +151,9 @@ namespace UnitTests.Application.Features.Complaints.Commands.CreateComplaint
 
             _mockCurrentUser.Setup(u => u.Id).Returns(studentId);
 
-            var enrollment = new Enrollment(Guid.NewGuid(), studentId, courseId, DateTime.UtcNow);
-            var enrollments = new List<Enrollment> { enrollment };
-
             _mockEnrollmentRepository
-                .Setup(r => r.GetStudentEnrollments(studentId))
-                .ReturnsAsync(enrollments);
+                .Setup(r => r.IsStudentEnrolled(studentId, courseId, It.IsAny<CancellationToken>()))
+                .ReturnsAsync(true);
 
             // Giả lập lưu file thành công
             _mockStorageService
@@ -181,12 +192,9 @@ namespace UnitTests.Application.Features.Complaints.Commands.CreateComplaint
 
             _mockCurrentUser.Setup(u => u.Id).Returns(studentId);
 
-            var enrollment = new Enrollment(Guid.NewGuid(), studentId, courseId, DateTime.UtcNow);
-            var enrollments = new List<Enrollment> { enrollment };
-
             _mockEnrollmentRepository
-                .Setup(r => r.GetStudentEnrollments(studentId))
-                .ReturnsAsync(enrollments);
+                .Setup(r => r.IsStudentEnrolled(studentId, courseId, It.IsAny<CancellationToken>()))
+                .ReturnsAsync(true);
 
             _mockStorageService
                 .Setup(s => s.SaveAsync(dummyStream, "jpg", It.IsAny<CancellationToken>()))

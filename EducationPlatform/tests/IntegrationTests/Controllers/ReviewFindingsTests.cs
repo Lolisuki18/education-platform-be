@@ -299,6 +299,91 @@ namespace IntegrationTests.Controllers
             response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
         }
 
+        // ---------- E-mail addresses are not case sensitive ----------
+
+        [Fact]
+        public async Task AnAddress_TypedWithCapitalsAndPadding_ReachesTheSameAccount()
+        {
+            var register = await Client.PostAsJsonAsync("/api/auth/register", new
+            {
+                Email = "  Mixed.Case@Example.com ",
+                Password = "Password123!",
+                Phone = "0987000111",
+                Name = "Mixed Case",
+                Role = 1
+            });
+            register.StatusCode.Should().Be(HttpStatusCode.Accepted);
+
+            // The mail went to the stored (normalized) address
+            var otp = TestEmailCapture.GetOtp("mixed.case@example.com");
+            var verify = await Client.PostAsJsonAsync("/api/auth/verify-email", new { Email = "MIXED.CASE@example.com", Otp = otp });
+            verify.StatusCode.Should().Be(HttpStatusCode.OK);
+
+            var login = await Client.PostAsJsonAsync("/api/auth/login", new { Email = "Mixed.Case@EXAMPLE.com", Password = "Password123!" });
+            login.StatusCode.Should().Be(HttpStatusCode.OK);
+
+            var again = await Client.PostAsJsonAsync("/api/auth/register", new
+            {
+                Email = "mixed.case@example.com",
+                Password = "Password123!",
+                Phone = "0987000222",
+                Name = "Second",
+                Role = 1
+            });
+            again.StatusCode.Should().Be(HttpStatusCode.Conflict);
+        }
+
+        // ---------- Profile updates follow the registration rules ----------
+
+        [Fact]
+        public async Task UpdateProfile_WithAPhoneAnotherAccountOwns_IsAConflict()
+        {
+            var client = await CreateAuthenticatedClientAsync("student@example.com", "Password123!");
+
+            var response = await client.PatchAsJsonAsync("/api/user/update-profile", new { Phone = "0911111111" }); // the teacher's
+
+            response.StatusCode.Should().Be(HttpStatusCode.Conflict);
+        }
+
+        [Theory]
+        [InlineData("12345")]
+        [InlineData("not-a-phone")]
+        public async Task UpdateProfile_WithAnInvalidPhone_IsABadRequest(string phone)
+        {
+            var client = await CreateAuthenticatedClientAsync("student@example.com", "Password123!");
+
+            var response = await client.PatchAsJsonAsync("/api/user/update-profile", new { Phone = phone });
+
+            response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        }
+
+        [Fact]
+        public async Task UpdateProfile_KeepingYourOwnPhone_IsFine()
+        {
+            var client = await CreateAuthenticatedClientAsync("student@example.com", "Password123!");
+
+            var response = await client.PatchAsJsonAsync("/api/user/update-profile", new { Name = "Renamed", Phone = "0922222222" });
+
+            response.StatusCode.Should().Be(HttpStatusCode.OK);
+        }
+
+        // ---------- Report parameters are validated ----------
+
+        [Theory]
+        [InlineData("/api/statistics/analytics/growth?type=99&groupBy=Day")]
+        [InlineData("/api/statistics/analytics/growth?type=0&groupBy=99")]
+        [InlineData("/api/statistics/analytics/top-performance?top=0")]
+        [InlineData("/api/statistics/analytics/top-performance?top=100000")]
+        [InlineData("/api/statistics/summary?from=2026-02-01&to=2026-01-01")]
+        public async Task ANonsenseReportRequest_IsABadRequestNotAServerError(string url)
+        {
+            var admin = await CreateAuthenticatedClientAsync("admin@example.com", "Password123!");
+
+            var response = await admin.GetAsync(url);
+
+            response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        }
+
         // ---------- helpers ----------
 
         private async Task<Guid> EnrollStudentAsync()

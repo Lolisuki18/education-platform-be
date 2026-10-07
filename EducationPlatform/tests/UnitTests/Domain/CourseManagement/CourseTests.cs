@@ -42,6 +42,26 @@ namespace UnitTests.DomainTests.CourseManagement
                 .WithMessage("Course price must be greater than zero");
         }
 
+        [Theory]
+        [InlineData(null)]
+        [InlineData(0)]
+        public void Course_WithNoPriceOrAPriceOfZero_IsFree(int? amount)
+        {
+            var course = new Course(Guid.NewGuid(), "Free course", "Desc", amount, "t.png", null, "none", "out",
+                Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), null);
+
+            course.Price.IsFree().Should().BeTrue();
+        }
+
+        [Fact]
+        public void Course_WithNegativePrice_Throws()
+        {
+            Action act = () => new Course(Guid.NewGuid(), "Course", "Desc", -5m, "t.png", null, "none", "out",
+                Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), null);
+
+            act.Should().Throw<DomainException>().WithMessage("Course price must be greater than zero");
+        }
+
         [Fact]
         public void CoursePrice_EqualsAndHashCode_ShouldBehaveCorrectly()
         {
@@ -333,6 +353,18 @@ namespace UnitTests.DomainTests.CourseManagement
             complaint.Status.Should().Be(ComplaintStatus.Rejected);
             complaint.AdminNote.Should().Be("Rejected note");
             complaint.ReviewedAt.Should().NotBeNull();
+        }
+
+        [Fact]
+        public void Complaint_Reject_AfterItWasReviewed_ShouldThrow()
+        {
+            var complaint = new Complaint(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), "Reason", null);
+            complaint.Approve("Done");
+
+            Action act = () => complaint.Reject("Changed my mind");
+
+            act.Should().Throw<DomainException>().WithMessage("Only pending complaints can be rejected.");
+            complaint.Status.Should().Be(ComplaintStatus.Approved);
         }
 
         // ======================= POLICY TESTS =======================

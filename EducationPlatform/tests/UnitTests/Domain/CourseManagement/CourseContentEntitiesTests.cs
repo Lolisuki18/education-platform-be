@@ -125,6 +125,27 @@ namespace UnitTests.DomainTests.CourseManagement
         }
 
         [Fact]
+        public void AddAnswer_AnswerThatIsNotAnOption_Throws()
+        {
+            var quiz = NewQuiz();
+
+            ((Action)(() => quiz.AddAnswer(QuizType.SingleChoice, new[] { "9" }, new[] { "1", "2" })))
+                .Should().Throw<DomainException>().WithMessage("Every correct answer must be one of the options");
+            ((Action)(() => quiz.AddAnswer(QuizType.MultipleChoice, new[] { "1", "9" }, new[] { "1", "2" })))
+                .Should().Throw<DomainException>().WithMessage("Every correct answer must be one of the options");
+        }
+
+        [Fact]
+        public void AddAnswer_AnswerMatchesAnOptionIgnoringCaseAndPadding()
+        {
+            var quiz = NewQuiz();
+
+            quiz.AddAnswer(QuizType.SingleChoice, new[] { " Paris " }, new[] { "paris", "Rome" });
+
+            quiz.Answer.CorrectAnswers.Should().Equal("Paris");
+        }
+
+        [Fact]
         public void AddAnswer_UnknownType_Throws()
         {
             var quiz = NewQuiz();

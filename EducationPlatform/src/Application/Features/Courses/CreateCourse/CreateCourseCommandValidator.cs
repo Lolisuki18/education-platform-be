@@ -21,8 +21,9 @@ namespace Application.Features.Courses.CreateCourse
             RuleFor(v => v.Description)
                 .NotEmpty().WithMessage("Description is required.");
 
+            // An uploaded thumbnail names itself; a name is only needed when the course points at an existing image
             RuleFor(v => v.ThumbnailName)
-                .NotEmpty().WithMessage("Thumbnail is required.");
+                .NotEmpty().When(v => v.ThumbnailFileStream == null).WithMessage("Thumbnail is required.");
 
             RuleFor(v => v.Slug)
                 .MaximumLength(Slugs.MaxLength).WithMessage($"Slug must not exceed {Slugs.MaxLength} characters.");

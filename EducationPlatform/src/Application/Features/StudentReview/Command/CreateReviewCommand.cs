@@ -47,8 +47,8 @@ namespace Application.Features.StudentReview.Command
 
             var currentStudentId = _currentUser.Id.Value;
             //2. Check if the student has enrolled in the course
-            var enrollments = await _unitOfWork.GetRepository<IEnrollmentRepository>().GetStudentEnrollments(currentStudentId, cancellationToken: cancellationToken);
-            if (!enrollments.Any(e => e.CourseID == request.CourseId))
+            var isEnrolled = await _unitOfWork.GetRepository<IEnrollmentRepository>().IsStudentEnrolled(currentStudentId, request.CourseId, cancellationToken);
+            if (!isEnrolled)
             {
                 throw new ForbiddenException("You must be enrolled in this course to leave a review.");
             }

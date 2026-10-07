@@ -21,9 +21,11 @@ namespace Infrastructure.Implementation
         #region Methods
         public async Task<User?> GetUserByEmail(string email, CancellationToken cancellationToken = default)
         {
+            var normalized = User.NormalizeEmail(email);
+
             return await context.Users
                 .Include(u => u.RefreshSessions)
-                .FirstOrDefaultAsync(u => u.Email == email, cancellationToken);
+                .FirstOrDefaultAsync(u => u.Email == normalized, cancellationToken);
         }
 
         public async Task<User?> GetUserByPhone(string phone, CancellationToken cancellationToken = default)

@@ -17,6 +17,9 @@ namespace Domain.CourseManagement.Aggregate
 
         Task<IEnumerable<Complaint>> GetApprovedByCoursesAsync(Guid courseId, CancellationToken cancellationToken = default);
 
+        /// <summary>True when the student already has a complaint about the course that no admin has reviewed yet.</summary>
+        Task<bool> HasPendingComplaintAsync(Guid studentId, Guid courseId, CancellationToken cancellationToken = default);
+
         void CreateComplaint(Complaint complaint);
 
         void UpdateComplaint(Complaint complaint);

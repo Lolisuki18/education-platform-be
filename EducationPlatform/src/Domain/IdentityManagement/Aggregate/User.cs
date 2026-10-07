@@ -78,7 +78,7 @@ namespace Domain.IdentityManagement.Aggregate
                     "Invalid role");
 
             UserID = userId;
-            Email = email;
+            Email = NormalizeEmail(email);
             Password = Password.Create(plainPassword);
             Phone = phone;
             Name = name;
@@ -92,6 +92,12 @@ namespace Domain.IdentityManagement.Aggregate
 
 
         #region Methods
+        /// <summary>
+        /// The one form an address is stored and looked up in: an address typed as "Alice@Mail.com " (mobile keyboards
+        /// capitalise the first letter) must reach the same account as "alice@mail.com".
+        /// </summary>
+        public static string NormalizeEmail(string email) => (email ?? string.Empty).Trim().ToLowerInvariant();
+
         /// <summary>
         /// Creates a new one-time code and returns it so it can be e-mailed. Only a hash is stored, so a
         /// leaked database does not reveal codes that are still valid.

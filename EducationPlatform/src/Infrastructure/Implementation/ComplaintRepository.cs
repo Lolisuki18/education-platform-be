@@ -63,6 +63,15 @@ namespace Infrastructure.Implementation
                 .ToListAsync(cancellationToken);
         }
 
+        public async Task<bool> HasPendingComplaintAsync(Guid studentId, Guid courseId, CancellationToken cancellationToken = default)
+        {
+            return await context.Complaints
+                .AsNoTracking()
+                .AnyAsync(c => c.StudentID == studentId &&
+                               c.CourseID == courseId &&
+                               c.Status == ComplaintStatus.Pending, cancellationToken);
+        }
+
         public void CreateComplaint(Complaint complaint)
         {
             if (complaint == null)

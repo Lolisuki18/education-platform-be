@@ -46,8 +46,8 @@ namespace UnitTests.Application.Features.StudentReview
             _course = new Course(_courseId, "Algebra", "About algebra", 100m, "thumb.png", null, "none", "outcomes", Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), null);
 
             _enrollments
-                .Setup(e => e.GetStudentEnrollments(_studentId, It.IsAny<int>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
-                .ReturnsAsync(new List<Enrollment> { new(Guid.NewGuid(), _studentId, _courseId, null) });
+                .Setup(e => e.IsStudentEnrolled(_studentId, _courseId, It.IsAny<CancellationToken>()))
+                .ReturnsAsync(true);
             _courses.Setup(c => c.GetByIdAsync(_courseId, It.IsAny<CancellationToken>())).ReturnsAsync(_course);
             _users.Setup(u => u.GetByIdAsync(_studentId, It.IsAny<CancellationToken>())).ReturnsAsync(_student);
             _mapper.Setup(m => m.Map<CourseReviewDTO>(It.IsAny<CourseReview>())).Returns(new CourseReviewDTO());
@@ -97,8 +97,8 @@ namespace UnitTests.Application.Features.StudentReview
         public async Task ANotEnrolledStudent_IsForbidden()
         {
             _enrollments
-                .Setup(e => e.GetStudentEnrollments(_studentId, It.IsAny<int>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
-                .ReturnsAsync(new List<Enrollment> { new(Guid.NewGuid(), _studentId, Guid.NewGuid(), null) });
+                .Setup(e => e.IsStudentEnrolled(_studentId, _courseId, It.IsAny<CancellationToken>()))
+                .ReturnsAsync(false);
 
             var act = () => _handler.Handle(Command(), CancellationToken.None);
 

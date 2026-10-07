@@ -90,7 +90,8 @@ namespace Domain.CourseManagement.Aggregate
             Title = title.Trim();
             Description = description.Trim();
             Status = CourseStatus.InReview;
-            Price = price.HasValue ? CoursePrice.Paid(price.Value) : CoursePrice.Free();
+            // No price and a price of 0 both mean "free" (a form that sends 0 for a free course must not be an error)
+            Price = price is null or 0 ? CoursePrice.Free() : CoursePrice.Paid(price.Value);
             ThumbnailName = thumbnailName;
             Slug = Domain.Common.Slugs.Create(slug, title);
             Prerequisites = prerequisites?.Trim();

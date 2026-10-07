@@ -50,6 +50,21 @@ namespace UnitTests.Application.Features.Identity.Commands.Login
         }
 
         [Fact]
+        public async Task Handle_DeactivatedAccount_ShouldBeForbiddenAndGetNoTokens()
+        {
+            var user = new User(Guid.NewGuid(), "locked@gmail.com", "password123", "0123456789", "Locked", null, Role.Student, DateTime.UtcNow, isVerified: true);
+            user.Deactivate();
+            _mockUserRepository.Setup(r => r.GetUserByEmail("locked@gmail.com")).ReturnsAsync(user);
+
+            Func<Task> act = async () => await _handler.Handle(
+                new LoginCommand { Email = "locked@gmail.com", Password = "password123" }, CancellationToken.None);
+
+            await act.Should().ThrowAsync<ForbiddenException>();
+            _mockTokenService.Verify(t => t.GenerateToken(It.IsAny<User>()), Times.Never);
+            user.RefreshSessions.Should().BeEmpty();
+        }
+
+        [Fact]
         public async Task Handle_Success_ShouldReturnTokenAndSaveRefreshToken()
         {
             // Arrange

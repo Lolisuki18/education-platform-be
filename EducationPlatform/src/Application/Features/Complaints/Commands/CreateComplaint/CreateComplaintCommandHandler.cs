@@ -31,14 +31,22 @@ namespace Application.Features.Complaints.Commands.CreateComplaint
 
             Guid studentId = _currentUser.Id.Value;
 
-            // 1. Validate enrollment
-            var enrollmentRepo = _unitOfWork.GetRepository<IEnrollmentRepository>();
-            var enrollments = await enrollmentRepo.GetStudentEnrollments(studentId, cancellationToken: cancellationToken);
-
-            var isEnrolled = enrollments.Any(e => e.CourseID == request.CourseID);
+            // 1. Validate enrollment (a direct lookup: listing the student's enrollments is paged and misses older ones)
+            var isEnrolled = await _unitOfWork
+                .GetRepository<IEnrollmentRepository>()
+                .IsStudentEnrolled(studentId, request.CourseID, cancellationToken);
             if (!isEnrolled)
             {
                 throw new ConflictException("You can only submit complaints for courses you have enrolled in.");
+            }
+
+            // One open complaint per student and course: repeating it must not stack up towards the removal threshold
+            var hasPending = await _unitOfWork
+                .GetRepository<IComplaintRepository>()
+                .HasPendingComplaintAsync(studentId, request.CourseID, cancellationToken);
+            if (hasPending)
+            {
+                throw new ConflictException("You already have a complaint about this course that is waiting for review.");
             }
 
             // 2. Handle image upload if provided

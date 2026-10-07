@@ -66,6 +66,12 @@ namespace Domain.CourseManagement.Entity
                 throw new DomainException(
                     "Quiz must have answer and options");
 
+            // A correct answer that is not one of the options could never be picked, so the quiz could never be passed
+            var mustBeOptions = type == QuizType.SingleChoice ? new[] { answers.First() } : answers.ToArray();
+            if (type is QuizType.SingleChoice or QuizType.MultipleChoice &&
+                !mustBeOptions.All(a => options.Any(o => string.Equals(o?.Trim(), a?.Trim(), StringComparison.OrdinalIgnoreCase))))
+                throw new DomainException("Every correct answer must be one of the options");
+
             Answer = type switch
             {
                 QuizType.SingleChoice => QuizAnswer.SingleChoice(answers.First(), options),
